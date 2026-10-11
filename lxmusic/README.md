@@ -564,6 +564,8 @@ internal/tui/              表格与交互选择器
 
 **构建验证**（`CGO_ENABLED=0`，纯交叉编译）：`go tool dist list` 里的 48 个 GOOS/GOARCH 组合通过 43 个；剩下的 5 个（`android/{386,amd64,arm}`、`ios/{amd64,arm64}`）报 `requires external (cgo) linking`——用一个零依赖的程序测同样的 5 个目标，报错完全一致，属于本机没有 C 交叉链接器，与本项目和它的依赖无关。
 
+**交叉编译能过不等于能跑。** darwin 的 ioctl 号曾经拼错，48 个目标一个报错都没有，macOS 上 `search` 却是打表格就退。这类错误只在本机能跑的那个平台（Windows）上看不到，所以下面的行为验证只覆盖 Windows 和纯文本输出，Unix 终端的实际表现请在你的机器上确认。
+
 **测试**
 
 ```bash
@@ -590,6 +592,7 @@ go test -count=1 ./...
 - 进度泵：`stop` 返回后不再写任何字节（goroutine 真的退出了）、输出以换行结尾（`✓ 已保存` 独占一行）、重复调用 `stop` 不阻塞不 panic。`go test -race` 跑过。
 - 下载字节上报：累计、单调、最终等于整个 body；`Content-Length` 缺省时原样透传 `-1`。
 - Windows `INPUT_RECORD` 偏移量与 **key-up 回声过滤**：方向键、PgUp/PgDn、Home/End、Enter（CR 和 LF）、y/n、Ctrl+C/Ctrl+D、字符事件、全零记录。key-up 有专门回归测试——之前每次按方向键跳两行，而且回车被自己的 key-up 应答，导致确认提示永远不出现。过滤是按时间窗做的，不是读 `bKeyDown`：那条判断读偏移 8，而在任何合理的布局里偏移 8 装的都是 `wRepeatCount` 或 `wVirtualKeyCode`，对 key-down 和 key-up 都非零，所以那条判断从来没生效过，也正是每次按压被算两遍的直接证据。测试用固定时钟把 100ms 窗口的两边都钉住了。
+- Unix 终端 ioctl 编码：BSD 把 ioctl 编成 `方向 | 长度<<16 | 组<<8 | 号`，测试断言长度字段等于 `unsafe.Sizeof(syscall.Termios{})`、且 `tcgets` 和 `winsize` 的号不相等。这条是从真 bug 里来的——号的写死值 `0x68` 是 `TIOCGWINSZ` 的号不是 termios 的，darwin 上 `tcgets` 算出一个内核没注册的请求，返回 `ENOTTY`，`isTerminal()` 当「不是终端」，`search` 打完表格就直接退、选择器一次都没进去。Linux 走另一个文件、值恰好写对，所以交叉编译全绿也查不出来，只有真在 macOS 上跑才暴露。
 - 按键扫描：tmux 前缀序列，以及跨两次 read 被截断的转义序列。
 - 酷我体积解析：`size:52.83Mb` 这种**两个字母**单位的容错。
 

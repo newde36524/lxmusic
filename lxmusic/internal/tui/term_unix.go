@@ -33,13 +33,16 @@ func ioctl(trap uintptr, fd int, p unsafe.Pointer) error {
 var saved *syscall.Termios
 
 // isTerminal is true only when both standard streams are real terminals.
-// Redirected or piped output must never receive escape sequences.
+// Redirected or piped output must never receive escape sequences, and a
+// redirected stdin is not interactive even if stdout is a terminal - without
+// that second check `lxmusic search ... </dev/null` would enter the picker
+// and then fail to take over the terminal.
 func isTerminal() bool {
 	var t syscall.Termios
 	if err := ioctl(tcgets, int(os.Stdout.Fd()), unsafe.Pointer(&t)); err != nil {
 		return false
 	}
-	return int(os.Stdin.Fd()) >= 0
+	return ioctl(tcgets, int(os.Stdin.Fd()), unsafe.Pointer(&t)) == nil
 }
 
 // enable drops the terminal into raw mode so keystrokes arrive immediately.

@@ -374,6 +374,34 @@ handler 迁到 pflag），所以命令开 `DisableFlagParsing: true`，让原始
 同理 `RunE` 里不能 `return flag.ErrHelp`：禁用了解析后 cobra 根本看不到 `--help`，
 那个哨兵只会以 `error: flag: help requested` 冒回来，要用 `cmd.Help()`。
 
+**Unix 终端：ioctl 号别自己拼，用 syscall 的。** BSD 把一个 ioctl 编成
+`方向 | 长度<<16 | 组<<8 | 号`。长度用 `unsafe.Sizeof(syscall.Termios{})` 是对的，
+但**号**当初写死成了 `0x68`——那是 `TIOCGWINSZ` 的号，不是 termios 的（termios 是 `0x13`）。
+于是 darwin 上的 `tcgets` 算出 `0x40487468`：`TIOCGWINSZ` 带 72 字节长度，
+内核里没有注册这个请求，返回 `ENOTTY`。`isTerminal()` 把失败当「不是终端」，
+`search` 于是打表格、直接退出，交互选择器一次都没进去。
+
+这个坑只在编译期看不见——`go build` 48 个目标能过 43 个，全绿，问题一个都暴露不出来；
+而且 Linux 走的是另一个文件（`0x5401` / `0x5402` / `0x5413` 直接写死，恰好是对的），
+所以本地和 CI 都发现不了，只有真在 macOS 上跑才暴露。现在改成
+`syscall.TIOCGETA` / `TIOCSETA` / `TIOCGWINSZ`：Go 从平台头文件生成这些常量，
+号和长度都和内核核对过，而且长度字段天然和 `syscall.Termios` 同步
+（darwin 是 72 字节 = `0x48`，其余 BSD 是 44 字节 = `0x2c`）。
+Linux 那边 stdlib 不导出 `TCGETS`，仍然写死，值不变。
+
+有回归测试钉住：长度字段必须等于 `unsafe.Sizeof(syscall.Termios{})`，
+`tcgets` 和 `winsize` 的号不许相同。顺带把 `isTerminal()` 补全——文档一直写「两个流都
+是终端」，但代码只查了 stdout，`</dev/null` 之类会把交互模式打开再因拿不到终端而退回，
+现在两个流都查。
+
+**一个还没查清的地方**：`Cc` 槽位。本机实测（`golang.org/x/sys/unix` 从平台头生成的常量）
+Linux 是 `VMIN=0x6 / VTIME=0x5`，darwin 报的是 `VMIN=0x10 / VTIME=0x11`。代码按 Linux 的
+6/5 设 VMIN=0、VTIME=1（100ms 读超时，用来分辨单独一个 ESC 和某个序列的第一个字节）。
+如果 darwin 的真值真是 0x10/0x11，那这两个写到了别的槽上，读会一直阻塞到真有按键，
+**单独按 Esc 不会生效，得再按一个键才动**。也可能是那组常量取的是 4.2BSD 遗留的
+`term.h` 而不是 `termios.h`（`VEOF=0x0` 也指向这个可能），那样 6/5 就是对的。
+本机跑不了 BSD，判不出来——修完上面的 ioctl 之后在 Mac 上按一下 Esc 就知道答案。
+
 **音质选择**：搜索结果里每首歌带 `Qualities` 列表（各档 type + size）。
 `--quality auto`（默认）取 `Song.BestQuality()` = 可选档里最高的那档；
 显式指定的档位若音源不给，会**逐级降级**并在输出里写明
