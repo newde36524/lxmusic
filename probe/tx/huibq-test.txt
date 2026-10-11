@@ -1,0 +1,7 @@
+﻿.\lxmusic.exe : error: unknown source "" (known: kg, kw, wy, tx, flower, flower2, huibq)
+At line:1 char:333
++ ... rl\lxmusic; .\lxmusic.exe source test huibq "kw:440618" --quality 320 ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (error: unknown ...flower2, huibq):String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 

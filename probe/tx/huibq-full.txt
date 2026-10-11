@@ -1,0 +1,10 @@
+﻿.\lxmusic.exe : error: source "huibq2": bad response ": Handle Action(musicUrl)\n  source kg\n  quality 320k\n  musicIn
+fo {\n    album: '叶惠美',\n    albumId: '966846',\n    albumName: '叶惠美',\n    duration: 0,\n    hash: 'B3A52A7A958BF0AED0
+EBFBA2E9A818B7',\n    id: '20505418B3A52A7A958BF0AED0EBFBA2E9A818B7',\n    img: '',\n    interval: 0,\n    mid: '205054
+18',\n    name: '晴天',\n    singer: '周杰伦',\n    songId: '',\n    songmid: '20505418',\n    sour..."
+At line:1 char:333
++ ... rl\lxmusic; .\lxmusic.exe url "kg:20505418B3A52A7A958BF0AED0EBFBA2E9A ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (error: source "...,\n    sour...":String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 

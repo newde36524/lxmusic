@@ -1,0 +1,1241 @@
+// Command lxmusic is a CLI port of the core search / download / play / lyric
+// logic reverse engineered out of lx-music-desktop 2.12.6.
+package main
+
+import (
+	"context"
+	"encoding/json"
+	"errors"
+	"flag"
+	"fmt"
+	"io"
+	"net/http"
+	"net/url"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"sort"
+	"strings"
+	"sync"
+	"time"
+
+	lx "lxmusic/internal/lx"
+	"lxmusic/internal/tui"
+)
+
+// Help text now lives with the commands that use it, so cobra can print it
+// per-subcommand. Everything the old usageText said is in commands.go.
+
+func main() {
+	if err := newRootCmd().Execute(); err != nil {
+		fmt.Fprintf(os.Stderr, "error: %v\n", err)
+		os.Exit(1)
+	}
+}
+
+/* --------------------------------------------------------------- helpers */
+
+// flagsFirst reorders the arguments so that every flag comes before the
+// positional ones. Go's flag package stops parsing at the first non-flag token,
+// which would otherwise make `lxmusic search 晴天 --limit 5` ignore --limit.
+func flagsFirst(args []string) []string {
+	var flags, rest []string
+	for i := 0; i < len(args); i++ {
+		a := args[i]
+		if !strings.HasPrefix(a, "-") || len(a) == 1 {
+			rest = append(rest, a)
+			continue
+		}
+		flags = append(flags, a)
+		// attach a value unless the flag is self-contained (=-style) or the
+		// next token is another flag
+		if !strings.Contains(a, "=") && i+1 < len(args) && !strings.HasPrefix(args[i+1], "-") {
+			i++
+			flags = append(flags, args[i])
+		}
+	}
+	return append(flags, rest...)
+}
+
+type refs struct {
+	key    string
+	search string
+	index  int
+	page   int
+	limit  int
+}
+
+func (r *refs) register(fs *flag.FlagSet) {
+	fs.StringVar(&r.key, "key", "", "song reference source:id")
+	fs.StringVar(&r.search, "search", "", "look the song up by keyword instead")
+	fs.IntVar(&r.index, "index", 1, "which search result to use")
+	fs.IntVar(&r.page, "page", 1, "search page")
+	fs.IntVar(&r.limit, "limit", 20, "search page size")
+}
+
+func newClient(proxy string, verbose bool) *lx.Client {
+	c := lx.NewClient()
+	c.Verbose = verbose
+	if proxy != "" {
+		if u, err := url.Parse(proxy); err == nil {
+			c.HTTP.Transport = &http.Transport{
+				Proxy:               http.ProxyURL(u),
+				TLSHandshakeTimeout: 10 * time.Second,
+				IdleConnTimeout:     30 * time.Second,
+			}
+		} else {
+			fmt.Fprintf(os.Stderr, "warning: bad --proxy %q, ignoring\n", proxy)
+		}
+	}
+	return c
+}
+
+// resolveRef turns the CLI arguments into a provider plus a song.
+func resolveRef(ctx context.Context, key, source, search string, index, page, limit int) (lx.Provider, *lx.Song, error) {
+	if source == "" {
+		if i := strings.IndexByte(key, ':'); i > 0 {
+			source = key[:i]
+		} else if search == "" {
+			return nil, nil, fmt.Errorf("cannot determine source: use <source>:<id> or --source with --search")
+		} else {
+			source = "kg"
+		}
+	}
+	p, err := lx.GetProvider(source)
+	if err != nil {
+		return nil, nil, err
+	}
+	s, err := lx.SongRef(ctx, p, key, search, index, page, limit)
+	if err != nil {
+		return nil, nil, err
+	}
+	if s.Name == "" {
+		// A bare --key has no metadata, and user sources need the song name.
+		if err := lx.Hydrate(ctx, p, s); err != nil {
+			fmt.Fprintf(os.Stderr, "note: could not look up song metadata: %v\n", err)
+		}
+	}
+	if s.PageURL == "" {
+		s.PageURL = defaultPageURL(p.ID(), s)
+	}
+	return p, s, nil
+}
+
+// defaultPageURL rebuilds the platform page for a song known only by id.
+func defaultPageURL(source string, s *lx.Song) string {
+	switch source {
+	case "kw":
+		return "http://www.kuwo.cn/play_detail/" + s.ID
+	case "wy":
+		return "https://music.163.com/#/song?id=" + s.ID
+	case "tx":
+		if s.MID != "" {
+			return "https://y.qq.com/n/yqq/song/" + s.MID + ".html"
+		}
+	case "kg":
+		return "https://www.kugou.com/song/"
+	}
+	return ""
+}
+
+func printJSON(v any) error {
+	b, err := json.MarshalIndent(v, "", "  ")
+	if err != nil {
+		return err
+	}
+	fmt.Println(string(b))
+	return nil
+}
+
+func openInBrowser(u string) {
+	if u == "" {
+		return
+	}
+	var c *exec.Cmd
+	switch {
+	case os.Getenv("OS") != "": // windows
+		c = exec.Command("cmd", "/c", "start", "", u)
+	case isDarwin():
+		c = exec.Command("open", u)
+	default:
+		c = exec.Command("xdg-open", u)
+	}
+	if err := c.Run(); err != nil {
+		fmt.Fprintf(os.Stderr, "warning: could not open browser for %s (%v)\n", u, err)
+	}
+}
+
+func isDarwin() bool {
+	b, err := exec.Command("uname", "-s").Output()
+	return err == nil && strings.TrimSpace(string(b)) == "Darwin"
+}
+
+// sanitizeFileName keeps only characters that survive every common shell.
+func sanitizeFileName(name string) string {
+	out := name
+	for _, b := range []string{"<", ">", ":", "\"", "/", "\\", "|", "?", "*"} {
+		out = strings.ReplaceAll(out, b, "_")
+	}
+	out = strings.TrimRight(strings.TrimSpace(out), ".")
+	if out == "" {
+		return "untitled"
+	}
+	return out
+}
+
+func sortedKeys(m map[string]string) []string {
+	keys := make([]string, 0, len(m))
+	for k := range m {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	return keys
+}
+
+func qualityList(s *lx.Song) string {
+	if len(s.Qualities) == 0 {
+		return "-"
+	}
+	out := make([]string, 0, len(s.Qualities))
+	for _, q := range s.Qualities {
+		if q.Size > 0 {
+			out = append(out, q.Type+" "+lx.FormatBytes(q.Size))
+		} else {
+			out = append(out, q.Type)
+		}
+	}
+	sort.Strings(out)
+	return strings.Join(out, " ")
+}
+
+// printSongBlock renders one song the way the app's list item reads.
+func printSongBlock(i int, s *lx.Song) {
+	fmt.Printf("%2d. %s - %s  (%s)  %s\n", i, s.Name, s.Singer, lx.FormatDuration(s.Duration), qualityList(s))
+	if s.Album != "" {
+		fmt.Printf("    album : %s\n", s.Album)
+	}
+	if s.Pic != "" {
+		fmt.Printf("    pic   : %s\n", s.Pic)
+	}
+	if s.PageURL != "" {
+		fmt.Printf("    page  : %s\n", s.PageURL)
+	}
+	fmt.Printf("    ref   : %s\n", s.KeyString())
+}
+
+// platformName shows the app's display name for a source id when it is known.
+func platformName(id string) string {
+	if p, err := lx.GetProvider(id); err == nil {
+		return p.Name()
+	}
+	return id
+}
+
+// bestQualityLabel is the single rendition shown in the table: the highest
+// quality the provider announced, or "-" when none could be determined.
+func bestQualityLabel(s *lx.Song) string {
+	if q := s.BestQuality(); q != "" {
+		return q
+	}
+	for _, q := range s.Qualities {
+		if q.Type != "" {
+			return q.Type
+		}
+	}
+	return "-"
+}
+
+// maxResults is the most rows the search table ever shows, across all sources.
+// The picker is a scrolling list, so fifty leaves room to find a specific
+// version or a specific singer without paging; the table is sorted by quality,
+// so capping happens after the sort and the fifty that survive are the
+// highest-fidelity ones.
+const maxResults = 50
+
+// downloadTimeout is the deadline for one download, measured from when it
+// starts. It is deliberately a per-download budget rather than a session
+// budget: the picker runs for as long as the user sits at the table, and
+// charging the wait time against the transfer would leave a slow download
+// finishing the job with seconds left on the clock.
+const downloadTimeout = 10 * time.Minute
+
+// qualityRank orders the labels the table shows, best first. It has to cover
+// the labels bestQualityLabel emits, and anything it does not recognise falls to
+// zero - including "-", the marker for a row with no quality at all.
+func qualityRank(q string) int {
+	switch q {
+	case lx.QFlac24:
+		return 4
+	case lx.QFlac:
+		return 3
+	case lx.Q320:
+		return 2
+	case lx.Q128:
+		return 1
+	}
+	return 0
+}
+
+// toRows flattens one search page into table rows. Indexes are not assigned
+// here because the rows are sorted and capped afterwards; cmdSearch numbers
+// them once the final set is settled.
+func toRows(res *lx.SearchResult) []tui.Row {
+	if res == nil || len(res.List) == 0 {
+		return nil
+	}
+	out := make([]tui.Row, 0, len(res.List))
+	for _, s := range res.List {
+		out = append(out, tui.Row{
+			Platform: platformName(res.Source),
+			Name:     s.Name,
+			Artist:   s.Singer,
+			Duration: lx.FormatDuration(s.Duration),
+			Quality:  bestQualityLabel(s),
+			Size:     s.BestQualitySize(),
+			Ref:      s.KeyString(),
+			Song:     s,
+		})
+	}
+	return out
+}
+
+// sortRows puts the best fidelity first, then the largest file. Quality is the
+// key the user asked for and the one that separates files that are actually
+// better; within one quality tier the size is still the more informative order,
+// because tiers are announced inconsistently - kugou calls 晴天 flac24bit where
+// kuwo and QQ call the same 52.83 MB file flac - so two tiers may hold the same
+// file and the size breaks the tie. Rows with neither a quality nor a size sort
+// last: an unknown is not a reason to bury a real file. Stable, so each
+// platform's own ordering survives a tie.
+func sortRows(rows []tui.Row) {
+	sort.SliceStable(rows, func(i, j int) bool {
+		if a, b := qualityRank(rows[i].Quality), qualityRank(rows[j].Quality); a != b {
+			return a > b
+		}
+		return rows[i].Size > rows[j].Size
+	})
+}
+
+// downloadDir is where downloads land unless --out says otherwise: a music
+// subdirectory of the directory the command was run from. It is relative to the
+// caller's own working directory, so `lxmusic download` in a repo lands in
+// ./music there rather than in a fixed home folder, and it is created on demand
+// by whoever writes the file.
+func downloadDir() string {
+	dir, err := os.Getwd()
+	if err != nil {
+		return "music"
+	}
+	return filepath.Join(dir, "music")
+}
+
+/* ------------------------------------------------------------ platforms */
+
+func cmdPlatforms(args []string) error {
+	lx.Register(newClient("", false))
+	for _, id := range lx.Sources() {
+		p, err := lx.GetProvider(id)
+		if err != nil {
+			return err
+		}
+		fmt.Printf("%-3s  %s\n", id, p.Name())
+	}
+	return nil
+}
+
+/* -------------------------------------------------------------- search */
+
+func cmdSearch(args []string) error {
+	fs := flag.NewFlagSet("search", flag.ContinueOnError)
+	var source, proxy, outDir, quality string
+	var limit, page int
+	var jsonOut, verbose, plain bool
+	fs.StringVar(&source, "source", "all", "kg|kw|wy|tx|all")
+	fs.IntVar(&limit, "limit", 20, "page size")
+	fs.IntVar(&page, "page", 1, "page number")
+	fs.StringVar(&outDir, "out", downloadDir(), "directory the picker downloads into (default ./music)")
+	fs.StringVar(&quality, "quality", lx.QAuto, "128k|320k|flac|flac24bit|auto")
+	fs.BoolVar(&jsonOut, "json", false, "emit JSON")
+	fs.BoolVar(&plain, "plain", false, "print the table even on a terminal")
+	fs.StringVar(&proxy, "proxy", "", "http proxy URL")
+	fs.BoolVar(&verbose, "verbose", false, "log every HTTP exchange")
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+	if fs.NArg() < 1 {
+		return fmt.Errorf("usage: lxmusic search <keyword> [--source kg|kw|wy|tx|all]")
+	}
+	keyword := fs.Arg(0)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
+	defer cancel()
+	c := newClient(proxy, verbose)
+	lx.Register(c)
+
+	// One page per source; a source that fails is reported and skipped, so a
+	// flaky endpoint never hides the hits the others returned.
+	ids := lx.Sources()
+	if source != "" && source != "all" {
+		ids = []string{source}
+	}
+	var results []*lx.SearchResult
+	var rows []tui.Row
+	var hidden []string
+	for _, id := range ids {
+		p, err := lx.GetProvider(id)
+		if err != nil {
+			return err
+		}
+		res, err := p.Search(ctx, keyword, page, limit)
+		if err != nil {
+			// A source that does not search by design is not a warning when the
+			// sweep covers everything. Asked for by name it still explains itself.
+			if errors.Is(err, lx.ErrNoSearch) && source == "all" {
+				continue
+			}
+			fmt.Fprintf(os.Stderr, "warning: %s: %v\n", id, err)
+			continue
+		}
+		results = append(results, res)
+		// The table is a download list, so a row only earns a place if it can be
+		// downloaded with what is configured. Anonymous audio is enough on its
+		// own; otherwise a user source that serves the platform is enough - that
+		// is exactly the capability a user source exists to add, and once one is
+		// configured these rows are real results again. --json above still shows
+		// everything, untouched.
+		if p.AnonymousAudio() || lx.UserSourceFor(id) != nil {
+			rows = append(rows, toRows(res)...)
+		} else if len(res.List) > 0 {
+			hidden = append(hidden, id)
+		}
+	}
+	// --json dumps the raw search responses untouched, so the filter, the cap
+	// and the sort are applied only to the table, which is a presentation
+	// concern.
+	if jsonOut {
+		if len(results) == 1 {
+			return printJSON(results[0])
+		}
+		return printJSON(results)
+	}
+	if len(hidden) > 0 {
+		fmt.Fprintf(os.Stderr, "note: 已过滤掉 %s 的结果：这些音源匿名拿不到音频直链，也没有配置能供它们的音源（--json 可看完整搜索结果）\n",
+			strings.Join(hidden, " "))
+	}
+
+	// Highest fidelity first, then keep the top maxResults. The slice is cut
+	// before numbering, so the table reads 1..N with no gaps.
+	sortRows(rows)
+	if len(rows) > maxResults {
+		rows = rows[:maxResults]
+	}
+	for i := range rows {
+		rows[i].Index = i + 1
+	}
+
+	title := fmt.Sprintf("搜索 %q — %d 条结果", keyword, len(rows))
+	if len(rows) == 0 {
+		fmt.Printf("搜索 %q: 无结果\n", keyword)
+		return nil
+	}
+	if plain || !tui.Terminal() {
+		tui.PrintTable(os.Stdout, 0, title, rows)
+		return nil
+	}
+
+	prog := &tui.DownloadProgress{}
+	// The search deadline belongs to the search. This one carries the whole
+	// interactive session - how long the user spends reading the list and
+	// choosing - and each download is given its own downloadTimeout below.
+	// Deriving the picker from ctx would cap a download at whatever time the
+	// search left over, so a 2 minute search left the transfer with about 90
+	// seconds and the table was the bottleneck the user never saw.
+	session, sessionCancel := context.WithCancel(context.Background())
+	defer sessionCancel()
+	status, err := tui.Pick(session, tui.Prompt{
+		Title: title,
+		Rows:  rows,
+		Foot:  "保存到 " + outDir,
+		Download: func(r tui.Row, dctx context.Context) (string, error) {
+			d, cancel := context.WithTimeout(dctx, downloadTimeout)
+			defer cancel()
+			return downloadSelected(c, r, quality, outDir, d, prog.Report)
+		},
+		SavePath: func(r tui.Row) string {
+			return savePathFor(r, outDir)
+		},
+		Progress: prog,
+	})
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "note: %v; 改用表格输出\n", err)
+		tui.PrintTable(os.Stdout, 0, title, rows)
+	} else if status != "" {
+		fmt.Println(status)
+	}
+	return nil
+}
+
+/* ------------------------------------------------------- url / download */
+
+func cmdURL(args []string) error {
+	fs := flag.NewFlagSet("url", flag.ContinueOnError)
+	ref := &refs{}
+	ref.register(fs)
+	var source, quality, proxy string
+	var jsonOut, verbose bool
+	fs.StringVar(&source, "source", "", "source id for a bare reference")
+	fs.StringVar(&quality, "quality", lx.QAuto, "128k|320k|flac|flac24bit|auto")
+	fs.BoolVar(&jsonOut, "json", false, "emit JSON")
+	fs.StringVar(&proxy, "proxy", "", "http proxy URL")
+	fs.BoolVar(&verbose, "verbose", false, "log every HTTP exchange")
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+	if ref.key == "" && fs.NArg() > 0 {
+		ref.key = fs.Arg(0)
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 90*time.Second)
+	defer cancel()
+	c := newClient(proxy, verbose)
+	lx.Register(c)
+
+	p, s, err := resolveRef(ctx, ref.key, source, ref.search, ref.index, ref.page, ref.limit)
+	if err != nil {
+		return err
+	}
+	pl, _, err := resolveAudio(ctx, p, s, quality)
+	if err != nil {
+		return err
+	}
+	if jsonOut {
+		return printJSON(pl)
+	}
+	fmt.Printf("song    : %s\n", s.KeyString())
+	fmt.Printf("quality : %s\n", pl.Quality)
+	fmt.Printf("url     : %s\n", pl.URL)
+	for _, k := range sortedKeys(pl.Headers) {
+		fmt.Printf("header  : %s: %s\n", k, pl.Headers[k])
+	}
+	if pl.Size > 0 {
+		fmt.Printf("size    : %s\n", lx.FormatBytes(pl.Size))
+	}
+	if pl.Note != "" {
+		fmt.Printf("note    : %s\n", pl.Note)
+	}
+	return nil
+}
+
+func cmdDownload(args []string) error {
+	fs := flag.NewFlagSet("download", flag.ContinueOnError)
+	ref := &refs{}
+	ref.register(fs)
+	var source, quality, outDir, proxy string
+	var verbose bool
+	fs.StringVar(&source, "source", "", "source id for a bare reference")
+	fs.StringVar(&quality, "quality", lx.QAuto, "128k|320k|flac|flac24bit|auto")
+	fs.StringVar(&outDir, "out", downloadDir(), "download directory (default ./music)")
+	fs.StringVar(&proxy, "proxy", "", "http proxy URL")
+	fs.BoolVar(&verbose, "verbose", false, "log every HTTP exchange")
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+	if ref.key == "" && fs.NArg() > 0 {
+		ref.key = fs.Arg(0)
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), downloadTimeout)
+	defer cancel()
+	c := newClient(proxy, verbose)
+	lx.Register(c)
+
+	p, s, err := resolveRef(ctx, ref.key, source, ref.search, ref.index, ref.page, ref.limit)
+	if err != nil {
+		return err
+	}
+	var on func(done, total int64)
+	stop := func() {}
+	if tui.Terminal() {
+		prog := &tui.DownloadProgress{}
+		on = prog.Report
+		stop = pumpProgress(os.Stdout, prog, s.KeyString())
+	}
+	status, err := downloadOne(ctx, c, p, s, quality, outDir, on)
+	stop()
+	if err != nil {
+		return err
+	}
+	fmt.Println(status)
+	return nil
+}
+
+// progressTick is how often the bar is redrawn. A variable, not a constant, so
+// a test can shorten it rather than sleeping on a real cadence.
+var progressTick = 100 * time.Millisecond
+
+// pumpProgress redraws one progress line while a download runs, so the plain
+// "download" command reports the transfer the way the picker does. The caller
+// gates it on tui.Terminal, so piped output stays byte-clean.
+//
+// The bar goes to stdout rather than stderr: the preview and note warnings are
+// emitted to stderr partway through the transfer, and a \r bar on the same
+// stream would overwrite them. stop returns only after the final line has been
+// printed and cleared, so the saved line lands on its own line; calling it more
+// than once is a no-op.
+func pumpProgress(w io.Writer, p *tui.DownloadProgress, label string) (stop func()) {
+	stopCh := make(chan struct{})
+	finished := make(chan struct{})
+	go func() {
+		defer close(finished)
+		tick := time.NewTicker(progressTick) // the picker polls at the same rate
+		defer tick.Stop()
+		for {
+			select {
+			case <-stopCh:
+				_, _ = fmt.Fprintf(w, "\r%s\n", p.Line(label))
+				return
+			case <-tick.C:
+				_, _ = fmt.Fprintf(w, "\r%s", p.Line(label))
+			}
+		}
+	}()
+	var once sync.Once
+	return func() {
+		once.Do(func() {
+			close(stopCh)
+			<-finished
+		})
+	}
+}
+
+// resolveAudio asks for one rendition, preferring a configured user source, and
+// reports the id of whoever answered - "" when the named provider did. When a
+// user source takes over and answers with no note of its own, one is added: the
+// built-in's "this is a short preview" note would describe the other request,
+// not the bytes that were actually served.
+func resolveAudio(ctx context.Context, p lx.Provider, s *lx.Song, quality string) (*lx.PlayerURL, string, error) {
+	by := lx.AudioProvider(p, s)
+	pl, err := by.MusicURL(ctx, s, s.QualityByType(quality))
+	if err != nil || by == p {
+		return pl, "", err
+	}
+	if pl != nil && pl.Note == "" {
+		pl.Note = "served by user source " + by.ID()
+	}
+	return pl, by.ID(), nil
+}
+
+// downloadOne resolves the rendition and writes the file, returning a one-line
+// status. Shared by "download" and the interactive picker. on receives the bytes
+// written as they happen, or nil when nothing is watching.
+func downloadOne(ctx context.Context, c *lx.Client, p lx.Provider, s *lx.Song,
+	quality, outDir string, on func(done, total int64)) (string, error) {
+	pl, user, err := resolveAudio(ctx, p, s, quality)
+	if err != nil {
+		return "", err
+	}
+	name := pl.FileName
+	if name == "" {
+		// s.Name can be empty when a song is known only by id and the metadata
+		// lookup failed, so fall back to the reference: an empty base is what
+		// produced a file called ".mp3".
+		base := s.Name
+		if base == "" {
+			base = s.KeyString()
+		}
+		name = base + lx.AudioExt(pl.Quality, pl.URL)
+	}
+	if err := os.MkdirAll(outDir, 0o755); err != nil {
+		return "", err
+	}
+	path := filepath.Join(outDir, sanitizeFileName(name))
+	n, err := c.DownloadFileOn(ctx, pl.URL, path, pl.Headers, on)
+	if err != nil {
+		return "", err
+	}
+	if user != "" {
+		fmt.Fprintf(os.Stderr, "note  : audio served by user source %q, not the built-in %q\n", user, p.ID())
+	}
+	if pl.Note != "" {
+		fmt.Fprintf(os.Stderr, "note  : %s\n", pl.Note)
+	}
+	previewNote(s.Duration, n)
+	return fmt.Sprintf("✓ 已保存 %s (%s)", path, lx.FormatBytes(n)), nil
+}
+
+// downloadSelected saves one table row. The row already carries the song it was
+// drawn from, so that is used: re-resolving the reference would be a network
+// round trip for nothing, and when the lookup fails the song arrives without a
+// name, which is how a file came out called ".mp3".
+func downloadSelected(c *lx.Client, r tui.Row, quality, outDir string, ctx context.Context,
+	on func(done, total int64)) (string, error) {
+	s := r.Song
+	if s == nil {
+		// A row that only ever had a reference in it.
+		_, q, err := resolveRef(ctx, r.Ref, "", "", 0, 0, 0)
+		if err != nil {
+			return "", err
+		}
+		s = q
+	}
+	p, err := lx.GetProvider(s.Source)
+	if err != nil {
+		return "", err
+	}
+	return downloadOne(ctx, c, p, s, quality, outDir, on)
+}
+
+// savePathFor predicts where a row will be written, without a network round
+// trip. The confirm prompt appears between the Enter keypress and this
+// returning, so anything blocking in here reads as the UI freezing. The download
+// settles the real name afterwards and reports the exact path it wrote; this is
+// the same fallback downloadOne uses when the platform supplies no file name.
+// The directory is always the truth - only the file name is a prediction.
+func savePathFor(r tui.Row, outDir string) string {
+	name := r.Name
+	if name == "" {
+		name = r.Ref
+	}
+	return filepath.Join(outDir, sanitizeFileName(name+lx.AudioExt(r.Quality, "")))
+}
+
+// previewNote warns when the platform handed back a fragment of the song
+// rather than the track. kuwo's anonymous convert_url serves the same ~181 KB
+// preview object for every song whatever the bitrate, so the size alone is a
+// reliable tell: a real mp3 runs at least about 16 KB per second of runtime.
+// A bare "source:id" reference carries no runtime, so a fixed floor stands in
+// for it - no track longer than a minute is ever that small.
+func previewNote(durationSec int, got int64) {
+	if got <= 0 {
+		return
+	}
+	if durationSec > 0 {
+		if got >= int64(durationSec)*16000*3/4 {
+			return
+		}
+	} else if got >= 400*1024 {
+		return
+	}
+	suffix := ""
+	if durationSec > 0 {
+		suffix = " of a " + lx.FormatDuration(durationSec) + " track"
+	}
+	fmt.Fprintf(os.Stderr, "note  : this is a preview, not the song (%s%s).\n"+
+		"        a user source, or a logged-in session, is what gets the full track.\n",
+		lx.FormatBytes(got), suffix)
+}
+
+/* --------------------------------------------------------------- lyric */
+
+func cmdLyric(args []string) error {
+	fs := flag.NewFlagSet("lyric", flag.ContinueOnError)
+	ref := &refs{}
+	ref.register(fs)
+	var source, proxy string
+	var showTrans, jsonOut, verbose bool
+	fs.StringVar(&source, "source", "", "source id for a bare reference")
+	fs.BoolVar(&showTrans, "show-trans", false, "also print the translation")
+	fs.BoolVar(&jsonOut, "json", false, "emit JSON")
+	fs.StringVar(&proxy, "proxy", "", "http proxy URL")
+	fs.BoolVar(&verbose, "verbose", false, "log every HTTP exchange")
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+	if ref.key == "" && fs.NArg() > 0 {
+		ref.key = fs.Arg(0)
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 90*time.Second)
+	defer cancel()
+	c := newClient(proxy, verbose)
+	lx.Register(c)
+
+	p, s, err := resolveRef(ctx, ref.key, source, ref.search, ref.index, ref.page, ref.limit)
+	if err != nil {
+		return err
+	}
+	if s.Name == "" {
+		return fmt.Errorf("this source needs a song name for lyrics: re-run with --search <keyword> --index N")
+	}
+	ly, err := p.Lyric(ctx, s)
+	if err != nil {
+		return err
+	}
+	if jsonOut {
+		return printJSON(ly)
+	}
+	if ly.Format == "krc" {
+		fmt.Fprintln(os.Stderr, "note: kugou returned KRC karaoke data (decoded)")
+	}
+	fmt.Println(ly.Plain)
+	if showTrans && strings.TrimSpace(ly.Trans) != "" {
+		fmt.Println("\n--- translation ---")
+		fmt.Println(ly.Trans)
+	}
+	if strings.TrimSpace(ly.Roman) != "" {
+		fmt.Println("\n--- romanization ---")
+		fmt.Println(ly.Roman)
+	}
+	return nil
+}
+
+/* ------------------------------------------------------------- pic/play */
+
+func cmdPic(args []string) error {
+	fs := flag.NewFlagSet("pic", flag.ContinueOnError)
+	ref := &refs{}
+	ref.register(fs)
+	var source, proxy string
+	var jsonOut, verbose bool
+	fs.StringVar(&source, "source", "", "source id for a bare reference")
+	fs.BoolVar(&jsonOut, "json", false, "emit JSON")
+	fs.StringVar(&proxy, "proxy", "", "http proxy URL")
+	fs.BoolVar(&verbose, "verbose", false, "log every HTTP exchange")
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+	if ref.key == "" && fs.NArg() > 0 {
+		ref.key = fs.Arg(0)
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 90*time.Second)
+	defer cancel()
+	c := newClient(proxy, verbose)
+	lx.Register(c)
+
+	p, s, err := resolveRef(ctx, ref.key, source, ref.search, ref.index, ref.page, ref.limit)
+	if err != nil {
+		return err
+	}
+	u, err := p.Pic(ctx, s)
+	if err != nil {
+		return err
+	}
+	if jsonOut {
+		return printJSON(map[string]string{"url": u, "song": s.KeyString()})
+	}
+	fmt.Println(u)
+	return nil
+}
+
+func cmdPlay(args []string) error {
+	fs := flag.NewFlagSet("play", flag.ContinueOnError)
+	ref := &refs{}
+	ref.register(fs)
+	var source, quality, proxy string
+	var verbose bool
+	fs.StringVar(&source, "source", "", "source id for a bare reference")
+	fs.StringVar(&quality, "quality", lx.QAuto, "128k|320k|flac|flac24bit|auto")
+	fs.StringVar(&proxy, "proxy", "", "http proxy URL")
+	fs.BoolVar(&verbose, "verbose", false, "log every HTTP exchange")
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+	if ref.key == "" && fs.NArg() > 0 {
+		ref.key = fs.Arg(0)
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 90*time.Second)
+	defer cancel()
+	c := newClient(proxy, verbose)
+	lx.Register(c)
+
+	p, s, err := resolveRef(ctx, ref.key, source, ref.search, ref.index, ref.page, ref.limit)
+	if err != nil {
+		return err
+	}
+	fmt.Printf("playing: %s - %s\n", s.Singer, s.Name)
+	pl, user, err := resolveAudio(ctx, p, s, quality)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "note: no direct stream (%v)\n", err)
+	} else {
+		fmt.Printf("quality: %s\nstream : %s\n", pl.Quality, pl.URL)
+		if user != "" {
+			fmt.Printf("note   : stream served by user source %q\n", user)
+		}
+		if pl.Note != "" {
+			fmt.Printf("note   : %s\n", pl.Note)
+		}
+		if len(pl.Headers) > 0 {
+			for _, k := range sortedKeys(pl.Headers) {
+				fmt.Printf("header : %s: %s\n", k, pl.Headers[k])
+			}
+		}
+	}
+	openInBrowser(s.PageURL)
+	_ = c
+	return nil
+}
+
+/* -------------------------------------------------------------- detail */
+
+func cmdDetail(args []string) error {
+	fs := flag.NewFlagSet("detail", flag.ContinueOnError)
+	ref := &refs{}
+	ref.register(fs)
+	var source, proxy string
+	var jsonOut, verbose bool
+	fs.StringVar(&source, "source", "", "source id for a bare reference")
+	fs.BoolVar(&jsonOut, "json", false, "emit JSON")
+	fs.StringVar(&proxy, "proxy", "", "http proxy URL")
+	fs.BoolVar(&verbose, "verbose", false, "log every HTTP exchange")
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+	if ref.key == "" && fs.NArg() > 0 {
+		ref.key = fs.Arg(0)
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 90*time.Second)
+	defer cancel()
+	c := newClient(proxy, verbose)
+	lx.Register(c)
+
+	p, s, err := resolveRef(ctx, ref.key, source, ref.search, ref.index, ref.page, ref.limit)
+	if err != nil {
+		return err
+	}
+	if err := p.Detail(ctx, s); err != nil {
+		fmt.Fprintf(os.Stderr, "note: %v\n", err)
+	}
+	if _, err := p.Pic(ctx, s); err != nil && s.Pic == "" {
+		fmt.Fprintf(os.Stderr, "note: %v\n", err)
+	}
+	if jsonOut {
+		return printJSON(s)
+	}
+	printSongBlock(1, s)
+	return nil
+}
+
+/* --------------------------------------------------------------- share */
+
+// cmdShare answers "give me a link for this song name I can hand to someone".
+// Two kinds of link have very different lifetimes, so both are printed:
+//
+//	page   — the platform's own page, stable for years. This is what you share.
+//	stream — a direct audio URL with an embedded vkey/token that the platform
+//	         expires on the order of minutes to hours. Useful for piping into
+//	         ffplay/ffmpeg, useless as a permanent share.
+func cmdShare(args []string) error {
+	fs := flag.NewFlagSet("share", flag.ContinueOnError)
+	var source, quality, proxy string
+	var index, limit, page int
+	var jsonOut, verbose bool
+	fs.StringVar(&source, "source", "all", "kg|kw|wy|tx|<user source>|all")
+	fs.StringVar(&quality, "quality", lx.QAuto, "128k|320k|flac|flac24bit|auto")
+	fs.IntVar(&index, "index", 1, "which search result to use")
+	fs.IntVar(&limit, "limit", 10, "search page size")
+	fs.IntVar(&page, "page", 1, "search page")
+	fs.StringVar(&proxy, "proxy", "", "http proxy URL")
+	fs.BoolVar(&jsonOut, "json", false, "emit JSON")
+	fs.BoolVar(&verbose, "verbose", false, "log every HTTP exchange")
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+	if fs.NArg() < 1 {
+		return fmt.Errorf("usage: lxmusic share <song name> [--source kg|kw|wy|tx|all]")
+	}
+	keyword := fs.Arg(0)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
+	defer cancel()
+	c := newClient(proxy, verbose)
+	lx.Register(c)
+
+	var p lx.Provider
+	var s *lx.Song
+	if source == "all" || source == "" {
+		for _, id := range lx.Sources() {
+			q, err := lx.GetProvider(id)
+			if err != nil {
+				continue
+			}
+			res, err := q.Search(ctx, keyword, page, limit)
+			if err != nil || len(res.List) == 0 {
+				continue
+			}
+			if hit, err2 := lx.SongFromSearchResult(res, index); err2 == nil {
+				s = hit
+				p = q
+				break
+			}
+		}
+		if p == nil {
+			return fmt.Errorf("no hits for %q on any source", keyword)
+		}
+	} else {
+		q, err := lx.GetProvider(source)
+		if err != nil {
+			return err
+		}
+		res, err := q.Search(ctx, keyword, page, limit)
+		if err != nil {
+			return err
+		}
+		s, err = lx.SongFromSearchResult(res, index)
+		if err != nil {
+			return err
+		}
+		p = q
+	}
+	if s.PageURL == "" {
+		s.PageURL = defaultPageURL(p.ID(), s)
+	}
+
+	stream, streamQuality, streamNote, streamErr := "", "", "", error(nil)
+	if pl, _, err := resolveAudio(ctx, p, s, quality); err == nil {
+		stream, streamQuality, streamNote = pl.URL, pl.Quality, pl.Note
+	} else {
+		streamErr = err
+	}
+
+	out := map[string]any{
+		"name":    s.Name + " - " + s.Singer,
+		"source":  p.ID(),
+		"ref":     s.KeyString(),
+		"page":    s.PageURL,
+		"quality": streamQuality,
+		"stream":  stream,
+	}
+	if streamNote != "" {
+		out["note"] = streamNote
+	}
+	if streamErr != nil {
+		out["streamError"] = streamErr.Error()
+	}
+	if jsonOut {
+		return printJSON(out)
+	}
+	fmt.Printf("song    : %s - %s\n", s.Name, s.Singer)
+	fmt.Printf("source  : %s   ref: %s\n", p.ID(), s.KeyString())
+	fmt.Printf("page    : %s\n", s.PageURL)
+	if stream != "" {
+		fmt.Printf("quality : %s\n", streamQuality)
+		fmt.Printf("stream  : %s\n", stream)
+		if streamNote != "" {
+			fmt.Printf("note    : %s\n", streamNote)
+		}
+	} else {
+		fmt.Fprintf(os.Stderr, "note: no direct stream (%v)\n", streamErr)
+	}
+	fmt.Println("\nThe page link is the one to share — it never expires. The stream link")
+	fmt.Println("carries a platform vkey/token and stops working within minutes to hours.")
+	return nil
+}
+
+/* -------------------------------------------------------- source config */
+
+func cmdSource(args []string) error {
+	// flagsFirst hoists every flag ahead of the subcommand, so find the first
+	// bare token, skipping the value of each flag that takes one, then drop it
+	// from the list the subcommand handlers parse.
+	sub, rest := "list", args
+	for i := 0; i < len(args); i++ {
+		a := args[i]
+		if strings.HasPrefix(a, "-") {
+			if !strings.Contains(a, "=") && i+1 < len(args) && !strings.HasPrefix(args[i+1], "-") {
+				i++
+			}
+			continue
+		}
+		sub = a
+		rest = append(append([]string{}, args[:i]...), args[i+1:]...)
+		break
+	}
+	switch sub {
+	case "list", "ls":
+		cfg, err := lx.LoadConfig()
+		if err != nil {
+			return err
+		}
+		dir, _ := lx.ConfigDir()
+		fmt.Printf("config : %s\n", dir)
+		node := cfg.Node
+		if node == "" {
+			if found, err := exec.LookPath("node"); err == nil {
+				node = found
+			} else {
+				node = "(not found — user sources need node on PATH)"
+			}
+		}
+		fmt.Printf("node   : %s\n", node)
+		if len(cfg.Sources) == 0 {
+			fmt.Println("\nno user sources configured. Add one with:")
+			fmt.Println("  lxmusic source add --name flower --url https://raw.githubusercontent.com/pdone/lx-music-source/main/flower/latest.js")
+			return nil
+		}
+		fmt.Println("\nname        source  url")
+		for _, s := range cfg.Sources {
+			src := s.Source
+			if src == "" {
+				src = "(any)"
+			}
+			fmt.Printf("%-10s %-8s %s\n", s.Name, src, s.URL)
+		}
+		return nil
+	case "add":
+		return cmdSourceAdd(rest)
+	case "rm", "remove", "del":
+		return cmdSourceRemove(rest)
+	case "path":
+		dir, err := lx.ConfigDir()
+		if err != nil {
+			return err
+		}
+		fmt.Println(dir)
+		return nil
+	case "test":
+		return cmdSourceType(rest)
+	case "info", "describe":
+		return cmdSourceInfo(rest)
+	default:
+		return fmt.Errorf("unknown source subcommand %q (list|add|rm|path|info|test)", sub)
+	}
+}
+
+// cmdSourceInfo runs the script once and prints what it announced. The quality
+// column is what --quality can actually be honoured with.
+func cmdSourceInfo(args []string) error {
+	if len(args) < 1 {
+		return fmt.Errorf("usage: lxmusic source info <name>")
+	}
+	c := newClient("", false)
+	lx.Register(c)
+	p, err := lx.GetProvider(args[0])
+	if err != nil {
+		return err
+	}
+	u, ok := p.(*lx.UserSource)
+	if !ok {
+		return fmt.Errorf("%q is not a user source (lxmusic source list)", args[0])
+	}
+	if err := u.Describe(context.Background()); err != nil {
+		return err
+	}
+	fmt.Printf("name    : %s\n", u.Spec.Name)
+	if u.Info.Name != "" {
+		fmt.Printf("script  : %s", u.Info.Name)
+		if u.Info.Version != "" {
+			fmt.Printf(" v%s", u.Info.Version)
+		}
+		fmt.Println()
+	}
+	if u.Info.Description != "" {
+		fmt.Printf("desc    : %s\n", u.Info.Description)
+	}
+	src := u.Spec.Source
+	if src == "" {
+		src = "(any)"
+	}
+	fmt.Printf("serves  : %s\n", src)
+	if len(u.Cap) == 0 {
+		fmt.Println("\ndeclared : nothing — the script never called lx.send(inited)")
+		return nil
+	}
+	fmt.Println("\nplatform  actions    qualities")
+	names := make([]string, 0, len(u.Cap))
+	for k := range u.Cap {
+		names = append(names, k)
+	}
+	sort.Strings(names)
+	for _, k := range names {
+		cap := u.Cap[k]
+		fmt.Printf("%-9s %-11s %s\n", k, strings.Join(cap.Actions, ","), strings.Join(cap.Qualitys, ","))
+	}
+	return nil
+}
+
+func cmdSourceAdd(args []string) error {
+	fs := flag.NewFlagSet("source add", flag.ContinueOnError)
+	var name, u, source, node string
+	var timeout, ttl int
+	fs.StringVar(&name, "name", "", "short id, e.g. flower")
+	fs.StringVar(&u, "url", "", "script url or local file path")
+	fs.StringVar(&source, "source", "", "platform this source serves (kg|kw|wy|tx)")
+	fs.StringVar(&node, "node", "", "node executable, defaults to PATH")
+	fs.IntVar(&timeout, "timeout", 25, "per-request seconds")
+	fs.IntVar(&ttl, "ttl", 24, "script cache ttl hours")
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+	if name == "" || u == "" {
+		return fmt.Errorf("usage: lxmusic source add --name <id> --url <script url or path>")
+	}
+	cfg, err := lx.LoadConfig()
+	if err != nil {
+		return err
+	}
+	spec := lx.UserSourceSpec{Name: name, URL: u, Source: source, Node: node, TimeoutSec: timeout, CacheTTLHrs: ttl}
+	if err := cfg.Set(spec); err != nil {
+		return err
+	}
+	fmt.Printf("added source %q -> %s\n", name, u)
+	return nil
+}
+
+func cmdSourceRemove(args []string) error {
+	fs := flag.NewFlagSet("source rm", flag.ContinueOnError)
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+	if fs.NArg() < 1 {
+		return fmt.Errorf("usage: lxmusic source rm <name>")
+	}
+	cfg, err := lx.LoadConfig()
+	if err != nil {
+		return err
+	}
+	if err := cfg.Remove(fs.Arg(0)); err != nil {
+		return err
+	}
+	fmt.Printf("removed source %q\n", fs.Arg(0))
+	return nil
+}
+
+// cmdSourceType downloads the script and runs its `musicUrl` action once to
+// prove the node bridge works end to end before the user relies on it.
+func cmdSourceType(args []string) error {
+	fs := flag.NewFlagSet("source test", flag.ContinueOnError)
+	var quality string
+	fs.StringVar(&quality, "quality", lx.QAuto, "rendition to resolve")
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+	if fs.NArg() < 2 {
+		return fmt.Errorf("usage: lxmusic source test <name> <song-ref> [--quality ...]")
+	}
+	c := newClient("", false)
+	lx.Register(c)
+	p, err := lx.GetProvider(fs.Arg(0))
+	if err != nil {
+		return err
+	}
+	u, ok := p.(*lx.UserSource)
+	if !ok {
+		return fmt.Errorf("%q is not a user source (lxmusic source list)", fs.Arg(0))
+	}
+	lookup, err := lx.GetProvider(u.Spec.Source)
+	if err != nil {
+		return err
+	}
+	s, err := lx.SongRef(context.Background(), lookup, fs.Arg(1), "", 1, 1, 20)
+	if err != nil {
+		return err
+	}
+	if s.Name == "" {
+		if err := lx.Hydrate(context.Background(), lookup, s); err != nil {
+			fmt.Fprintf(os.Stderr, "note: %v\n", err)
+		}
+	}
+	if s.PageURL == "" {
+		s.PageURL = defaultPageURL(lookup.ID(), s)
+	}
+	fmt.Printf("source  : %s (%s)\n", u.Spec.Name, u.Spec.URL)
+	fmt.Printf("song    : %s - %s   [%s]\n", s.Name, s.Singer, s.KeyString())
+	pl, err := u.MusicURL(context.Background(), s, s.QualityByType(quality))
+	if err != nil {
+		return err
+	}
+	fmt.Printf("quality : %s\nurl     : %s\n", pl.Quality, pl.URL)
+	if ly, err := u.Lyric(context.Background(), s); err == nil {
+		fmt.Printf("\nlyric   : OK (%s, %d bytes)\n", ly.Format, len(ly.Plain))
+	} else {
+		fmt.Printf("lyric  : unavailable (%v)\n", err)
+	}
+	return nil
+}

@@ -1,0 +1,20 @@
+﻿go : HTTP GET http://songsearch.kugou.com/song_search_v2?PrivilegeFilter=0&hifiquality=0&iscorrection=1&keyword=%E6%99%
+B4%E5%A4%A9&page=1&pagesize=20&platform=AndroidFilter
+At line:1 char:333
++ ... rl\lxmusic; go run . lyric --search "晴天" --source kg --json --verbose ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (HTTP GET http:/...m=AndroidFilter:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+HTTP songsearch.kugou.com 200 (67477 bytes)
+HTTP GET http://lyrics.kugou.com/search?client=pc&hash=B3A52A7A958BF0AED0EBFBA2E9A818B7&keyword=%E5%91%A8%E6%9D%B0%E4%B
+C%A6+%E6%99%B4%E5%A4%A9&lrctxt=1&man=yes&timelength=269&ver=1
+HTTP lyrics.kugou.com 200 (13104 bytes)
+HTTP GET http://lyrics.kugou.com/download?accesskey=2A7B35884B3C20E9D3281686BA59A3F8&charset=utf8&client=pc&fmt=krc&id=
+274944371&ver=1
+HTTP lyrics.kugou.com 200 (5720 bytes)
+{
+  "lyric": "[ti:晴天]\n[ar:周杰伦]\n[al:叶惠美]\n[by:]\n[offset:0]\n[00:00.00]晴天 - 周杰伦 (Jay Chou)\n[00:00.00]词：周杰伦\n[00:00.00]曲：周杰伦\n[00:00.00]编曲：周杰伦\n[00:00.00]制作人：周杰伦\n[00:00.00]合声：周杰伦\n[00:00.00]合声编写：周杰伦\n[00:00.00]吉他：蔡科俊Again\n[00:00.00]贝斯：陈任佑\n[00:00.00]鼓：陈柏州\n[00:00.00]录音助理：刘勇志\n[00:00.00]录音工程：杨瑞代（Alfa Studio）\n[00:00.00]混音工程：杨大纬（杨大纬录音工作室）\n[00:00.00]故事的小黄花\n[00:00.00]从出生那年就飘着\n[00:00.00]童年的荡秋千\n[00:00.00]随记忆一直晃到现在\n[00:00.00]Re So So Si Do Si La \n[00:00.00]So La Si Si Si Si La Si La So \n[00:00.00]吹着前奏望着天空\n[00:00.00]我想起花瓣试着掉落\n[00:00.00]为你翘课的那一天\n[00:00.00]花落的那一天\n[00:00.00]教室的那一间\n[00:00.00]我怎么看不见\n[00:00.00]消失的下雨天\n[00:00.00]我好想再淋一遍\n[00:00.00]没想到失去的勇气我还留着\n[00:00.00]好想再问一遍\n[00:00.00]你会等待还是离开\n[00:00.00]刮风这天我试过握着你手\n[00:00.00]但偏偏雨渐渐大到我看你不见\n[00:00.00]还要多久我才能在你身边\n[00:00.00]等到放晴的那天也许我会比较好一点\n[00:00.00]从前从前有个人爱你很久\n[00:00.00]但偏偏风渐渐把距离吹得好远\n[00:00.00]好不容易又能再多爱一天\n[00:00.00]但故事的最后你好像还是说了拜拜\n[00:00.00]为你翘课的那一天\n[00:00.00]花落的那一天\n[00:00.00]教室的那一间\n[00:00.00]我怎么看不见\n[00:00.00]消失的下雨天\n[00:00.00]我好想再淋一遍\n[00:00.00]没想到失去的勇气我还留着\n[00:00.00]好想再问一遍\n[00:00.00]你会等待还是离开\n[00:00.00]刮风这天我试过握着你手\n[00:00.00]但偏偏雨渐渐大到我看你不见\n[00:00.00]还要多久我才能在你身边\n[00:00.00]等到放晴的那天也许我会比较好一点\n[00:00.00]从前从前有个人爱你很久\n[00:00.00]偏偏风渐渐把距离吹得好远\n[00:00.00]好不容易又能再多爱一天\n[00:00.00]但故事的最后你好像还是说了拜拜\n[00:00.00]刮风这天我试过握着你手\n[00:00.00]但偏偏雨渐渐大到我看你不见\n[00:00.00]还要多久我才能够在你身边\n[00:00.00]等到放晴那天也许我会比较好一点\n[00:00.00]从前从前有个人爱你很久\n[00:00.00]但偏偏雨渐渐把距离吹得好远\n[00:00.00]好不容易又能再多爱一天\n[00:00.00]但故事的最后你好像还是说了拜",
+  "format": "krc",
+  "url": "http://lyrics.kugou.com/download"
+}

@@ -1,0 +1,32 @@
+﻿node : ON_HANDLER
+At line:1 char:302
++ ... tch {} } }; node C:\lx-rl\scripts\run-bridge.js C:\lx-rl\scripts\dbg- ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (ON_HANDLER:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+({source:c,action:N,info:{musicInfo:S,type:q}})=>{const RE={p:'\x30\x78\x63\x65',O:0xe9,w:'\x30\x78\x64\x32',r:0x119,g:
+'\x30\x78\x63\x38',h:0x119,E:0xfc,u:'\x30\x78\x31\x31\x35',C:'\x30\x78\x63\x62',U:0xda,T:0xeb,z:'\x30\x78\x62\x37',P:0x
+e7,e:0x106},Rg={p:0xfb},J=A,y={'\x74\x53\x71\x51\x6f':function(G,F,K){const B=Z;return p[B(Rr.p)](G,F,K);},'\x65\x72\x4
+5\x73\x57':p[J(Ru.p)],'\x78\x42\x41\x57\x4f':function(G,F,K,b){const x=J;return p[x(Rg.p)](G,F,K,b);},'\x72\x62\x72\x71
+\x66':function(G,F){const W=J;return p[W(Rh.p)](G,F);},'\x41\x62\x61\x63\x4a':p[J(Ru.O)],'\x4d\x76\x7a\x48\x46':p[J(Ru.
+w)]};if(p[J(Ru.r)](p[J(Ru.g)],N))throw p[J(Ru.h)](Error,p[J(Ru.E)]);return new Promise((G,F)=>{const Y=J;let K=Y(RE.p)+
+c+'\x2f'+y[Y(RE.O)](z,c,S)+'\x2f'+q;P[Y(RE.w)]=T[Y(RE.r)][Y(RE.g)+'\x67'](T[Y(RE.h)][Y(RE.E)](JSON[Y(RE.u)](K[Y(RE.C)](
+/(?:\d\w)+/g),null,0x216b+0x1224+-0x338e)),y[Y(RE.U)]),y[Y(RE.T)](w,y[Y(RE.z)](y[Y(RE.P)],K),{'\x6d\x65\x74\x68\x6f\x64
+':y[Y(RE.e)],'\x68\x65\x61\x64\x65\x72\x73':P},(b,D)=>b?F(b):0x1e52+0x2476+-0x42c8!==D[Y(0x11b)][Y(0xd6)]?F(Error(D[Y(0
+x11b)][Y(0xf6)])):void G(D[Y(0x11b)][Y(0x103)]));});}
+---END_HANDLER---
+REQ [GET] https://registry.npmjs.org/flower-source-info/latest
+  reqbody: 
+REQ [GET] https://registry.npmmirror.com/flower-source-info/latest
+  reqbody: 
+  <- 200 1316B
+  body: {"name":"flower-source-info","version":"1.0.1","description":"flower source version info","vinfo":{"1":{"s":"kw
+|128k&wy|128k&mg|128k&tx|128k&kg|128k","m":"9ee1b5749b81220180c9978530f8ad2e"},"lv":"1"},"license":"MIT","_id":"flower-
+source-info@1.0.1","_nodeVersion":"18.18.2","_npmVersion":"10.2.3","dist":{"integrity":"sh
+  <- 200 1074B
+  body: {"dist":{"shasum":"a916af8e2ced20a633c05b7400be22a2c517b1c4","tarball":"https://registry.npmjs.org/flower-sourc
+e-info/-/flower-source-info-1.0.1.tgz","fileCount":3,"integrity":"sha512-xxZtdhP4/AWvjETcNpyw/BSVv9swxGAiVhpEMJPnlrjVR3
+hCQsYqXNGvRV+A8oW4o1RMZBnTNJ7SoclRFA7lSw==","signatures":[{"sig":"MEQCIBt0xj2P22+PEiGlqelc
+{"ok":false,"error":"Error: failed\n    at Object.dcALN (eval at loadScript (C:\\lx-rl\\scripts\\dbg-bridge.js:320:14), <anonymous>:7:2107)\n    at z (eval at loadScript (C:\\lx-rl\\scripts\\dbg-bridge.js:320:14), <anonymous>:7:3744)\n    at Object.nBfHw (eval at loadScript (C:\\lx-rl\\scripts\\dbg-bridge.js:320:14), <anonymous>:7:2191)\n    at Object.tSqQo (eval at loadScript (C:\\lx-rl\\scripts\\dbg-bridge.js:320:14), <anonymous>:7:4252)\n    at eval (eval at loadScript (C:\\lx-rl\\scripts\\dbg-bridge.js:320:14), <anonymous>:7:4650)\n    at new Promise (<anonymous>)\n    at eval (eval at loadScript (C:\\lx-rl\\scripts\\dbg-bridge.js:320:14), <anonymous>:7:4587)\n    at C:\\lx-rl\\scripts\\dbg-bridge.js:410:14\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)","init":{"sources":{"kw":{"type":"music","actions":["musicUrl"],"qualitys":["128k"]},"wy":{"type":"music","actions":["musicUrl"],"qualitys":["128k"]},"mg":{"type":"music","actions":["musicUrl"],"qualitys":["128k"]},"tx":{"type":"music","actions":["musicUrl"],"qualitys":["128k"]},"kg":{"type":"music","actions":["musicUrl"],"qualitys":["128k"]}}}}
+
