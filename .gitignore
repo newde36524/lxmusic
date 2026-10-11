@@ -8,3 +8,5 @@ extracted/dist/
 # scripts/slice.js 产出的空切片占位符（内容为 `// slice [0,0) of ...`）。
 # 文件名以 NUL. 开头是 Windows 保留设备名，git 根本无法索引，只能忽略。
 nul.js
+*.exe
+*.log

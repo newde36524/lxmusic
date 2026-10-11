@@ -596,7 +596,16 @@ go test -count=1 ./...
 - 按键扫描：tmux 前缀序列，以及跨两次 read 被截断的转义序列。
 - 酷我体积解析：`size:52.83Mb` 这种**两个字母**单位的容错。
 
-> 交互键盘路径和进度条渲染**无法在本项目所在的自动化环境里验证**——这里没有 PTY（`LoadLibrary(api-ms-win-console-pty-l1-1-0.dll)` 返回 false，`AllocConsole` 也失败，`GetConsoleMode` 不可用，`tui.Terminal()` 恒为 false），所以只有单元测试、合成的控制台输入记录和纯文本输出被真正跑过。方向键 / Enter / 进度条的实际显示请在你的真终端里确认。
+> **交互键盘路径和进度条渲染无法在本项目所在的自动化环境里验证**，而且这个限制是查到底了的，不是没找到工具。逐条验证过：
+>
+> - ConPTY 那个 dll（`api-ms-win-conpty-l1-1-0.dll`）在这台机器的 System32 里根本不存在，`LoadLibrary` 返回 false；`wsl.exe` 有装但一个发行版都没有；winpty / cygwin 也没有。
+> - `AllocConsole()` 返回 `ERROR_ACCESS_DENIED`；`AttachConsole(pid)` 同样返回 `ERROR_ACCESS_DENIED`。把沙箱关掉重跑结果不变，所以不是沙箱挡的。
+> - 换 cmd.exe（属于受保护进程组、天然豁免进程组约束）当跳板让它的子进程去 attach，还是同样的拒绝码——**说明这是作业（job object）层面的限制，被所有后代继承，进程组绕行路线不存在**。
+> - 唯一能建出控制台的办法 `CREATE_NEW_CONSOLE` 确实有效，子进程会拿到自己的控制台并正常运行；但这台机器的 kernel32 不导出 `GetCurrentProcessThreadAttributeValue`，`UpdateProcThreadAttribute` 对 `PROC_THREAD_ATTRIBUTE_PROCESS_GROUP_AFFINITY` 和 `PROC_THREAD_ATTRIBUTE_PARENT_PROCESS` 都返回 `ERROR_NOT_SUPPORTED`，父进程退出进程组的口子也是关着的。结果是：控制台建得出来，父进程却连不进去，一个从外面读不到内容、写不进按键的控制台对验证没有任何用处。
+>
+> 所以选择器只验证了它上面的那一层，而那一层的边界是很窄的：`isTerminal` / `enable` / `disable` / `termSize` / `nextKey` 五个函数，合计 435 行（占 7567 行非测试代码的 5.7%），是全部唯一触碰 syscall 的地方。这五个函数以上的 7132 行——四套协议、全部加密、JSON 解析、排序截断、音频路由、选择器布局与渲染、按键映射、表格排版、进度条——零平台分支，跨目标一字不改地编译。
+>
+> 换句话说：**没验证到的是"操作系统怎么把一次按键送进来"，而不是"收到按键之后程序怎么反应"。** 后者有单元测试、有合成的 `INPUT_RECORD`（`bKeyDown` 是真填的，产品代码从不读这个字段，能逐行验证说明起作用的确实是 100ms 时间窗）、有纯文本输出比对。方向键 / Enter / y-n / 进度条在真终端里的实际显示，仍然请在你的机器上确认。
 
 ---
 
