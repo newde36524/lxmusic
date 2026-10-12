@@ -2,6 +2,8 @@ package main
 
 import (
 	"bytes"
+	"context"
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -12,26 +14,41 @@ import (
 	"lxmusic/internal/tui"
 )
 
-// TestQualityRank pins the tier order the table sorts by, including the
-// unrecognised case, which must not beat a real 128k file.
+// TestQualityRank pins the tier order the table sorts by. The ranks are the
+// positions in lx.qualityOrder, so this also pins the ordering the desktop app
+// itself uses — flac24bit, flac, wav, ape, 320k, 192k, 128k — which is what
+// keeps a user source that only announces "wav" from sinking to the bottom of
+// the table as an unknown tier. Unrecognised labels must not beat a real 128k.
 func TestQualityRank(t *testing.T) {
 	for _, c := range []struct {
 		q    string
 		want int
 	}{
-		{lx.QFlac24, 4}, {lx.QFlac, 3}, {lx.Q320, 2}, {lx.Q128, 1},
-		{"-", 0}, {"", 0}, {"flac24", 0}, {"FLAC", 0},
+		{lx.QFlac24, 7}, {lx.QFlac, 6}, {lx.QWav, 5}, {lx.QApe, 4},
+		{lx.Q320, 3}, {lx.Q192, 2}, {lx.Q128, 1},
+		{"-", 0}, {"", 0}, {"flac24", 0}, {"FLAC", 0}, {"wav24", 0},
 	} {
 		if got := qualityRank(c.q); got != c.want {
 			t.Errorf("qualityRank(%q) = %d, want %d", c.q, got, c.want)
 		}
 	}
+	// The order must be strictly descending, whatever the vocabulary grows to.
+	ranks := []int{}
+	for _, q := range lx.QualityList() {
+		ranks = append(ranks, lx.QualityRank(q))
+	}
+	for i := 1; i < len(ranks); i++ {
+		if ranks[i] >= ranks[i-1] {
+			t.Fatalf("qualityOrder is not strictly descending at %d: %v", i, ranks)
+		}
+	}
 }
 
-// TestSortRows pins the table order: quality descending first, then size
-// descending within a tier. The comparator has been wrong twice now - once by
-// inverting the size direction, once by using size as the only key - so each
-// half of the rule gets its own assertion.
+// TestSortRows pins the table order: relevance descending, then quality
+// descending, then size descending within a tier. The comparator has been wrong
+// three times now - once by inverting the size direction, once by using size as
+// the only key, once by sorting the rows while a parallel score slice stayed
+// behind - so each half of the rule gets its own assertion.
 func TestSortRows(t *testing.T) {
 	rows := []tui.Row{
 		{Name: "unknown"},
@@ -43,7 +60,9 @@ func TestSortRows(t *testing.T) {
 		{Name: "bigFlac", Quality: lx.QFlac, Size: 52000000},
 		{Name: "unknownNoSize"},
 	}
-	sortRows(rows)
+	// No keyword: every row scores the same relevance, so quality and size take
+	// over and the ordering is the plain fidelity order.
+	sortRows(rows, "")
 	want := []string{"flac24", "bigFlac", "noSizeFlac", "big320", "tiny320", "small128", "unknown", "unknownNoSize"}
 	if len(rows) != len(want) {
 		t.Fatalf("sortRows returned %d rows, want %d", len(rows), len(want))
@@ -63,9 +82,47 @@ func TestSortRows(t *testing.T) {
 // rather than reordering rows the user had no reason to expect to move.
 func TestSortRowsStableOnTies(t *testing.T) {
 	rows := []tui.Row{{Name: "a"}, {Name: "b"}, {Name: "c"}}
-	sortRows(rows)
+	sortRows(rows, "")
 	if rows[0].Name != "a" || rows[1].Name != "b" || rows[2].Name != "c" {
 		t.Errorf("sortRows reordered a full tie: %v", rows)
+	}
+}
+
+// TestSortRowsRelevanceFirst is the regression test for the README's own
+// complaint: a cover recorded in lossless used to rank above the original that
+// only exists at 320k. Relevance now leads the sort, so the original comes
+// first no matter what the bitrates are.
+func TestSortRowsRelevanceFirst(t *testing.T) {
+	rows := []tui.Row{
+		{Name: "晴天", Artist: "林俊杰", Quality: lx.QFlac24, Size: 60000000}, // cover, lossless
+		{Name: "晴天", Artist: "周杰伦", Quality: lx.Q320, Size: 9000000},     // the original, 320k
+		{Name: "晴天", Artist: "周杰伦", Quality: lx.Q128, Size: 4000000},     // the original, 128k
+		{Name: "七里香", Artist: "周杰伦", Quality: lx.QFlac, Size: 50000000},  // unrelated song
+	}
+	sortRows(rows, "晴天 周杰伦")
+	want := []string{"周杰伦", "周杰伦", "林俊杰", "周杰伦"}
+	for i, r := range rows {
+		if r.Artist != want[i] {
+			t.Errorf("position %d = %q - %q, want artist %q", i, r.Name, r.Artist, want[i])
+		}
+	}
+	// Within the two matching rows quality still orders them.
+	if rows[0].Quality != lx.Q320 || rows[1].Quality != lx.Q128 {
+		t.Errorf("quality did not break the tie within a relevance group: %v then %v",
+			rows[0].Quality, rows[1].Quality)
+	}
+}
+
+// TestSortRowsVersionTiebreak checks that an alternate recording does not outrank
+// the plain one when both match the keyword.
+func TestSortRowsVersionTiebreak(t *testing.T) {
+	rows := []tui.Row{
+		{Name: "晴天 (现场版)", Artist: "周杰伦", Quality: lx.Q128, Size: 1},
+		{Name: "晴天", Artist: "周杰伦", Quality: lx.Q128, Size: 1},
+	}
+	sortRows(rows, "晴天")
+	if rows[0].Name != "晴天" {
+		t.Errorf("version mismatch was not demoted: first row = %q", rows[0].Name)
 	}
 }
 
@@ -83,7 +140,7 @@ func TestCapAfterSort(t *testing.T) {
 		})
 	}
 	rows = append(rows, tui.Row{Name: "best", Quality: lx.QFlac24, Size: 1})
-	sortRows(rows)
+	sortRows(rows, "")
 	if len(rows) > maxResults {
 		rows = rows[:maxResults]
 	}
@@ -256,5 +313,117 @@ func TestPreviewNote(t *testing.T) {
 				t.Errorf("warning omits the runtime: %q", got)
 			}
 		})
+	}
+}
+
+// noLyric is the smallest provider there is: tagDownload only ever calls Lyric
+// on it, and it answers with nothing — the ordinary case for a song a platform
+// will not give out lyrics for.
+type noLyric struct{}
+
+func (noLyric) ID() string                                                         { return "fake" }
+func (noLyric) Name() string                                                       { return "fake" }
+func (noLyric) Search(context.Context, string, int, int) (*lx.SearchResult, error) { return nil, nil }
+func (noLyric) MusicURL(context.Context, *lx.Song, lx.Quality) (*lx.PlayerURL, error) {
+	return nil, nil
+}
+func (noLyric) Lyric(context.Context, *lx.Song) (*lx.Lyric, error) {
+	return nil, errors.New("no lyric")
+}
+func (noLyric) Pic(context.Context, *lx.Song) (string, error) { return "", nil }
+func (noLyric) Detail(context.Context, *lx.Song) error        { return nil }
+func (noLyric) AnonymousAudio() bool                          { return false }
+
+// TestTagDownloadSkips pins the safety half: a format this writer does not know,
+// and a song with no name, are both left byte for byte alone. Neither path may
+// touch the network, so both the client and the provider are nil — the guards
+// must come before either is reached.
+func TestTagDownloadSkips(t *testing.T) {
+	ctx := context.Background()
+	dir := t.TempDir()
+	for _, ext := range []string{".ape", ".ogg", ".m4a", ".wav", ".wma"} {
+		path := filepath.Join(dir, "x"+ext)
+		writeMain(t, path, []byte("raw audio"))
+		note, err := tagDownload(ctx, nil, nil, &lx.Song{Name: "晴天"}, path)
+		if err != nil || note != "" {
+			t.Errorf("%s: (%q, %v) - an untaggable format must be left alone", ext, note, err)
+		}
+		if b, _ := os.ReadFile(path); !bytes.Equal(b, []byte("raw audio")) {
+			t.Errorf("%s was rewritten", ext)
+		}
+	}
+	for _, name := range []string{"", "   "} {
+		path := filepath.Join(dir, "nameless.mp3")
+		writeMain(t, path, []byte("raw audio"))
+		note, err := tagDownload(ctx, nil, nil, &lx.Song{Name: name}, path)
+		if err != nil || note != "" {
+			t.Errorf("name %q: (%q, %v) - nothing to write must not write", name, note, err)
+		}
+		if b, _ := os.ReadFile(path); !bytes.Equal(b, []byte("raw audio")) {
+			t.Error("a song with no name rewrote its file")
+		}
+	}
+}
+
+// TestTagDownloadWrites is the happy path with no network in it: no cover url, so
+// the client is never touched, and no lyric, so noLyric stands in for the source.
+// The note must say exactly what landed, and the audio must survive the write.
+func TestTagDownloadWrites(t *testing.T) {
+	ctx := context.Background()
+	dir := t.TempDir()
+	audio := []byte{0xff, 0xfb, 0x90, 0x64}
+
+	path := filepath.Join(dir, "晴天.mp3")
+	writeMain(t, path, audio)
+	note, err := tagDownload(ctx, nil, noLyric{},
+		&lx.Song{Name: "晴天", Singer: "周杰伦", Album: "叶惠美"}, path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if note != "已写入标签 信息" {
+		t.Errorf("note = %q, want 已写入标签 信息", note)
+	}
+	got, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.HasPrefix(got, []byte("ID3")) {
+		t.Error("no ID3 tag was written")
+	}
+	if !bytes.HasSuffix(got, audio) {
+		t.Error("the audio was not preserved")
+	}
+
+	// An uppercase extension is tagged the same way.
+	path2 := filepath.Join(dir, "UPPER.MP3")
+	writeMain(t, path2, audio)
+	note, err = tagDownload(ctx, nil, noLyric{}, &lx.Song{Name: "晴天"}, path2)
+	if err != nil || note == "" {
+		t.Errorf(".MP3: (%q, %v)", note, err)
+	}
+
+	// Re-running on an already tagged file must not stack a second tag.
+	note, err = tagDownload(ctx, nil, noLyric{},
+		&lx.Song{Name: "晴天", Singer: "周杰伦", Album: "叶惠美"}, path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if note != "已写入标签 信息" {
+		t.Errorf("re-tag note = %q, want 已写入标签 信息", note)
+	}
+	got, _ = os.ReadFile(path)
+	// The old tag is stripped, so only one ID3 marker may remain.
+	if n := bytes.Count(got, []byte("ID3")); n != 1 {
+		t.Errorf("the re-tag left %d ID3 markers, want 1", n)
+	}
+	if !bytes.HasSuffix(got, audio) {
+		t.Error("the re-tag did not preserve the audio")
+	}
+}
+
+func writeMain(t *testing.T, path string, b []byte) {
+	t.Helper()
+	if err := os.WriteFile(path, b, 0o644); err != nil {
+		t.Fatal(err)
 	}
 }

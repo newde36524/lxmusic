@@ -1,0 +1,873 @@
+######## NOT FOUND: @src/renderer/utils/ipc.ts
+
+######## renderer.js.map :: src/renderer/store/setting.ts (2510 chars)
+import { reactive, computed } from '@common/utils/vueTools';
+import defaultSetting from '@common/defaultSetting';
+import { updateSetting as saveSetting } from '@renderer/utils/ipc';
+export const appSetting = window.lxData.appSetting = reactive({ ...defaultSetting });
+export const isShowAnimation = computed(() => {
+    return appSetting['common.isShowAnimation'];
+});
+export const initSetting = (newSetting) => {
+    mergeSetting(newSetting);
+};
+export const mergeSetting = (newSetting) => {
+    for (const [key, value] of Object.entries(newSetting)) {
+        // @ts-expect-error
+        appSetting[key] = value;
+    }
+};
+export const updateSetting = window.lxData.updateSetting = (setting) => {
+    // console.warn(setting)
+    void saveSetting(setting);
+};
+/**
+ * 保存是否同意协议
+ * @param isAgreePact 是否同意协议
+ */
+export const saveAgreePact = (isAgreePact) => {
+    updateSetting({ 'common.isAgreePact': isAgreePact });
+};
+/**
+ * 保存音频输出id
+ * @param id 媒体驱动id
+ */
+export const saveMediaDeviceId = (id) => {
+    updateSetting({ 'player.mediaDeviceId': id });
+};
+/**
+ * 保存音量大小
+ * @param volume 音量
+ */
+export const saveVolume = (volume) => {
+    updateSetting({ 'player.volume': volume });
+};
+/**
+ * 设置是否静音
+ * @param isMute 是否静音
+ */
+export const saveVolumeIsMute = (isMute) => {
+    updateSetting({ 'player.isMute': isMute });
+};
+/**
+ * 设置播放速率
+ * @param rate 播放速率
+ */
+export const savePlaybackRate = (rate) => {
+    updateSetting({ 'player.playbackRate': rate });
+};
+/**
+ * 设置是否开启桌面歌词
+ * @param enabled
+ */
+export const setVisibleDesktopLyric = (enabled) => {
+    updateSetting({ 'desktopLyric.enable': enabled });
+};
+/**
+ * 设置是否锁定桌面歌词
+ * @param isLock
+ */
+export const setLockDesktopLyric = (isLock) => {
+    updateSetting({ 'desktopLyric.isLock': isLock });
+};
+/**
+ * 设置切歌模式
+ * @param mode
+ */
+export const setTogglePlayMode = (mode) => {
+    updateSetting({ 'player.togglePlayMethod': mode });
+};
+/**
+ * 设置API id
+ * @param sourceId
+ */
+export const setApiSource = (sourceId) => {
+    updateSetting({ 'common.apiSource': sourceId });
+};
+/**
+ * 设置播放详情页歌词字体大小
+ * @param size 字体大小
+ */
+export const setPlayDetailLyricFont = (size) => {
+    updateSetting({ 'playDetail.style.fontSize': size });
+};
+/**
+ * 设置播放详情页歌词对齐方式
+ * @param align 对齐方式
+ */
+export const setPlayDetailLyricAlign = (align) => {
+    updateSetting({ 'playDetail.style.align': align });
+};
+/**
+ * 设置播放详情页音频可视化
+ * @param enable 是否启用
+ */
+export const setEnableAudioVisualization = (enable) => {
+    updateSetting({ 'player.audioVisualization': enable });
+};
+
+
+######## renderer.download.worker.js.map :: src/common/utils/common.ts (5908 chars)
+// 非业务工具方法
+import { pathToFileURL } from 'url';
+/**
+ * 获取两个数之间的随机整数，大于等于min，小于max
+ * @param {*} min
+ * @param {*} max
+ */
+export const getRandom = (min, max) => Math.floor(Math.random() * (max - min)) + min;
+export const sizeFormate = (size) => {
+    // https://gist.github.com/thomseddon/3511330
+    if (!size)
+        return '0 B';
+    let units = ['B', 'KiB', 'MiB', 'GiB', 'TiB'];
+    let number = Math.floor(Math.log(size) / Math.log(1024));
+    return `${(size / Math.pow(1024, Math.floor(number))).toFixed(2)} ${units[number]}`;
+};
+/**
+ * 将字符串、时间戳等格式转成时间对象
+ * @param date 时间
+ * @returns 时间对象或空字符串
+ */
+export const toDateObj = (date) => {
+    // console.log(date)
+    if (!date)
+        return '';
+    switch (typeof date) {
+        case 'string':
+            if (!date.includes('T'))
+                date = date.split('.')[0].replace(/-/g, '/');
+        // eslint-disable-next-line no-fallthrough
+        case 'number':
+            date = new Date(date);
+        // eslint-disable-next-line no-fallthrough
+        case 'object':
+            break;
+        default: return '';
+    }
+    return date;
+};
+const numFix = (n) => n < 10 ? (`0${n}`) : n.toString();
+/**
+ * 时间格式化
+ * @param _date 时间
+ * @param format Y-M-D h:m:s Y年 M月 D日 h时 m分 s秒
+ */
+export const dateFormat = (_date, format = 'Y-M-D h:m:s') => {
+    // console.log(date)
+    const date = toDateObj(_date);
+    if (!date)
+        return '';
+    return format
+        .replace('Y', date.getFullYear().toString())
+        .replace('M', numFix(date.getMonth() + 1))
+        .replace('D', numFix(date.getDate()))
+        .replace('h', numFix(date.getHours()))
+        .replace('m', numFix(date.getMinutes()))
+        .replace('s', numFix(date.getSeconds()));
+};
+export const formatPlayTime = (time) => {
+    let m = Math.trunc(time / 60);
+    let s = Math.trunc(time % 60);
+    return m == 0 && s == 0 ? '--/--' : numFix(m) + ':' + numFix(s);
+};
+export const formatPlayTime2 = (time) => {
+    let m = Math.trunc(time / 60);
+    let s = Math.trunc(time % 60);
+    return numFix(m) + ':' + numFix(s);
+};
+export const isUrl = (path) => /https?:\/\//.test(path);
+// 解析URL参数为对象
+export const parseUrlParams = (str) => {
+    const params = {};
+    if (typeof str !== 'string')
+        return params;
+    const paramsArr = str.split('&');
+    for (const param of paramsArr) {
+        let [key, value] = param.split('=');
+        params[key] = value;
+    }
+    return params;
+};
+/**
+ * 生成节流函数
+ * @param fn 回调
+ * @param delay 延迟
+ * @returns
+ */
+export function throttle(fn, delay = 100) {
+    let timer = null;
+    let _args;
+    return (...args) => {
+        _args = args;
+        if (timer)
+            return;
+        timer = setTimeout(() => {
+            timer = null;
+            void fn(..._args);
+        }, delay);
+    };
+}
+/**
+ * 生成防抖函数
+ * @param fn 回调
+ * @param delay 延迟
+ * @returns
+ */
+export function debounce(fn, delay = 100) {
+    let timer = null;
+    let _args;
+    return (...args) => {
+        _args = args;
+        if (timer)
+            clearTimeout(timer);
+        timer = setTimeout(() => {
+            timer = null;
+            void fn(..._args);
+        }, delay);
+    };
+}
+const fileNameRxp = /[\\/:*?#"<>|]/g;
+export const filterFileName = (name) => name.replace(fileNameRxp, '');
+// https://blog.csdn.net/xcxy2015/article/details/77164126#comments
+/**
+ *
+ * @param a
+ * @param b
+ */
+export const similar = (a, b) => {
+    if (!a || !b)
+        return 0;
+    if (a.length > b.length) { // 保证 a <= b
+        let t = b;
+        b = a;
+        a = t;
+    }
+    let al = a.length;
+    let bl = b.length;
+    let mp = []; // 一个表
+    let i, j, ai, lt, tmp; // ai：字符串a的第i个字符。 lt：左上角的值。 tmp：暂存新的值。
+    for (i = 0; i <= bl; i++)
+        mp[i] = i;
+    for (i = 1; i <= al; i++) {
+        ai = a.charAt(i - 1);
+        lt = mp[0];
+        mp[0] = mp[0] + 1;
+        for (j = 1; j <= bl; j++) {
+            tmp = Math.min(mp[j] + 1, mp[j - 1] + 1, lt + (ai == b.charAt(j - 1) ? 0 : 1));
+            lt = mp[j];
+            mp[j] = tmp;
+        }
+    }
+    return 1 - (mp[bl] / bl);
+};
+/**
+ * 排序字符串
+ * @param arr
+ * @param data
+ */
+export const sortInsert = (arr, data) => {
+    let key = data.num;
+    let left = 0;
+    let right = arr.length - 1;
+    while (left <= right) {
+        let middle = Math.trunc((left + right) / 2);
+        if (key == arr[middle].num) {
+            left = middle;
+            break;
+        }
+        else if (key < arr[middle].num) {
+            right = middle - 1;
+        }
+        else {
+            left = middle + 1;
+        }
+    }
+    while (left > 0) {
+        if (arr[left - 1].num != key)
+            break;
+        left--;
+    }
+    arr.splice(left, 0, data);
+};
+export const encodePath = (path) => {
+    return pathToFileURL(path).href;
+};
+export const arrPush = (list, newList) => {
+    for (let i = 0; i * 1000 < newList.length; i++) {
+        list.push(...newList.slice(i * 1000, (i + 1) * 1000));
+    }
+    return list;
+};
+export const arrUnshift = (list, newList) => {
+    for (let i = 0; i * 1000 < newList.length; i++) {
+        list.splice(i * 1000, 0, ...newList.slice(i * 1000, (i + 1) * 1000));
+    }
+    return list;
+};
+export const arrPushByPosition = (list, newList, position) => {
+    for (let i = 0; i * 1000 < newList.length; i++) {
+        list.splice(position + i * 1000, 0, ...newList.slice(i * 1000, (i + 1) * 1000));
+    }
+    return list;
+};
+// https://stackoverflow.com/a/2450976
+export const arrShuffle = (array) => {
+    let currentIndex = array.length;
+    let randomIndex;
+    // While there remain elements to shuffle.
+    while (currentIndex != 0) {
+        // Pick a remaining element.
+        randomIndex = Math.floor(Math.random() * currentIndex);
+        currentIndex--;
+        // And swap it with the current element.
+        [array[currentIndex], array[randomIndex]] = [
+            array[randomIndex], array[currentIndex]
+        ];
+    }
+    return array;
+};
+
+
+######## renderer.js.map :: src/common/utils/common.ts (5908 chars)
+// 非业务工具方法
+import { pathToFileURL } from 'url';
+/**
+ * 获取两个数之间的随机整数，大于等于min，小于max
+ * @param {*} min
+ * @param {*} max
+ */
+export const getRandom = (min, max) => Math.floor(Math.random() * (max - min)) + min;
+export const sizeFormate = (size) => {
+    // https://gist.github.com/thomseddon/3511330
+    if (!size)
+        return '0 B';
+    let units = ['B', 'KiB', 'MiB', 'GiB', 'TiB'];
+    let number = Math.floor(Math.log(size) / Math.log(1024));
+    return `${(size / Math.pow(1024, Math.floor(number))).toFixed(2)} ${units[number]}`;
+};
+/**
+ * 将字符串、时间戳等格式转成时间对象
+ * @param date 时间
+ * @returns 时间对象或空字符串
+ */
+export const toDateObj = (date) => {
+    // console.log(date)
+    if (!date)
+        return '';
+    switch (typeof date) {
+        case 'string':
+            if (!date.includes('T'))
+                date = date.split('.')[0].replace(/-/g, '/');
+        // eslint-disable-next-line no-fallthrough
+        case 'number':
+            date = new Date(date);
+        // eslint-disable-next-line no-fallthrough
+        case 'object':
+            break;
+        default: return '';
+    }
+    return date;
+};
+const numFix = (n) => n < 10 ? (`0${n}`) : n.toString();
+/**
+ * 时间格式化
+ * @param _date 时间
+ * @param format Y-M-D h:m:s Y年 M月 D日 h时 m分 s秒
+ */
+export const dateFormat = (_date, format = 'Y-M-D h:m:s') => {
+    // console.log(date)
+    const date = toDateObj(_date);
+    if (!date)
+        return '';
+    return format
+        .replace('Y', date.getFullYear().toString())
+        .replace('M', numFix(date.getMonth() + 1))
+        .replace('D', numFix(date.getDate()))
+        .replace('h', numFix(date.getHours()))
+        .replace('m', numFix(date.getMinutes()))
+        .replace('s', numFix(date.getSeconds()));
+};
+export const formatPlayTime = (time) => {
+    let m = Math.trunc(time / 60);
+    let s = Math.trunc(time % 60);
+    return m == 0 && s == 0 ? '--/--' : numFix(m) + ':' + numFix(s);
+};
+export const formatPlayTime2 = (time) => {
+    let m = Math.trunc(time / 60);
+    let s = Math.trunc(time % 60);
+    return numFix(m) + ':' + numFix(s);
+};
+export const isUrl = (path) => /https?:\/\//.test(path);
+// 解析URL参数为对象
+export const parseUrlParams = (str) => {
+    const params = {};
+    if (typeof str !== 'string')
+        return params;
+    const paramsArr = str.split('&');
+    for (const param of paramsArr) {
+        let [key, value] = param.split('=');
+        params[key] = value;
+    }
+    return params;
+};
+/**
+ * 生成节流函数
+ * @param fn 回调
+ * @param delay 延迟
+ * @returns
+ */
+export function throttle(fn, delay = 100) {
+    let timer = null;
+    let _args;
+    return (...args) => {
+        _args = args;
+        if (timer)
+            return;
+        timer = setTimeout(() => {
+            timer = null;
+            void fn(..._args);
+        }, delay);
+    };
+}
+/**
+ * 生成防抖函数
+ * @param fn 回调
+ * @param delay 延迟
+ * @returns
+ */
+export function debounce(fn, delay = 100) {
+    let timer = null;
+    let _args;
+    return (...args) => {
+        _args = args;
+        if (timer)
+            clearTimeout(timer);
+        timer = setTimeout(() => {
+            timer = null;
+            void fn(..._args);
+        }, delay);
+    };
+}
+const fileNameRxp = /[\\/:*?#"<>|]/g;
+export const filterFileName = (name) => name.replace(fileNameRxp, '');
+// https://blog.csdn.net/xcxy2015/article/details/77164126#comments
+/**
+ *
+ * @param a
+ * @param b
+ */
+export const similar = (a, b) => {
+    if (!a || !b)
+        return 0;
+    if (a.length > b.length) { // 保证 a <= b
+        let t = b;
+        b = a;
+        a = t;
+    }
+    let al = a.length;
+    let bl = b.length;
+    let mp = []; // 一个表
+    let i, j, ai, lt, tmp; // ai：字符串a的第i个字符。 lt：左上角的值。 tmp：暂存新的值。
+    for (i = 0; i <= bl; i++)
+        mp[i] = i;
+    for (i = 1; i <= al; i++) {
+        ai = a.charAt(i - 1);
+        lt = mp[0];
+        mp[0] = mp[0] + 1;
+        for (j = 1; j <= bl; j++) {
+            tmp = Math.min(mp[j] + 1, mp[j - 1] + 1, lt + (ai == b.charAt(j - 1) ? 0 : 1));
+            lt = mp[j];
+            mp[j] = tmp;
+        }
+    }
+    return 1 - (mp[bl] / bl);
+};
+/**
+ * 排序字符串
+ * @param arr
+ * @param data
+ */
+export const sortInsert = (arr, data) => {
+    let key = data.num;
+    let left = 0;
+    let right = arr.length - 1;
+    while (left <= right) {
+        let middle = Math.trunc((left + right) / 2);
+        if (key == arr[middle].num) {
+            left = middle;
+            break;
+        }
+        else if (key < arr[middle].num) {
+            right = middle - 1;
+        }
+        else {
+            left = middle + 1;
+        }
+    }
+    while (left > 0) {
+        if (arr[left - 1].num != key)
+            break;
+        left--;
+    }
+    arr.splice(left, 0, data);
+};
+export const encodePath = (path) => {
+    return pathToFileURL(path).href;
+};
+export const arrPush = (list, newList) => {
+    for (let i = 0; i * 1000 < newList.length; i++) {
+        list.push(...newList.slice(i * 1000, (i + 1) * 1000));
+    }
+    return list;
+};
+export const arrUnshift = (list, newList) => {
+    for (let i = 0; i * 1000 < newList.length; i++) {
+        list.splice(i * 1000, 0, ...newList.slice(i * 1000, (i + 1) * 1000));
+    }
+    return list;
+};
+export const arrPushByPosition = (list, newList, position) => {
+    for (let i = 0; i * 1000 < newList.length; i++) {
+        list.splice(position + i * 1000, 0, ...newList.slice(i * 1000, (i + 1) * 1000));
+    }
+    return list;
+};
+// https://stackoverflow.com/a/2450976
+export const arrShuffle = (array) => {
+    let currentIndex = array.length;
+    let randomIndex;
+    // While there remain elements to shuffle.
+    while (currentIndex != 0) {
+        // Pick a remaining element.
+        randomIndex = Math.floor(Math.random() * currentIndex);
+        currentIndex--;
+        // And swap it with the current element.
+        [array[currentIndex], array[randomIndex]] = [
+            array[randomIndex], array[currentIndex]
+        ];
+    }
+    return array;
+};
+
+
+######## renderer.main.worker.js.map :: src/common/utils/common.ts (5908 chars)
+// 非业务工具方法
+import { pathToFileURL } from 'url';
+/**
+ * 获取两个数之间的随机整数，大于等于min，小于max
+ * @param {*} min
+ * @param {*} max
+ */
+export const getRandom = (min, max) => Math.floor(Math.random() * (max - min)) + min;
+export const sizeFormate = (size) => {
+    // https://gist.github.com/thomseddon/3511330
+    if (!size)
+        return '0 B';
+    let units = ['B', 'KiB', 'MiB', 'GiB', 'TiB'];
+    let number = Math.floor(Math.log(size) / Math.log(1024));
+    return `${(size / Math.pow(1024, Math.floor(number))).toFixed(2)} ${units[number]}`;
+};
+/**
+ * 将字符串、时间戳等格式转成时间对象
+ * @param date 时间
+ * @returns 时间对象或空字符串
+ */
+export const toDateObj = (date) => {
+    // console.log(date)
+    if (!date)
+        return '';
+    switch (typeof date) {
+        case 'string':
+            if (!date.includes('T'))
+                date = date.split('.')[0].replace(/-/g, '/');
+        // eslint-disable-next-line no-fallthrough
+        case 'number':
+            date = new Date(date);
+        // eslint-disable-next-line no-fallthrough
+        case 'object':
+            break;
+        default: return '';
+    }
+    return date;
+};
+const numFix = (n) => n < 10 ? (`0${n}`) : n.toString();
+/**
+ * 时间格式化
+ * @param _date 时间
+ * @param format Y-M-D h:m:s Y年 M月 D日 h时 m分 s秒
+ */
+export const dateFormat = (_date, format = 'Y-M-D h:m:s') => {
+    // console.log(date)
+    const date = toDateObj(_date);
+    if (!date)
+        return '';
+    return format
+        .replace('Y', date.getFullYear().toString())
+        .replace('M', numFix(date.getMonth() + 1))
+        .replace('D', numFix(date.getDate()))
+        .replace('h', numFix(date.getHours()))
+        .replace('m', numFix(date.getMinutes()))
+        .replace('s', numFix(date.getSeconds()));
+};
+export const formatPlayTime = (time) => {
+    let m = Math.trunc(time / 60);
+    let s = Math.trunc(time % 60);
+    return m == 0 && s == 0 ? '--/--' : numFix(m) + ':' + numFix(s);
+};
+export const formatPlayTime2 = (time) => {
+    let m = Math.trunc(time / 60);
+    let s = Math.trunc(time % 60);
+    return numFix(m) + ':' + numFix(s);
+};
+export const isUrl = (path) => /https?:\/\//.test(path);
+// 解析URL参数为对象
+export const parseUrlParams = (str) => {
+    const params = {};
+    if (typeof str !== 'string')
+        return params;
+    const paramsArr = str.split('&');
+    for (const param of paramsArr) {
+        let [key, value] = param.split('=');
+        params[key] = value;
+    }
+    return params;
+};
+/**
+ * 生成节流函数
+ * @param fn 回调
+ * @param delay 延迟
+ * @returns
+ */
+export function throttle(fn, delay = 100) {
+    let timer = null;
+    let _args;
+    return (...args) => {
+        _args = args;
+        if (timer)
+            return;
+        timer = setTimeout(() => {
+            timer = null;
+            void fn(..._args);
+        }, delay);
+    };
+}
+/**
+ * 生成防抖函数
+ * @param fn 回调
+ * @param delay 延迟
+ * @returns
+ */
+export function debounce(fn, delay = 100) {
+    let timer = null;
+    let _args;
+    return (...args) => {
+        _args = args;
+        if (timer)
+            clearTimeout(timer);
+        timer = setTimeout(() => {
+            timer = null;
+            void fn(..._args);
+        }, delay);
+    };
+}
+const fileNameRxp = /[\\/:*?#"<>|]/g;
+export const filterFileName = (name) => name.replace(fileNameRxp, '');
+// https://blog.csdn.net/xcxy2015/article/details/77164126#comments
+/**
+ *
+ * @param a
+ * @param b
+ */
+export const similar = (a, b) => {
+    if (!a || !b)
+        return 0;
+    if (a.length > b.length) { // 保证 a <= b
+        let t = b;
+        b = a;
+        a = t;
+    }
+    let al = a.length;
+    let bl = b.length;
+    let mp = []; // 一个表
+    let i, j, ai, lt, tmp; // ai：字符串a的第i个字符。 lt：左上角的值。 tmp：暂存新的值。
+    for (i = 0; i <= bl; i++)
+        mp[i] = i;
+    for (i = 1; i <= al; i++) {
+        ai = a.charAt(i - 1);
+        lt = mp[0];
+        mp[0] = mp[0] + 1;
+        for (j = 1; j <= bl; j++) {
+            tmp = Math.min(mp[j] + 1, mp[j - 1] + 1, lt + (ai == b.charAt(j - 1) ? 0 : 1));
+            lt = mp[j];
+            mp[j] = tmp;
+        }
+    }
+    return 1 - (mp[bl] / bl);
+};
+/**
+ * 排序字符串
+ * @param arr
+ * @param data
+ */
+export const sortInsert = (arr, data) => {
+    let key = data.num;
+    let left = 0;
+    let right = arr.length - 1;
+    while (left <= right) {
+        let middle = Math.trunc((left + right) / 2);
+        if (key == arr[middle].num) {
+            left = middle;
+            break;
+        }
+        else if (key < arr[middle].num) {
+            right = middle - 1;
+        }
+        else {
+            left = middle + 1;
+        }
+    }
+    while (left > 0) {
+        if (arr[left - 1].num != key)
+            break;
+        left--;
+    }
+    arr.splice(left, 0, data);
+};
+export const encodePath = (path) => {
+    return pathToFileURL(path).href;
+};
+export const arrPush = (list, newList) => {
+    for (let i = 0; i * 1000 < newList.length; i++) {
+        list.push(...newList.slice(i * 1000, (i + 1) * 1000));
+    }
+    return list;
+};
+export const arrUnshift = (list, newList) => {
+    for (let i = 0; i * 1000 < newList.length; i++) {
+        list.splice(i * 1000, 0, ...newList.slice(i * 1000, (i + 1) * 1000));
+    }
+    return list;
+};
+export const arrPushByPosition = (list, newList, position) => {
+    for (let i = 0; i * 1000 < newList.length; i++) {
+        list.splice(position + i * 1000, 0, ...newList.slice(i * 1000, (i + 1) * 1000));
+    }
+    return list;
+};
+// https://stackoverflow.com/a/2450976
+export const arrShuffle = (array) => {
+    let currentIndex = array.length;
+    let randomIndex;
+    // While there remain elements to shuffle.
+    while (currentIndex != 0) {
+        // Pick a remaining element.
+        randomIndex = Math.floor(Math.random() * currentIndex);
+        currentIndex--;
+        // And swap it with the current element.
+        [array[currentIndex], array[randomIndex]] = [
+            array[randomIndex], array[currentIndex]
+        ];
+    }
+    return array;
+};
+
+
+######## renderer.js.map :: src/renderer/store/index.ts (2690 chars)
+import { ref, reactive, shallowRef, markRaw, computed, watch } from '@common/utils/vueTools';
+import { windowSizeList as configWindowSizeList } from '@common/config';
+import { appSetting } from './setting';
+import pkg from '../../../package.json';
+import music from '@renderer/utils/musicSdk';
+process.versions.app = pkg.version;
+export const apiSource = ref(null);
+export const proxy = {
+    enable: false,
+    host: '',
+    port: '',
+};
+export const sync = reactive({
+    enable: false,
+    mode: 'server',
+    isShowSyncMode: false,
+    isShowAuthCodeModal: false,
+    deviceName: '',
+    type: 'list',
+    server: {
+        port: '',
+        status: {
+            status: false,
+            message: '',
+            address: [],
+            code: '',
+            devices: [],
+        },
+    },
+    client: {
+        host: '',
+        status: {
+            status: false,
+            message: '',
+            address: [],
+        },
+    },
+});
+export const openAPI = reactive({
+    address: '',
+    message: '',
+});
+export const windowSizeActive = computed(() => {
+    return windowSizeList.find(i => i.id === appSetting['common.windowSizeId']) ?? windowSizeList[0];
+});
+export const getSourceI18nPrefix = () => {
+    return appSetting['common.sourceNameType'] == 'real' ? 'source_' : 'source_alias_';
+};
+export const sourceNames = computed(() => {
+    const prefix = getSourceI18nPrefix();
+    const sourceNames = {
+        kw: 'kw',
+        tx: 'tx',
+        kg: 'kg',
+        mg: 'mg',
+        wy: 'wy',
+        all: window.i18n.t(prefix + 'all'),
+    };
+    for (const { id } of music.sources) {
+        sourceNames[id] = window.i18n.t(prefix + id);
+    }
+    return sourceNames;
+});
+export const windowSizeList = markRaw(configWindowSizeList);
+export const isShowPact = ref(false);
+export const versionInfo = window.lxData.versionInfo = reactive({
+    version: pkg.version,
+    newVersion: null,
+    showModal: false,
+    reCheck: false,
+    isUnknown: false,
+    isLatest: false,
+    status: 'checking',
+    downloadProgress: null,
+});
+export const userApi = reactive({
+    list: [],
+    status: false,
+    message: 'initing',
+    apis: {},
+});
+export const isShowChangeLog = ref(false);
+export const isFullscreen = ref(false);
+watch(isFullscreen, isFullscreen => {
+    window.lx.rootOffset = window.dt || isFullscreen ? 0 : 8;
+}, { immediate: true });
+export const themeShouldUseDarkColors = ref(window.shouldUseDarkColors);
+export const qualityList = shallowRef({});
+export const setQualityList = (_qualityList) => {
+    qualityList.value = _qualityList;
+};
+export const themeId = ref('green');
+export const themeInfo = {
+    themes: [],
+    userThemes: [],
+    dataPath: '',
+};

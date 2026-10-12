@@ -1,0 +1,454 @@
+######## renderer-lyric.js.map :: src/renderer-lyric/App.vue (5474 chars)
+<template>
+  <div id="container" :class="[{ lock: setting['desktopLyric.isLock'] }, { hide: isHide || isHoverHide }]">
+    <div id="main">
+      <transition enter-active-class="animated-fast fadeIn" leave-active-class="animated-fast fadeOut">
+        <div v-show="!setting['desktopLyric.isLock']" class="control-bar">
+          <layout-control-bar />
+        </div>
+      </transition>
+      <layout-lyric-vertical v-if="setting['desktopLyric.direction'] == 'vertical'" />
+      <layout-lyric-horizontal v-else />
+      <transition enter-active-class="animated-fast fadeIn" leave-active-class="animated-fast fadeOut">
+        <common-audio-visualizer v-if="setting['desktopLyric.audioVisualization']" />
+      </transition>
+    </div>
+    <template v-if="isShowResize">
+      <div class="resize resize-left" @mousedown.self="handleMouseDown('left', $event)" @touchstart.self="handleTouchDown('left', $event)" />
+      <div class="resize resize-top" @mousedown.self="handleMouseDown('top', $event)" @touchstart.self="handleTouchDown('top', $event)" />
+      <div class="resize resize-right" @mousedown.self="handleMouseDown('right', $event)" @touchstart.self="handleTouchDown('right', $event)" />
+      <div class="resize resize-bottom" @mousedown.self="handleMouseDown('bottom', $event)" @touchstart.self="handleTouchDown('bottom', $event)" />
+      <div class="resize resize-top-left" @mousedown.self="handleMouseDown('top-left', $event)" @touchstart.self="handleTouchDown('top-left', $event)" />
+      <div class="resize resize-top-right" @mousedown.self="handleMouseDown('top-right', $event)" @touchstart.self="handleTouchDown('top-right', $event)" />
+      <div class="resize resize-bottom-left" @mousedown.self="handleMouseDown('bottom-left', $event)" @touchstart.self="handleTouchDown('bottom-left', $event)" />
+      <div class="resize resize-bottom-right" @mousedown.self="handleMouseDown('bottom-right', $event)" @touchstart.self="handleTouchDown('bottom-right', $event)" />
+    </template>
+    <layout-icons />
+  </div>
+</template>
+
+<script setup>
+import useWindowSize from '@lyric/useApp/useWindowSize'
+import useHoverHide from '@lyric/useApp/useHoverHide'
+import { onMounted } from '@common/utils/vueTools'
+import { setting } from '@lyric/store/state'
+import { sendConnectMainWindowEvent } from '@lyric/utils/ipc'
+import useCommon from '@lyric/useApp/useCommon'
+import useLyric from '@lyric/useApp/useLyric'
+import useTheme from '@lyric/useApp/useTheme'
+import { init as initLyricPlayer } from '@lyric/core/lyric'
+import usePauseHide from '@lyric/useApp/usePauseHide'
+
+const isShowResize = window.os != 'windows'
+useCommon()
+const { handleMouseDown, handleTouchDown } = useWindowSize()
+const isHoverHide = useHoverHide()
+useLyric()
+useTheme()
+const isHide = usePauseHide()
+
+
+onMounted(() => {
+  initLyricPlayer()
+  sendConnectMainWindowEvent()
+})
+
+</script>
+
+<style lang="less">
+@import './assets/styles/index.less';
+@import './assets/styles/layout.less';
+
+body {
+  user-select: none;
+  height: 100vh;
+  box-sizing: border-box;
+  color: #fff;
+  opacity: .8;
+}
+
+body {
+  user-select: none;
+  height: 100vh;
+  box-sizing: border-box;
+}
+#root {
+  height: 100%;
+}
+
+#container {
+  box-sizing: border-box;
+  height: 100%;
+  transition: opacity .3s ease;
+  opacity: 1;
+  &.lock {
+    #main {
+      background-color: transparent;
+    }
+  }
+  &.hide {
+    opacity: .05;
+
+    &:not(.lock):hover {
+      opacity: 1;
+    }
+  }
+}
+
+@resize-width: 6px;
+.resize {
+  z-index: 2;
+}
+.resize-left {
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 100%;
+  width: @resize-width;
+  cursor: ew-resize;
+  // background-color: rgba(0, 0, 0, 1);
+}
+.resize-right {
+  position: absolute;
+  right: 0;
+  top: 0;
+  height: 100%;
+  width: @resize-width;
+  cursor: ew-resize;
+}
+.resize-top {
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 4px;
+  width: 100%;
+  cursor: ns-resize;
+}
+.resize-bottom {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  height: @resize-width;
+  width: 100%;
+  cursor: ns-resize;
+}
+.resize-top-left {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: @resize-width;
+  height: @resize-width;
+  cursor: nwse-resize;
+  // background-color: rgba(0, 0, 0, 1);
+}
+.resize-top-right {
+  position: absolute;
+  right: 0;
+  top: 0;
+  width: @resize-width;
+  height: @resize-width;
+  cursor: nesw-resize;
+  // background-color: rgba(0, 0, 0, 1);
+}
+.resize-bottom-left {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: @resize-width;
+  height: @resize-width;
+  cursor: nesw-resize;
+  // background-color: rgba(0, 0, 0, 1);
+}
+.resize-bottom-right {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: @resize-width;
+  height: @resize-width;
+  cursor: nwse-resize;
+  // background-color: rgba(0, 0, 0, 1);
+}
+
+#main {
+  position: relative;
+  box-sizing: border-box;
+  height: 100%;
+  transition: background-color @transition-theme;
+  min-height: 0;
+  border-radius: @radius-border;
+  overflow: hidden;
+  background-color: rgba(0, 0, 0, .2);
+
+  &:hover {
+    .control-bar {
+      opacity: 1;
+    }
+  }
+}
+
+.control-bar {
+  position: absolute;
+  border-top-left-radius: @radius-border;
+  border-top-right-radius: @radius-border;
+  overflow: hidden;
+  top: 0;
+  left: 0;
+  width: 100%;
+  opacity: 0;
+  transition: opacity @transition-theme;
+  z-index: 1;
+}
+</style>
+
+
+######## renderer-lyric.js.map :: src/renderer-lyric/main.ts (1252 chars)
+import { createApp } from 'vue';
+import { i18nPlugin } from './plugins/i18n';
+import mountComponents from './components';
+import App from './App.vue';
+import '@root/common/error';
+import { getSetting, onMainWindowInited, onSettingChanged, sendConnectMainWindowEvent } from './utils/ipc';
+import { initSetting, mergeSetting } from './store/action';
+import { init as initMainWindowChannel } from './core/mainWindowChannel';
+window.ELECTRON_DISABLE_SECURITY_WARNINGS = process.env.ELECTRON_DISABLE_SECURITY_WARNINGS;
+void getSetting().then((setting) => {
+    // window.lx.appSetting = setting
+    // Set language automatically
+    const languageId = setting['common.langId'];
+    if (window.i18n.locale !== languageId && languageId != null) {
+        window.i18n.setLanguage(languageId);
+        window.setLang(languageId);
+    }
+    // store.commit('setSetting', setting)
+    initSetting(setting);
+    onSettingChanged(({ params: setting }) => {
+        // console.log('onSettingChanged', setting)
+        mergeSetting(setting);
+    });
+    onMainWindowInited(() => {
+        sendConnectMainWindowEvent();
+    });
+    initMainWindowChannel();
+    const app = createApp(App);
+    app.use(i18nPlugin);
+    mountComponents(app);
+    app.mount('#root');
+});
+
+
+######## renderer-lyric.js.map :: src/renderer-lyric/store/state.ts (2466 chars)
+import { ref, shallowReactive } from '@common/utils/vueTools';
+export const setting = shallowReactive({
+    'desktopLyric.enable': false,
+    'desktopLyric.isLock': false,
+    'desktopLyric.isAlwaysOnTop': false,
+    'desktopLyric.isAlwaysOnTopLoop': false,
+    'desktopLyric.isShowTaskbar': true,
+    'desktopLyric.pauseHide': false,
+    'desktopLyric.audioVisualization': false,
+    'desktopLyric.width': 450,
+    'desktopLyric.height': 300,
+    'desktopLyric.x': null,
+    'desktopLyric.y': null,
+    'desktopLyric.isLockScreen': true,
+    'desktopLyric.isDelayScroll': true,
+    'desktopLyric.scrollAlign': 'center',
+    'desktopLyric.isHoverHide': false,
+    'desktopLyric.direction': 'horizontal',
+    'desktopLyric.style.align': 'center',
+    'desktopLyric.style.lyricUnplayColor': 'rgba(255, 255, 255, 1)',
+    'desktopLyric.style.lyricPlayedColor': 'rgba(7, 197, 86, 1)',
+    'desktopLyric.style.lyricShadowColor': 'rgba(0, 0, 0, 0.14)',
+    'desktopLyric.style.font': '',
+    'desktopLyric.style.fontSize': 20,
+    'desktopLyric.style.lineGap': 15,
+    // 'desktopLyric.style.fontWeight': true,
+    'desktopLyric.style.opacity': 95,
+    'desktopLyric.style.ellipsis': false,
+    'desktopLyric.style.isFontWeightFont': false,
+    'desktopLyric.style.isFontWeightLine': false,
+    'desktopLyric.style.isFontWeightExtended': false,
+    'desktopLyric.style.isZoomActiveLrc': true,
+    'common.langId': 'zh-cn',
+    'player.isShowLyricTranslation': false,
+    'player.isShowLyricRoma': false,
+    'player.isSwapLyricTranslationAndRoma': false,
+    'player.isPlayLxlrc': false,
+    'player.playbackRate': 1,
+});
+// export const themeList = markRaw([
+//   {
+//     id: 0,
+//     className: 'green',
+//   },
+//   {
+//     id: 1,
+//     className: 'yellow',
+//   },
+//   {
+//     id: 2,
+//     className: 'blue',
+//   },
+//   {
+//     id: 3,
+//     className: 'red',
+//   },
+//   {
+//     id: 4,
+//     className: 'pink',
+//   },
+//   {
+//     id: 5,
+//     className: 'purple',
+//   },
+//   {
+//     id: 6,
+//     className: 'orange',
+//   },
+//   {
+//     id: 7,
+//     className: 'grey',
+//   },
+//   {
+//     id: 8,
+//     className: 'ming',
+//   },
+//   {
+//     id: 9,
+//     className: 'blue2',
+//   },
+// ])
+// export type Status = 'playing' | 'paused' | 'stopped'
+// export const status = ref<Status>('stopped')
+export const isPlay = ref(false);
+export const musicInfo = shallowReactive({
+    id: null,
+    name: '^',
+    singer: '^',
+    album: null,
+});
+
+
+######## renderer-lyric.js.map :: src/renderer-lyric/store/lyric.ts (653 chars)
+import { markRaw, reactive } from '@common/utils/vueTools';
+export const lyrics = markRaw({
+    lyric: '',
+    tlyric: '',
+    rlyric: '',
+    lxlyric: '',
+});
+export const lyric = reactive({
+    lines: [],
+    text: '',
+    line: 0,
+    offset: 0, // 歌词延迟
+    tempOffset: 0, // 歌词临时延迟
+});
+export const setLines = (lines) => {
+    if (!lines.length && !lyric.lines.length)
+        return;
+    lyric.lines = lines;
+};
+export const setText = (text, line) => {
+    lyric.text = text;
+    lyric.line = line;
+};
+export const setOffset = (offset) => {
+    lyric.offset = offset;
+};
+export const setTempOffset = (offset) => {
+    lyric.tempOffset = offset;
+};
+
+
+######## renderer-lyric.js.map :: src/renderer-lyric/store/action.ts (806 chars)
+import { setting, musicInfo, isPlay } from './state';
+import { updateSetting as saveSetting } from '@lyric/utils/ipc';
+export const initSetting = (newSetting) => {
+    mergeSetting(newSetting);
+};
+export const mergeSetting = (newSetting) => {
+    for (const [key, value] of Object.entries(newSetting)) {
+        // @ts-expect-error
+        setting[key] = value;
+    }
+};
+export const updateSetting = (setting) => {
+    void saveSetting(setting);
+};
+const musicInfoKeys = Object.keys(musicInfo);
+export const setMusicInfo = (_musicInfo) => {
+    for (const key of musicInfoKeys) {
+        const val = _musicInfo[key];
+        if (val !== undefined) {
+            // @ts-expect-error
+            musicInfo[key] = val;
+        }
+    }
+};
+export const setIsPlay = (_status) => {
+    isPlay.value = _status;
+};
+
+
+######## renderer-lyric.js.map :: src/renderer-lyric/utils/ipc.ts (2416 chars)
+import { rendererSend, rendererInvoke, rendererOn, rendererOff } from '@common/rendererIpc';
+import { CMMON_EVENT_NAME, WIN_LYRIC_RENDERER_EVENT_NAME } from '@common/ipcNames';
+export const getSetting = async () => {
+    return rendererInvoke(WIN_LYRIC_RENDERER_EVENT_NAME.get_config);
+};
+export const updateSetting = async (setting) => {
+    await rendererInvoke(WIN_LYRIC_RENDERER_EVENT_NAME.set_config, setting);
+};
+export const onSettingChanged = (listener) => {
+    rendererOn(WIN_LYRIC_RENDERER_EVENT_NAME.on_config_change, listener);
+    return () => {
+        rendererOff(WIN_LYRIC_RENDERER_EVENT_NAME.on_config_change, listener);
+    };
+};
+export const setWindowBounds = (bounds) => {
+    rendererSend(WIN_LYRIC_RENDERER_EVENT_NAME.set_win_bounds, bounds);
+};
+let previousResizable = null;
+export const setWindowResizeable = (resizable) => {
+    if (previousResizable === resizable)
+        return;
+    previousResizable = resizable;
+    // https://github.com/electron/electron/issues/48352
+    // rendererSend<boolean>(WIN_LYRIC_RENDERER_EVENT_NAME.set_win_resizeable, resizable)
+};
+export const sendConnectMainWindowEvent = () => {
+    rendererSend(WIN_LYRIC_RENDERER_EVENT_NAME.request_main_window_channel);
+};
+export const onProvideMainWindowChannel = (listener) => {
+    rendererOn(WIN_LYRIC_RENDERER_EVENT_NAME.provide_main_window_channel, listener);
+    return () => {
+        rendererOff(WIN_LYRIC_RENDERER_EVENT_NAME.provide_main_window_channel, listener);
+    };
+};
+export const onMainWindowInited = (listener) => {
+    rendererOn(WIN_LYRIC_RENDERER_EVENT_NAME.main_window_inited, listener);
+    return () => {
+        rendererOff(WIN_LYRIC_RENDERER_EVENT_NAME.main_window_inited, listener);
+    };
+};
+export const sendMouseEnterLeave = (isEnter) => {
+    rendererSend(WIN_LYRIC_RENDERER_EVENT_NAME.mouse_enter_leave, isEnter);
+};
+export const onMouseEnterLeave = (listener) => {
+    rendererOn(WIN_LYRIC_RENDERER_EVENT_NAME.mouse_enter_leave, listener);
+    return () => {
+        rendererOff(WIN_LYRIC_RENDERER_EVENT_NAME.mouse_enter_leave, listener);
+    };
+};
+/**
+ * On Theme Change
+ * @param listener LX.IpcRendererEventListenerParams<shouldUseDarkColors: boolean>
+ * @returns RemoveListener Fn
+ */
+export const onThemeChange = (listener) => {
+    rendererOn(CMMON_EVENT_NAME.theme_change, listener);
+    return () => {
+        rendererOff(CMMON_EVENT_NAME.theme_change, listener);
+    };
+};

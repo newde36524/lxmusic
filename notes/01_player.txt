@@ -1,0 +1,3705 @@
+######## renderer.js.map :: src/renderer/core/useApp/usePlayer/usePlayer.ts (6293 chars)
+import { onBeforeUnmount, watch } from '@common/utils/vueTools';
+import { useI18n } from '@renderer/plugins/i18n';
+import { setTitle } from '@renderer/utils';
+import { getCurrentTime, getDuration, setPause, setStop, } from '@renderer/plugins/player';
+import useMediaSessionInfo from './useMediaSessionInfo';
+import usePlayProgress from './usePlayProgress';
+import usePlayEvent from './usePlayEvent';
+import { musicInfo, playMusicInfo, playedList, } from '@renderer/store/player/state';
+import { setPlay, setAllStatus, addPlayedList, clearPlayedList,
+// resetPlayerMusicInfo,
+ } from '@renderer/store/player/action';
+import { appSetting } from '@renderer/store/setting';
+import useLyric from './useLyric';
+import useVolume from './useVolume';
+import useWatchList from './useWatchList';
+import { HOTKEY_PLAYER } from '@common/hotKey';
+import { playNext, pause, playPrev, togglePlay, collectMusic, uncollectMusic, dislikeMusic } from '@renderer/core/player';
+import usePlaybackRate from './usePlaybackRate';
+import useSoundEffect from './useSoundEffect';
+import useMaxOutputChannelCount from './useMaxOutputChannelCount';
+import { setPowerSaveBlocker } from '@renderer/core/player/utils';
+import usePreloadNextMusic from './usePreloadNextMusic';
+export default () => {
+    const t = useI18n();
+    usePlayProgress();
+    useMediaSessionInfo();
+    usePlayEvent();
+    useLyric();
+    useVolume();
+    useMaxOutputChannelCount();
+    useSoundEffect();
+    usePlaybackRate();
+    useWatchList();
+    usePreloadNextMusic();
+    const handlePlayNext = () => {
+        void playNext();
+    };
+    const handlePlayPrev = () => {
+        void playPrev();
+    };
+    const addPowerSaveBlocker = () => {
+        setPowerSaveBlocker(true);
+    };
+    const removePowerSaveBlocker = () => {
+        setPowerSaveBlocker(false);
+    };
+    const setPlayStatus = () => {
+        setPlay(true);
+    };
+    const setPauseStatus = () => {
+        setPlay(false);
+        if (window.lx.isPlayedStop)
+            pause();
+        removePowerSaveBlocker();
+    };
+    const handleUpdatePlayInfo = () => {
+        setTitle(musicInfo.id ? `${musicInfo.name} - ${musicInfo.singer}` : null);
+    };
+    const handleCanplay = () => {
+        if (window.lx.isPlayedStop) {
+            setPause();
+        }
+    };
+    const handleEnded = () => {
+        // setTimeout(() => {
+        setAllStatus(t('player__end'));
+        if (window.lx.isPlayedStop) {
+            console.log('played stop');
+            return;
+        }
+        // resetPlayerMusicInfo()
+        // window.app_event.stop()
+        void playNext(true);
+        // })
+    };
+    const setProgress = (time) => {
+        window.app_event.setProgress(time);
+    };
+    const handleSeekforward = () => {
+        const seekOffset = 5;
+        const curTime = getCurrentTime();
+        const time = Math.min(getCurrentTime() + seekOffset, getDuration());
+        if (Math.trunc(curTime) == Math.trunc(time))
+            return;
+        setProgress(time);
+    };
+    const handleSeekbackward = () => {
+        const seekOffset = 5;
+        const curTime = getCurrentTime();
+        const time = Math.max(getCurrentTime() - seekOffset, 0);
+        if (Math.trunc(curTime) == Math.trunc(time))
+            return;
+        setProgress(time);
+    };
+    const setStopStatus = () => {
+        setPlay(false);
+        setTitle(null);
+        setAllStatus('');
+        setStop();
+        removePowerSaveBlocker();
+    };
+    watch(() => appSetting['player.togglePlayMethod'], newValue => {
+        // setLoopPlay(newValue == 'singleLoop')
+        if (playedList.length)
+            clearPlayedList();
+        if (newValue == 'random' && playMusicInfo.musicInfo && !playMusicInfo.isTempPlay)
+            addPlayedList({ ...playMusicInfo });
+    });
+    // setLoopPlay(appSetting['player.togglePlayMethod'] == 'singleLoop')
+    window.key_event.on(HOTKEY_PLAYER.next.action, handlePlayNext);
+    window.key_event.on(HOTKEY_PLAYER.prev.action, handlePlayPrev);
+    window.key_event.on(HOTKEY_PLAYER.toggle_play.action, togglePlay);
+    window.key_event.on(HOTKEY_PLAYER.music_love.action, collectMusic);
+    window.key_event.on(HOTKEY_PLAYER.music_unlove.action, uncollectMusic);
+    window.key_event.on(HOTKEY_PLAYER.music_dislike.action, dislikeMusic);
+    window.key_event.on(HOTKEY_PLAYER.seekbackward.action, handleSeekbackward);
+    window.key_event.on(HOTKEY_PLAYER.seekforward.action, handleSeekforward);
+    window.app_event.on('play', setPlayStatus);
+    window.app_event.on('pause', setPauseStatus);
+    window.app_event.on('error', setPauseStatus);
+    window.app_event.on('stop', setStopStatus);
+    window.app_event.on('musicToggled', handleUpdatePlayInfo);
+    window.app_event.on('playerCanplay', handleCanplay);
+    window.app_event.on('playerPlaying', addPowerSaveBlocker);
+    window.app_event.on('playerEmptied', removePowerSaveBlocker);
+    window.app_event.on('playerEnded', handleEnded);
+    onBeforeUnmount(() => {
+        // eslint-disable-next-line @typescript-eslint/no-misused-promises
+        window.key_event.off(HOTKEY_PLAYER.next.action, handlePlayNext);
+        // eslint-disable-next-line @typescript-eslint/no-misused-promises
+        window.key_event.off(HOTKEY_PLAYER.prev.action, handlePlayPrev);
+        window.key_event.off(HOTKEY_PLAYER.toggle_play.action, togglePlay);
+        window.key_event.off(HOTKEY_PLAYER.music_love.action, collectMusic);
+        window.key_event.off(HOTKEY_PLAYER.music_unlove.action, uncollectMusic);
+        window.key_event.off(HOTKEY_PLAYER.music_dislike.action, dislikeMusic);
+        window.key_event.off(HOTKEY_PLAYER.seekbackward.action, handleSeekbackward);
+        window.key_event.off(HOTKEY_PLAYER.seekforward.action, handleSeekforward);
+        window.app_event.off('play', setPlayStatus);
+        window.app_event.off('pause', setPauseStatus);
+        window.app_event.off('error', setPauseStatus);
+        window.app_event.off('stop', setStopStatus);
+        window.app_event.off('musicToggled', handleUpdatePlayInfo);
+        window.app_event.off('playerPlaying', addPowerSaveBlocker);
+        window.app_event.off('playerEmptied', removePowerSaveBlocker);
+        window.app_event.off('playerCanplay', handleCanplay);
+        window.app_event.off('playerEnded', handleEnded);
+    });
+};
+
+
+######## renderer.js.map :: src/renderer/core/useApp/usePlayer/usePlayerEvent.ts (1860 chars)
+import { onBeforeUnmount } from '@common/utils/vueTools';
+import { onPlaying, onPause, onEnded, onError, onLoadeddata, onLoadstart, onCanplay, onEmptied, onWaiting, getErrorCode, } from '@renderer/plugins/player';
+export default () => {
+    const rOnPlaying = onPlaying(() => {
+        console.log('onPlaying');
+        window.app_event.playerPlaying();
+        window.app_event.play();
+    });
+    const rOnPause = onPause(() => {
+        console.log('onPause');
+        window.app_event.playerPause();
+        window.app_event.pause();
+    });
+    const rOnEnded = onEnded(() => {
+        console.log('onEnded');
+        window.app_event.playerEnded();
+        // window.app_event.pause()
+    });
+    const rOnError = onError(() => {
+        console.log('onError');
+        const errorCode = getErrorCode();
+        window.app_event.error(errorCode);
+        window.app_event.playerError(errorCode);
+    });
+    const rOnLoadeddata = onLoadeddata(() => {
+        console.log('onLoadeddata');
+        window.app_event.playerLoadeddata();
+    });
+    const rOnLoadstart = onLoadstart(() => {
+        console.log('onLoadstart');
+        window.app_event.playerLoadstart();
+    });
+    const rOnCanplay = onCanplay(() => {
+        console.log('onCanplay');
+        window.app_event.playerCanplay();
+    });
+    const rOnEmptied = onEmptied(() => {
+        console.log('onEmptied');
+        window.app_event.playerEmptied();
+        // window.app_event.stop()
+    });
+    const rOnWaiting = onWaiting(() => {
+        console.log('onWaiting');
+        window.app_event.pause();
+        window.app_event.playerWaiting();
+    });
+    onBeforeUnmount(() => {
+        rOnPlaying();
+        rOnPause();
+        rOnEnded();
+        rOnError();
+        rOnLoadeddata();
+        rOnLoadstart();
+        rOnCanplay();
+        rOnEmptied();
+        rOnWaiting();
+    });
+};
+
+
+######## renderer.js.map :: src/renderer/core/useApp/usePlayer/usePlayStatus.ts (8098 chars)
+import { onBeforeUnmount, watch } from '@common/utils/vueTools';
+import { sendPlayerStatus, onPlayerAction } from '@renderer/utils/ipc';
+// import store from '@renderer/store'
+import { loveList } from '@renderer/store/list/state';
+import { addListMusics, removeListMusics, checkListExistMusic } from '@renderer/store/list/action';
+import { playMusicInfo, musicInfo } from '@renderer/store/player/state';
+import { throttle } from '@common/utils';
+import { pause, play, playNext, playPrev } from '@renderer/core/player';
+import { playProgress } from '@renderer/store/player/playProgress';
+import { appSetting } from '@renderer/store/setting';
+import { lyric } from '@renderer/store/player/lyric';
+export default () => {
+    // const setVisibleDesktopLyric = useCommit('setVisibleDesktopLyric')
+    // const setLockDesktopLyric = useCommit('setLockDesktopLyric')
+    let collect = false;
+    const updateCollectStatus = async () => {
+        let status = !!playMusicInfo.musicInfo && await checkListExistMusic(loveList.id, playMusicInfo.musicInfo.id);
+        if (collect == status)
+            return false;
+        collect = status;
+        return true;
+    };
+    const handlePlay = () => {
+        sendPlayerStatus({ status: 'playing' });
+    };
+    const handlePause = () => {
+        sendPlayerStatus({ status: 'paused' });
+    };
+    const handleStop = () => {
+        if (playMusicInfo.musicInfo != null)
+            return;
+        sendPlayerStatus({ status: 'stoped' });
+    };
+    const handleError = () => {
+        sendPlayerStatus({ status: 'error' });
+    };
+    const handleSetPlayInfo = async () => {
+        await updateCollectStatus();
+        sendPlayerStatus({
+            collect,
+            name: musicInfo.name,
+            singer: musicInfo.singer,
+            albumName: musicInfo.album,
+            picUrl: musicInfo.pic ?? '',
+            lyric: musicInfo.lrc ?? '',
+            lyricLineText: '',
+            lyricLineAllText: '',
+        });
+    };
+    const handleSetLyric = () => {
+        sendPlayerStatus({
+            lyric: musicInfo.lrc ?? '',
+            tlyric: musicInfo.tlrc ?? '',
+            rlyric: musicInfo.rlrc ?? '',
+            lxlyric: musicInfo.lxlrc ?? '',
+            lyricLineText: '',
+            lyricLineAllText: '',
+        });
+    };
+    const handleSetPic = () => {
+        sendPlayerStatus({
+            picUrl: musicInfo.pic ?? '',
+        });
+    };
+    const handleSetLyricLine = (text, line) => {
+        let curLine = lyric.lines[line]?.extendedLyrics.join('\n') ?? '';
+        sendPlayerStatus({
+            lyricLineText: text,
+            lyricLineAllText: curLine ? text + '\n' + curLine : text,
+        });
+    };
+    // const handleSetTaskbarThumbnailClip = (clip) => {
+    //   setTaskbarThumbnailClip(clip)
+    // }
+    const throttleListChange = throttle(async (listIds) => {
+        if (!listIds.includes(loveList.id))
+            return;
+        if (await updateCollectStatus())
+            sendPlayerStatus({ collect });
+    });
+    // const updateSetting = () => {
+    //   const setting = store.getters.setting
+    //   buttons.lrc = setting.desktopLyric.enable
+    //   buttons.lockLrc = setting.desktopLyric.isLock
+    //   setButtons()
+    // }
+    const rTaskbarThumbarClick = onPlayerAction(async ({ params: { action, data } }) => {
+        switch (action) {
+            case 'play':
+                play();
+                break;
+            case 'pause':
+                pause();
+                break;
+            case 'prev':
+                void playPrev();
+                break;
+            case 'next':
+                void playNext();
+                break;
+            case 'collect':
+                if (!playMusicInfo.musicInfo)
+                    return;
+                void addListMusics(loveList.id, ['progress' in playMusicInfo.musicInfo ? playMusicInfo.musicInfo.metadata.musicInfo : playMusicInfo.musicInfo]);
+                if (await updateCollectStatus())
+                    sendPlayerStatus({ collect });
+                break;
+            case 'unCollect':
+                if (!playMusicInfo.musicInfo)
+                    return;
+                void removeListMusics({ listId: loveList.id, ids: ['progress' in playMusicInfo.musicInfo ? playMusicInfo.musicInfo.metadata.musicInfo.id : playMusicInfo.musicInfo.id] });
+                if (await updateCollectStatus())
+                    sendPlayerStatus({ collect });
+                break;
+            case 'seek': {
+                let progress = data;
+                if (progress < 0)
+                    progress = 0;
+                else if (progress > playProgress.maxPlayTime)
+                    progress = playProgress.maxPlayTime;
+                window.app_event.setProgress(progress);
+                break;
+            }
+            case 'mute':
+                window.app_event.setVolumeIsMute(data);
+                break;
+            case 'volume':
+                window.app_event.setVolume(data);
+                break;
+            // case 'lrc':
+            //   setVisibleDesktopLyric(true)
+            //   updateSetting()
+            //   break
+            // case 'unLrc':
+            //   setVisibleDesktopLyric(false)
+            //   updateSetting()
+            //   break
+            // case 'lockLrc':
+            //   setLockDesktopLyric(true)
+            //   updateSetting()
+            //   break
+            // case 'unlockLrc':
+            //   setLockDesktopLyric(false)
+            //   updateSetting()
+            //   break
+        }
+    });
+    watch(() => playProgress.nowPlayTime, (newValue, oldValue) => {
+        // console.log(playProgress.nowPlayTime, newValue, oldValue)
+        // if (newValue.toFixed(2) === oldValue.toFixed(2)) return
+        // console.log(playProgress.nowPlayTime)
+        sendPlayerStatus({ progress: newValue });
+    });
+    watch(() => playProgress.maxPlayTime, (newValue) => {
+        sendPlayerStatus({ duration: newValue });
+    });
+    watch(() => appSetting['player.playbackRate'], rate => {
+        sendPlayerStatus({ playbackRate: rate });
+    });
+    window.app_event.on('play', handlePlay);
+    window.app_event.on('pause', handlePause);
+    window.app_event.on('stop', handleStop);
+    window.app_event.on('error', handleError);
+    window.app_event.on('musicToggled', handleSetPlayInfo);
+    window.app_event.on('lyricUpdated', handleSetLyric);
+    window.app_event.on('picUpdated', handleSetPic);
+    window.app_event.on('lyricLinePlay', handleSetLyricLine);
+    // window.app_event.on(eventTaskbarNames.setTaskbarThumbnailClip, handleSetTaskbarThumbnailClip)
+    window.app_event.on('myListUpdate', throttleListChange);
+    onBeforeUnmount(() => {
+        rTaskbarThumbarClick();
+        window.app_event.off('play', handlePlay);
+        window.app_event.off('pause', handlePause);
+        window.app_event.off('stop', handleStop);
+        window.app_event.off('error', handleError);
+        window.app_event.off('musicToggled', handleSetPlayInfo);
+        window.app_event.off('lyricUpdated', handleSetLyric);
+        window.app_event.off('picUpdated', handleSetPic);
+        window.app_event.off('lyricLinePlay', handleSetLyricLine);
+        // window.app_event.off(eventTaskbarNames.setTaskbarThumbnailClip, handleSetTaskbarThumbnailClip)
+        window.app_event.off('myListUpdate', throttleListChange);
+    });
+    return async () => {
+        // const setting = store.getters.setting
+        // buttons.lrc = setting.desktopLyric.enable
+        // buttons.lockLrc = setting.desktopLyric.isLock
+        await updateCollectStatus();
+        if (playMusicInfo.musicInfo == null)
+            return;
+        sendPlayerStatus({
+            collect,
+            name: musicInfo.name,
+            singer: musicInfo.singer,
+            albumName: musicInfo.album,
+            playbackRate: appSetting['player.playbackRate'],
+            picUrl: musicInfo.pic ?? '',
+            lyric: musicInfo.lrc ?? '',
+            tlyric: musicInfo.tlrc ?? '',
+            rlyric: musicInfo.rlrc ?? '',
+            lxlyric: musicInfo.lxlrc ?? '',
+        });
+    };
+};
+
+
+######## renderer.js.map :: src/renderer/core/useApp/usePlayer/usePlayProgress.ts (7628 chars)
+import { onBeforeUnmount, watch } from '@common/utils/vueTools';
+import { formatPlayTime2, getRandom } from '@common/utils/common';
+import { throttle } from '@common/utils';
+import { savePlayInfo } from '@renderer/utils/ipc';
+import { onTimeupdate, getCurrentTime, getDuration, setCurrentTime, onVisibilityChange } from '@renderer/plugins/player';
+import { playProgress, setNowPlayTime, setMaxplayTime } from '@renderer/store/player/playProgress';
+import { musicInfo, playMusicInfo, playInfo } from '@renderer/store/player/state';
+// import { getList } from '@renderer/store/utils'
+import { appSetting } from '@renderer/store/setting';
+import { playNext } from '@renderer/core/player';
+import { updateListMusics } from '@renderer/store/list/action';
+const delaySavePlayInfo = throttle(savePlayInfo, 2000);
+export default () => {
+    let restorePlayTime = 0;
+    const mediaBuffer = {
+        timeout: null,
+        playTime: 0,
+    };
+    // const updateMusicInfo = useCommit('list', 'updateMusicInfo')
+    const startBuffering = () => {
+        console.log('start t');
+        if (mediaBuffer.timeout)
+            return;
+        mediaBuffer.timeout = setTimeout(() => {
+            mediaBuffer.timeout = null;
+            if (window.lx.isPlayedStop)
+                return;
+            const currentTime = getCurrentTime();
+            mediaBuffer.playTime ||= currentTime;
+            let skipTime = currentTime + getRandom(3, 6);
+            if (skipTime > playProgress.maxPlayTime)
+                skipTime = (playProgress.maxPlayTime - currentTime) / 2;
+            if (skipTime - mediaBuffer.playTime < 1 || playProgress.maxPlayTime - skipTime < 1) {
+                mediaBuffer.playTime = 0;
+                if (appSetting['player.autoSkipOnError']) {
+                    console.warn('buffering end');
+                    void playNext(true);
+                }
+                return;
+            }
+            startBuffering();
+            setCurrentTime(skipTime);
+            console.log(mediaBuffer.playTime);
+            console.log(currentTime);
+        }, 3000);
+    };
+    const clearBufferTimeout = () => {
+        console.log('clear t');
+        if (!mediaBuffer.timeout)
+            return;
+        clearTimeout(mediaBuffer.timeout);
+        mediaBuffer.timeout = null;
+        mediaBuffer.playTime = 0;
+    };
+    const setProgress = (time, maxTime) => {
+        if (!musicInfo.id)
+            return;
+        if (maxTime != null)
+            setMaxplayTime(maxTime);
+        console.log('setProgress', time, maxTime);
+        if (time > 0)
+            restorePlayTime = time;
+        if (mediaBuffer.playTime) {
+            clearBufferTimeout();
+            mediaBuffer.playTime = time;
+            startBuffering();
+        }
+        setNowPlayTime(time);
+        setCurrentTime(time);
+        // if (!isPlay) audio.play()
+    };
+    const handlePause = () => {
+        clearBufferTimeout();
+    };
+    const handleStop = () => {
+        setNowPlayTime(0);
+        setMaxplayTime(0);
+    };
+    const handleError = () => {
+        restorePlayTime ||= getCurrentTime(); // 记录出错的播放时间
+        console.log('handleError');
+    };
+    const handleLoadeddata = () => {
+        setMaxplayTime(getDuration());
+        if (playMusicInfo.musicInfo && 'source' in playMusicInfo.musicInfo && !playMusicInfo.musicInfo.interval) {
+            // console.log(formatPlayTime2(playProgress.maxPlayTime))
+            if (playMusicInfo.listId) {
+                void updateListMusics([{
+                        id: playMusicInfo.listId,
+                        musicInfo: {
+                            ...playMusicInfo.musicInfo,
+                            interval: formatPlayTime2(playProgress.maxPlayTime),
+                        },
+                    }]);
+            }
+        }
+    };
+    const handlePlaying = () => {
+        console.log('handlePlaying', mediaBuffer.playTime, restorePlayTime);
+        clearBufferTimeout();
+        if (mediaBuffer.playTime) {
+            let playTime = mediaBuffer.playTime;
+            mediaBuffer.playTime = 0;
+            setCurrentTime(playTime);
+        }
+        else if (restorePlayTime) {
+            setCurrentTime(restorePlayTime);
+            restorePlayTime = 0;
+        }
+    };
+    const handleWating = () => {
+        startBuffering();
+    };
+    const handleEmpied = () => {
+        mediaBuffer.playTime = 0;
+        clearBufferTimeout();
+    };
+    const handleSetPlayInfo = () => {
+        // restorePlayTime = playProgress.nowPlayTime
+        setCurrentTime(restorePlayTime = playProgress.nowPlayTime);
+        // setMaxplayTime(playProgress.maxPlayTime)
+        handlePause();
+        if (!playMusicInfo.isTempPlay && playMusicInfo.listId) {
+            delaySavePlayInfo({
+                time: playProgress.nowPlayTime,
+                maxTime: playProgress.maxPlayTime,
+                listId: playMusicInfo.listId,
+                index: playInfo.playIndex,
+            });
+        }
+    };
+    watch(() => playProgress.nowPlayTime, (newValue, oldValue) => {
+        if (Math.abs(newValue - oldValue) > 2)
+            window.app_event.activePlayProgressTransition();
+        if (appSetting['player.isSavePlayTime'] && !playMusicInfo.isTempPlay) {
+            delaySavePlayInfo({
+                time: newValue,
+                maxTime: playProgress.maxPlayTime,
+                listId: playMusicInfo.listId,
+                index: playInfo.playIndex,
+            });
+        }
+    });
+    watch(() => playProgress.maxPlayTime, maxPlayTime => {
+        if (!playMusicInfo.isTempPlay) {
+            delaySavePlayInfo({
+                time: playProgress.nowPlayTime,
+                maxTime: maxPlayTime,
+                listId: playMusicInfo.listId,
+                index: playInfo.playIndex,
+            });
+        }
+    });
+    // window.app_event.on('play', handlePlay)
+    window.app_event.on('pause', handlePause);
+    window.app_event.on('stop', handleStop);
+    window.app_event.on('error', handleError);
+    window.app_event.on('setProgress', setProgress);
+    // window.app_event.on(eventPlayerNames.restorePlay, handleRestorePlay)
+    window.app_event.on('playerLoadeddata', handleLoadeddata);
+    window.app_event.on('playerPlaying', handlePlaying);
+    window.app_event.on('playerWaiting', handleWating);
+    window.app_event.on('playerEmptied', handleEmpied);
+    window.app_event.on('musicToggled', handleSetPlayInfo);
+    const rOnTimeupdate = onTimeupdate(() => {
+        setNowPlayTime(getCurrentTime());
+    });
+    let currentPlayTime = 0;
+    const rVisibilityChange = onVisibilityChange(() => {
+        if (document.hidden) {
+            currentPlayTime = playProgress.nowPlayTime;
+        }
+        else {
+            if (Math.abs(playProgress.nowPlayTime - currentPlayTime) > 2) {
+                window.app_event.activePlayProgressTransition();
+            }
+        }
+    });
+    onBeforeUnmount(() => {
+        rOnTimeupdate();
+        rVisibilityChange();
+        // window.app_event.off('play', handlePlay)
+        window.app_event.off('pause', handlePause);
+        window.app_event.off('stop', handleStop);
+        window.app_event.off('error', handleError);
+        window.app_event.off('setProgress', setProgress);
+        // window.app_event.off(eventPlayerNames.restorePlay, handleRestorePlay)
+        window.app_event.off('playerLoadeddata', handleLoadeddata);
+        window.app_event.off('playerPlaying', handlePlaying);
+        window.app_event.off('playerWaiting', handleWating);
+        window.app_event.off('playerEmptied', handleEmpied);
+        window.app_event.off('musicToggled', handleSetPlayInfo);
+    });
+};
+
+
+######## renderer.js.map :: src/renderer/core/useApp/usePlayer/useVolume.ts (2652 chars)
+import { onBeforeUnmount, watch } from '@common/utils/vueTools';
+import { setVolume as setPlayerVolume, setMute as setPlayerMute } from '@renderer/plugins/player';
+import { debounce } from '@common/utils';
+import { HOTKEY_PLAYER } from '@common/hotKey';
+// import { player as eventPlayerNames } from '@renderer/event/names'
+import { volume, isMute, setMute, setVolume } from '@renderer/store/player/volume';
+import { appSetting, saveVolume, saveVolumeIsMute } from '@renderer/store/setting';
+export default () => {
+    const handleSaveVolume = debounce(saveVolume, 300);
+    setVolume(appSetting['player.volume']);
+    setMute(appSetting['player.isMute']);
+    setPlayerVolume(appSetting['player.volume']);
+    setPlayerMute(appSetting['player.isMute']);
+    const handleToggleVolumeMute = (_isMute) => {
+        let muteStatus = _isMute ?? !isMute.value;
+        saveVolumeIsMute(muteStatus);
+        setMute(muteStatus);
+    };
+    const handleSetVolume = (num) => {
+        const _volume = num < 0 ? 0 : num > 1 ? 1 : num;
+        setVolume(_volume);
+    };
+    const handleSetVolumeUp = (step = 0.04) => {
+        handleSetVolume(volume.value + step);
+    };
+    const handleSetVolumeDown = (step = 0.04) => {
+        handleSetVolume(volume.value - step);
+    };
+    const hotkeyVolumeUp = () => {
+        handleSetVolumeUp();
+    };
+    const hotkeyVolumeDown = () => {
+        handleSetVolumeDown();
+    };
+    const hotkeyVolumeMute = () => {
+        handleToggleVolumeMute();
+    };
+    watch(volume, _volume => {
+        handleSaveVolume(_volume);
+        setPlayerVolume(_volume);
+    });
+    watch(isMute, mute => {
+        saveVolumeIsMute(mute);
+        setPlayerMute(mute);
+    });
+    watch(() => appSetting['player.volume'], _volume => {
+        setVolume(_volume);
+    });
+    watch(() => appSetting['player.isMute'], muteStatus => {
+        setMute(muteStatus);
+    });
+    window.key_event.on(HOTKEY_PLAYER.volume_up.action, hotkeyVolumeUp);
+    window.key_event.on(HOTKEY_PLAYER.volume_down.action, hotkeyVolumeDown);
+    window.key_event.on(HOTKEY_PLAYER.volume_mute.action, hotkeyVolumeMute);
+    window.app_event.on('setVolume', handleSetVolume);
+    window.app_event.on('setVolumeIsMute', handleToggleVolumeMute);
+    onBeforeUnmount(() => {
+        window.key_event.off(HOTKEY_PLAYER.volume_up.action, hotkeyVolumeUp);
+        window.key_event.off(HOTKEY_PLAYER.volume_down.action, hotkeyVolumeDown);
+        window.key_event.off(HOTKEY_PLAYER.volume_mute.action, hotkeyVolumeMute);
+        window.app_event.off('setVolume', handleSetVolume);
+        window.app_event.off('setVolumeIsMute', handleToggleVolumeMute);
+    });
+};
+
+
+######## renderer.js.map :: src/renderer/core/useApp/usePlayer/usePlaybackRate.ts (2073 chars)
+import { onBeforeUnmount, watch } from '@common/utils/vueTools';
+import { setPlaybackRate as setPlayerPlaybackRate, setPreservesPitch } from '@renderer/plugins/player';
+import { debounce } from '@common/utils';
+// import { HOTKEY_PLAYER } from '@common/hotKey'
+import { playbackRate, setPlaybackRate } from '@renderer/store/player/playbackRate';
+import { appSetting, savePlaybackRate } from '@renderer/store/setting';
+export default () => {
+    const handleSavePlaybackRate = debounce(savePlaybackRate, 300);
+    setPlaybackRate(appSetting['player.playbackRate']);
+    setPlayerPlaybackRate(appSetting['player.playbackRate']);
+    setPreservesPitch(appSetting['player.preservesPitch']);
+    const handleSetPlaybackRate = (num) => {
+        const rate = num < 0.5 ? 0.5 : num > 2 ? 2 : num;
+        setPlaybackRate(rate);
+    };
+    // const handleSetPlaybackRateUp = (step = 0.02) => {
+    //   handleSetPlaybackRate(volume.value + step)
+    // }
+    // const handleSetPlaybackRateDown = (step = 0.02) => {
+    //   handleSetPlaybackRate(volume.value - step)
+    // }
+    // const hotkeyVolumeUp = () => {
+    //   handleSetPlaybackRateUp()
+    // }
+    // const hotkeyVolumeDown = () => {
+    //   handleSetPlaybackRateDown()
+    // }
+    watch(playbackRate, rate => {
+        handleSavePlaybackRate(rate);
+        setPlayerPlaybackRate(rate);
+    });
+    watch(() => appSetting['player.playbackRate'], rate => {
+        setPlaybackRate(rate);
+    });
+    watch(() => appSetting['player.preservesPitch'], preservesPitch => {
+        setPreservesPitch(preservesPitch);
+    });
+    // window.key_event.on(HOTKEY_PLAYER.volume_up.action, hotkeyVolumeUp)
+    // window.key_event.on(HOTKEY_PLAYER.volume_down.action, hotkeyVolumeDown)
+    window.app_event.on('setPlaybackRate', handleSetPlaybackRate);
+    onBeforeUnmount(() => {
+        // window.key_event.off(HOTKEY_PLAYER.volume_up.action, hotkeyVolumeUp)
+        // window.key_event.off(HOTKEY_PLAYER.volume_down.action, hotkeyVolumeDown)
+        window.app_event.off('setPlaybackRate', handleSetPlaybackRate);
+    });
+};
+
+
+######## renderer.js.map :: src/renderer/core/useApp/usePlayer/useMaxOutputChannelCount.ts (460 chars)
+import { watch } from '@common/utils/vueTools';
+import { setMaxOutputChannelCount } from '@renderer/plugins/player';
+import { appSetting } from '@renderer/store/setting';
+export default () => {
+    // console.log(appSetting['player.soundEffect.panner.enable'])
+    setMaxOutputChannelCount(appSetting['player.isMaxOutputChannelCount']);
+    watch(() => appSetting['player.isMaxOutputChannelCount'], (val) => {
+        setMaxOutputChannelCount(val);
+    });
+};
+
+
+######## renderer.js.map :: src/renderer/core/useApp/usePlayer/useMediaDevice.ts (3477 chars)
+import { onBeforeUnmount, watch, } from '@common/utils/vueTools';
+import { pause } from '@renderer/core/player/action';
+import { dialog } from '@renderer/plugins/Dialog';
+import { setMediaDeviceId } from '@renderer/plugins/player';
+import { isPlay } from '@renderer/store/player/state';
+import { appSetting, saveMediaDeviceId } from '@renderer/store/setting';
+const getDevices = async () => {
+    const devices = await navigator.mediaDevices.enumerateDevices();
+    return devices.filter(({ kind }) => kind == 'audiooutput');
+};
+let isShowingTipAlert = false;
+export default () => {
+    let prevDeviceLabel = null;
+    let prevDeviceId = '';
+    const getMediaDevice = async (deviceId) => {
+        const devices = await getDevices();
+        let device = devices.find(device => device.deviceId === deviceId);
+        if (!device) {
+            deviceId = 'default';
+            device = devices.find(device => device.deviceId === deviceId);
+        }
+        if (!device && !devices.length && !isShowingTipAlert) {
+            isShowingTipAlert = true;
+            void dialog({
+                message: window.i18n.t('media_device__empty_device_tip'),
+                confirmButtonText: window.i18n.t('ok'),
+            }).finally(() => {
+                isShowingTipAlert = false;
+            });
+        }
+        return device ? { label: device.label, deviceId: device.deviceId } : { label: '', deviceId: '' };
+    };
+    const setMediaDevice = async (deviceId, label) => {
+        prevDeviceLabel = label;
+        // console.log(device)
+        setMediaDeviceId(deviceId).then(() => {
+            prevDeviceId = deviceId;
+            saveMediaDeviceId(deviceId);
+        }).catch((err) => {
+            console.log(err);
+            setMediaDeviceId('default').finally(() => {
+                prevDeviceId = 'default';
+                saveMediaDeviceId('default');
+            });
+        });
+    };
+    const handleDeviceChange = (label) => {
+        // console.log(device)
+        // console.log(appSetting['player.isMediaDeviceRemovedStopPlay'], isPlay.value, label, prevDeviceLabel)
+        if (label != prevDeviceLabel) {
+            window.app_event.playerDeviceChanged();
+            if (appSetting['player.isMediaDeviceRemovedStopPlay'] && isPlay.value) {
+                window.lx.isPlayedStop = true;
+                pause();
+            }
+        }
+    };
+    const handleMediaListChange = async () => {
+        const mediaDeviceId = appSetting['player.mediaDeviceId'];
+        const device = await getMediaDevice(mediaDeviceId);
+        handleDeviceChange(device.label);
+        if (device.deviceId == mediaDeviceId)
+            prevDeviceLabel = device.label;
+        else
+            void setMediaDevice(device.deviceId, device.label);
+    };
+    watch(() => appSetting['player.mediaDeviceId'], (id) => {
+        if (prevDeviceId == id)
+            return;
+        void getMediaDevice(id).then(async ({ deviceId, label }) => setMediaDevice(deviceId, label));
+    });
+    void getMediaDevice(appSetting['player.mediaDeviceId']).then(async ({ deviceId, label }) => setMediaDevice(deviceId, label));
+    // eslint-disable-next-line @typescript-eslint/no-misused-promises
+    navigator.mediaDevices.addEventListener('devicechange', handleMediaListChange);
+    onBeforeUnmount(() => {
+        // eslint-disable-next-line @typescript-eslint/no-misused-promises
+        navigator.mediaDevices.removeEventListener('devicechange', handleMediaListChange);
+    });
+};
+
+
+######## renderer.js.map :: src/renderer/core/useApp/usePlayer/useMediaSessionInfo.ts (5649 chars)
+import { onBeforeUnmount } from '@common/utils/vueTools';
+import { getDuration, getPlaybackRate, getCurrentTime } from '@renderer/plugins/player';
+import { isPlay, musicInfo, playMusicInfo } from '@renderer/store/player/state';
+import { playProgress } from '@renderer/store/player/playProgress';
+import { pause, play, playNext, playPrev, stop } from '@renderer/core/player';
+export default () => {
+    // 创建一个空白音频以保持对 Media Session 的注册
+    const emptyAudio = new Audio();
+    emptyAudio.autoplay = false;
+    emptyAudio.src = require('@renderer/assets/medias/Silence02s.mp3');
+    emptyAudio.controls = false;
+    emptyAudio.preload = 'auto';
+    emptyAudio.onplaying = () => {
+        emptyAudio.pause();
+    };
+    void emptyAudio.play();
+    let prevPicUrl = '';
+    const updateMediaSessionInfo = () => {
+        if (musicInfo.id == null) {
+            navigator.mediaSession.metadata = null;
+            return;
+        }
+        const mediaMetadata = {
+            title: musicInfo.name,
+            artist: musicInfo.singer,
+            album: musicInfo.album,
+            artwork: [],
+        };
+        if (musicInfo.pic) {
+            const pic = new Image();
+            pic.src = prevPicUrl = musicInfo.pic;
+            pic.onload = () => {
+                if (prevPicUrl == pic.src) {
+                    mediaMetadata.artwork = [{ src: pic.src }];
+                    // @ts-expect-error
+                    navigator.mediaSession.metadata = new window.MediaMetadata(mediaMetadata);
+                }
+            };
+        }
+        else
+            prevPicUrl = '';
+        // @ts-expect-error
+        navigator.mediaSession.metadata = new window.MediaMetadata(mediaMetadata);
+    };
+    const updatePositionState = (state = {}) => {
+        navigator.mediaSession.setPositionState({
+            duration: state.duration ?? getDuration(),
+            playbackRate: state.playbackRate ?? getPlaybackRate(),
+            position: state.position ?? getCurrentTime(),
+        });
+    };
+    const setProgress = (time) => {
+        window.app_event.setProgress(time);
+    };
+    const setStop = () => {
+        stop();
+    };
+    const handlePlay = () => {
+        navigator.mediaSession.playbackState = 'playing';
+    };
+    const handlePause = () => {
+        navigator.mediaSession.playbackState = 'paused';
+    };
+    const handleStop = () => {
+        navigator.mediaSession.playbackState = 'none';
+    };
+    const handleSetPlayInfo = () => {
+        void emptyAudio.play().finally(() => {
+            updateMediaSessionInfo();
+            updatePositionState({
+                position: playProgress.nowPlayTime,
+                duration: playProgress.maxPlayTime,
+            });
+            handlePause();
+        });
+    };
+    // const registerMediaSessionHandler = () => {
+    navigator.mediaSession.setActionHandler('play', () => {
+        if (isPlay.value || !playMusicInfo)
+            return;
+        console.log('play');
+        play();
+    });
+    navigator.mediaSession.setActionHandler('pause', () => {
+        if (!isPlay.value || !playMusicInfo)
+            return;
+        console.log('pause');
+        pause();
+    });
+    navigator.mediaSession.setActionHandler('stop', () => {
+        console.log('stop');
+        setStop();
+    });
+    navigator.mediaSession.setActionHandler('seekbackward', details => {
+        console.log('seekbackward');
+        const seekOffset = details.seekOffset ?? 5;
+        setProgress(Math.max(getCurrentTime() - seekOffset, 0));
+    });
+    navigator.mediaSession.setActionHandler('seekforward', details => {
+        console.log('seekforward');
+        const seekOffset = details.seekOffset ?? 5;
+        setProgress(Math.min(getCurrentTime() + seekOffset, getDuration()));
+    });
+    navigator.mediaSession.setActionHandler('seekto', details => {
+        console.log('seekto', details.seekTime);
+        if (details.seekTime == null)
+            return;
+        let time = Math.min(details.seekTime, getDuration());
+        time = Math.max(time, 0);
+        setProgress(time);
+    });
+    navigator.mediaSession.setActionHandler('previoustrack', () => {
+        console.log('previoustrack');
+        void playPrev();
+    });
+    navigator.mediaSession.setActionHandler('nexttrack', () => {
+        console.log('nexttrack');
+        void playNext();
+    });
+    // navigator.mediaSession.setActionHandler('skipad', () => {
+    //   console.log('')
+    // })
+    // }
+    window.app_event.on('playerLoadeddata', updatePositionState);
+    window.app_event.on('playerPlaying', updatePositionState);
+    window.app_event.on('play', handlePlay);
+    window.app_event.on('pause', handlePause);
+    window.app_event.on('stop', handleStop);
+    window.app_event.on('error', handlePause);
+    window.app_event.on('playerEmptied', handleSetPlayInfo);
+    // window.app_event.on('playerLoadstart', handleSetPlayInfo)
+    window.app_event.on('musicToggled', handleSetPlayInfo);
+    window.app_event.on('picUpdated', updateMediaSessionInfo);
+    onBeforeUnmount(() => {
+        window.app_event.off('playerLoadeddata', updatePositionState);
+        window.app_event.off('playerPlaying', updatePositionState);
+        window.app_event.off('play', handlePlay);
+        window.app_event.off('pause', handlePause);
+        window.app_event.off('stop', handleStop);
+        window.app_event.off('error', handlePause);
+        window.app_event.off('playerEmptied', handleSetPlayInfo);
+        // window.app_event.off('playerLoadstart', handleSetPlayInfo)
+        window.app_event.off('musicToggled', handleSetPlayInfo);
+        window.app_event.off('picUpdated', updateMediaSessionInfo);
+    });
+};
+
+
+######## renderer.js.map :: src/renderer/core/useApp/usePlayer/usePreloadNextMusic.ts (3750 chars)
+import { onBeforeUnmount, watch } from '@common/utils/vueTools';
+import { onTimeupdate, getCurrentTime } from '@renderer/plugins/player';
+import { playProgress } from '@renderer/store/player/playProgress';
+import { musicInfo } from '@renderer/store/player/state';
+// import { getList } from '@renderer/store/utils'
+import { getNextPlayMusicInfo, resetRandomNextMusicInfo } from '@renderer/core/player';
+import { getMusicUrl } from '@renderer/core/music';
+import { appSetting } from '@renderer/store/setting';
+let audio;
+const initAudio = () => {
+    if (audio)
+        return;
+    audio = new Audio();
+    audio.controls = false;
+    audio.preload = 'auto';
+    audio.crossOrigin = 'anonymous';
+    audio.muted = true;
+    audio.volume = 0;
+    audio.autoplay = true;
+    audio.addEventListener('playing', () => {
+        audio.pause();
+    });
+};
+const checkMusicUrl = async (url) => {
+    initAudio();
+    return new Promise((resolve) => {
+        const clear = () => {
+            audio.removeEventListener('error', handleErr);
+            audio.removeEventListener('canplay', handlePlay);
+        };
+        const handleErr = () => {
+            clear();
+            if (audio?.error?.code !== 1) {
+                resolve(false);
+            }
+            else {
+                resolve(true);
+            }
+        };
+        const handlePlay = () => {
+            clear();
+            resolve(true);
+        };
+        audio.addEventListener('error', handleErr);
+        audio.addEventListener('canplay', handlePlay);
+        audio.src = url;
+    });
+};
+const preloadMusicInfo = {
+    isLoading: false,
+    preProgress: 0,
+    info: null,
+};
+const resetPreloadInfo = () => {
+    preloadMusicInfo.preProgress = 0;
+    preloadMusicInfo.info = null;
+    preloadMusicInfo.isLoading = false;
+};
+const preloadNextMusicUrl = async (curTime) => {
+    if (preloadMusicInfo.isLoading || curTime - preloadMusicInfo.preProgress < 3)
+        return;
+    preloadMusicInfo.isLoading = true;
+    console.log('preload next music url');
+    const info = await getNextPlayMusicInfo();
+    if (info) {
+        preloadMusicInfo.info = info;
+        const url = await getMusicUrl({ musicInfo: info.musicInfo }).catch(() => '');
+        if (url) {
+            console.log('preload url', url);
+            const result = await checkMusicUrl(url);
+            if (!result) {
+                const url = await getMusicUrl({ musicInfo: info.musicInfo, isRefresh: true }).catch(() => '');
+                void checkMusicUrl(url);
+                console.log('preload url refresh', url);
+            }
+        }
+    }
+    preloadMusicInfo.isLoading = false;
+};
+export default () => {
+    const setProgress = (time) => {
+        if (!musicInfo.id)
+            return;
+        preloadMusicInfo.preProgress = time;
+    };
+    const handleSetPlayInfo = () => {
+        resetPreloadInfo();
+    };
+    watch(() => appSetting['player.togglePlayMethod'], () => {
+        if (!preloadMusicInfo.info || preloadMusicInfo.info.isTempPlay)
+            return;
+        resetRandomNextMusicInfo();
+        preloadMusicInfo.info = null;
+        preloadMusicInfo.preProgress = playProgress.nowPlayTime;
+    });
+    window.app_event.on('setProgress', setProgress);
+    window.app_event.on('musicToggled', handleSetPlayInfo);
+    const rOnTimeupdate = onTimeupdate(() => {
+        const time = getCurrentTime();
+        const duration = playProgress.maxPlayTime;
+        if (duration > 10 && duration - time < 10 && !preloadMusicInfo.info) {
+            void preloadNextMusicUrl(time);
+        }
+    });
+    onBeforeUnmount(() => {
+        rOnTimeupdate();
+        window.app_event.off('setProgress', setProgress);
+        window.app_event.off('musicToggled', handleSetPlayInfo);
+    });
+};
+
+
+######## renderer.js.map :: src/renderer/core/useApp/usePlayer/useWatchList.ts (1637 chars)
+import { onBeforeUnmount } from '@common/utils/vueTools';
+import { playInfo, playMusicInfo } from '@renderer/store/player/state';
+import { setPlayMusicInfo, updatePlayIndex } from '@renderer/store/player/action';
+import { throttle } from '@common/utils';
+import { playNext, stop } from '@renderer/core/player';
+const changedListIds = new Set();
+export default () => {
+    const throttleListChange = throttle(() => {
+        const isSkip = playMusicInfo.listId && !changedListIds.has(playInfo.playerListId) && !changedListIds.has(playMusicInfo.listId);
+        changedListIds.clear();
+        if (isSkip)
+            return;
+        const { playIndex } = updatePlayIndex();
+        if (playIndex < 0) { // 歌曲被移除
+            if (window.lx.isPlayedStop) {
+                stop();
+                setTimeout(() => {
+                    setPlayMusicInfo(null, null);
+                });
+            }
+            else if (!playMusicInfo.isTempPlay) {
+                console.log('current music removed');
+                void playNext(true);
+            }
+        }
+    });
+    const handleListChange = (listIds) => {
+        for (const id of listIds) {
+            changedListIds.add(id);
+        }
+        throttleListChange();
+    };
+    const handleDownloadListChange = () => {
+        handleListChange(['download']);
+    };
+    window.app_event.on('myListUpdate', handleListChange);
+    window.app_event.on('downloadListUpdate', handleDownloadListChange);
+    onBeforeUnmount(() => {
+        window.app_event.off('myListUpdate', handleListChange);
+        window.app_event.off('downloadListUpdate', handleDownloadListChange);
+    });
+};
+
+
+######## renderer.js.map :: src/renderer/core/useApp/usePlayer/useSoundEffect.ts (6321 chars)
+import { watch } from '@common/utils/vueTools';
+import { freqs, getAudioContext, getBiquadFilter, setConvolver, setPannerSoundR, setPannerSpeed, startPanner, stopPanner, setConvolverMainGain, setConvolverSendGain, setPitchShifter, } from '@renderer/plugins/player';
+import { appSetting } from '@renderer/store/setting';
+const cache = new Map();
+const loadBuffer = async (name) => new Promise((resolve, reject) => {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const path = require('@renderer/assets/medias/filters/' + name);
+    if (cache.has(path)) {
+        resolve(cache.get(path));
+        return;
+    }
+    // Load buffer asynchronously
+    let request = new XMLHttpRequest();
+    request.open('GET', path, true);
+    request.responseType = 'arraybuffer';
+    request.onload = function () {
+        // Asynchronously decode the audio file data in request.response
+        void getAudioContext().decodeAudioData(request.response, (buffer) => {
+            if (!buffer) {
+                reject(new Error('error decoding file data: ' + path));
+                return;
+            }
+            cache.set(path, buffer);
+            resolve(buffer);
+        }, function (error) {
+            reject(error);
+            console.error('decodeAudioData error', error);
+        });
+    };
+    request.onerror = function () {
+        reject(new Error('XHR error'));
+    };
+    request.send();
+});
+export default () => {
+    // console.log(appSetting['player.soundEffect.panner.enable'])
+    if (appSetting['player.soundEffect.panner.enable'])
+        startPanner();
+    setPannerSoundR(appSetting['player.soundEffect.panner.soundR'] / 10);
+    setPannerSpeed(2 * (appSetting['player.soundEffect.panner.speed'] / 10));
+    if (freqs.some(v => appSetting[`player.soundEffect.biquadFilter.hz${v}`] != 0)) {
+        const bfs = getBiquadFilter();
+        for (const item of freqs) {
+            bfs.get(`hz${item}`).gain.value = appSetting[`player.soundEffect.biquadFilter.hz${item}`];
+        }
+    }
+    if (appSetting['player.soundEffect.convolution.fileName']) {
+        void loadBuffer(appSetting['player.soundEffect.convolution.fileName']).then((buffer) => {
+            setConvolver(buffer, appSetting['player.soundEffect.convolution.mainGain'] / 10, appSetting['player.soundEffect.convolution.sendGain'] / 10);
+        });
+    }
+    if (appSetting['player.soundEffect.pitchShifter.playbackRate'] != 1) {
+        setPitchShifter(appSetting['player.soundEffect.pitchShifter.playbackRate']);
+    }
+    watch(() => appSetting['player.soundEffect.panner.enable'], (enable) => {
+        if (enable) {
+            startPanner();
+        }
+        else {
+            stopPanner();
+        }
+    });
+    watch(() => appSetting['player.soundEffect.panner.soundR'], (soundR) => {
+        setPannerSoundR(soundR / 10);
+    });
+    watch(() => appSetting['player.soundEffect.panner.speed'], (speed) => {
+        setPannerSpeed(2 * (speed / 10));
+    });
+    watch(() => appSetting['player.soundEffect.convolution.fileName'], (fileName) => {
+        setTimeout(() => {
+            if (fileName) {
+                void loadBuffer(fileName).then((buffer) => {
+                    setConvolver(buffer, appSetting['player.soundEffect.convolution.mainGain'] / 10, appSetting['player.soundEffect.convolution.sendGain'] / 10);
+                });
+            }
+            else {
+                setConvolver(null, 0, 0);
+            }
+        });
+    });
+    watch(() => appSetting['player.soundEffect.convolution.mainGain'], (mainGain) => {
+        if (!appSetting['player.soundEffect.convolution.fileName'])
+            return;
+        setConvolverMainGain(mainGain / 10);
+    });
+    watch(() => appSetting['player.soundEffect.convolution.sendGain'], (sendGain) => {
+        if (!appSetting['player.soundEffect.convolution.fileName'])
+            return;
+        setConvolverSendGain(sendGain / 10);
+    });
+    watch(() => appSetting['player.soundEffect.biquadFilter.hz31'], (hz31) => {
+        const bfs = getBiquadFilter();
+        bfs.get('hz31').gain.value = hz31;
+    });
+    watch(() => appSetting['player.soundEffect.biquadFilter.hz62'], (hz62) => {
+        const bfs = getBiquadFilter();
+        bfs.get('hz62').gain.value = hz62;
+    });
+    watch(() => appSetting['player.soundEffect.biquadFilter.hz125'], (hz125) => {
+        const bfs = getBiquadFilter();
+        bfs.get('hz125').gain.value = hz125;
+    });
+    watch(() => appSetting['player.soundEffect.biquadFilter.hz250'], (hz250) => {
+        const bfs = getBiquadFilter();
+        bfs.get('hz250').gain.value = hz250;
+    });
+    watch(() => appSetting['player.soundEffect.biquadFilter.hz500'], (hz500) => {
+        const bfs = getBiquadFilter();
+        bfs.get('hz500').gain.value = hz500;
+    });
+    watch(() => appSetting['player.soundEffect.biquadFilter.hz1000'], (hz1000) => {
+        const bfs = getBiquadFilter();
+        bfs.get('hz1000').gain.value = hz1000;
+    });
+    watch(() => appSetting['player.soundEffect.biquadFilter.hz2000'], (hz2000) => {
+        const bfs = getBiquadFilter();
+        bfs.get('hz2000').gain.value = hz2000;
+    });
+    watch(() => appSetting['player.soundEffect.biquadFilter.hz4000'], (hz4000) => {
+        const bfs = getBiquadFilter();
+        bfs.get('hz4000').gain.value = hz4000;
+    });
+    watch(() => appSetting['player.soundEffect.biquadFilter.hz8000'], (hz8000) => {
+        const bfs = getBiquadFilter();
+        bfs.get('hz8000').gain.value = hz8000;
+    });
+    watch(() => appSetting['player.soundEffect.biquadFilter.hz16000'], (hz16000) => {
+        const bfs = getBiquadFilter();
+        bfs.get('hz16000').gain.value = hz16000;
+    });
+    watch(() => appSetting['player.soundEffect.pitchShifter.playbackRate'], (playbackRate) => {
+        setPitchShifter(playbackRate);
+    });
+    // window.key_event.on(HOTKEY_PLAYER.volume_up.action, hotkeyVolumeUp)
+    // window.key_event.on(HOTKEY_PLAYER.volume_down.action, hotkeyVolumeDown)
+    // window.app_event.on('setPlaybackRate', handleSetPlaybackRate)
+    // onBeforeUnmount(() => {
+    //   // window.key_event.off(HOTKEY_PLAYER.volume_up.action, hotkeyVolumeUp)
+    //   // window.key_event.off(HOTKEY_PLAYER.volume_down.action, hotkeyVolumeDown)
+    //   window.app_event.off('setPlaybackRate', handleSetPlaybackRate)
+    // })
+};
+
+
+######## renderer.js.map :: src/renderer/core/useApp/usePlayer/index.ts (455 chars)
+import { createAudio, } from '@renderer/plugins/player';
+import useMediaDevice from './useMediaDevice';
+import usePlayerEvent from './usePlayerEvent';
+import usePlayer from './usePlayer';
+import usePlayStatus from './usePlayStatus';
+export default () => {
+    createAudio();
+    usePlayerEvent();
+    useMediaDevice(); // 初始化音频驱动输出设置
+    usePlayer();
+    const initPlayStatus = usePlayStatus();
+    return () => {
+        void initPlayStatus();
+    };
+};
+
+
+######## renderer.js.map :: src/renderer/core/player/action.ts (20763 chars)
+import { isEmpty, setPause, setPlay, setResource, setStop } from '@renderer/plugins/player';
+import { isPlay, playedList, playInfo, playMusicInfo, tempPlayList, musicInfo as _musicInfo } from '@renderer/store/player/state';
+import { getList, clearPlayedList, clearTempPlayeList, setPlayMusicInfo, addPlayedList, setMusicInfo, setAllStatus, removeTempPlayList, setPlayListId, removePlayedList, } from '@renderer/store/player/action';
+import { appSetting } from '@renderer/store/setting';
+import { getMusicUrl, getPicPath, getLyricInfo } from '../music/index';
+import { filterList } from './utils';
+import { requestMsg } from '@renderer/utils/message';
+import { getRandom } from '@renderer/utils/index';
+import { addListMusics, removeListMusics } from '@renderer/store/list/action';
+import { loveList } from '@renderer/store/list/state';
+import { addDislikeInfo } from '@renderer/core/dislikeList';
+// import { checkMusicFileAvailable } from '@renderer/utils/music'
+let gettingUrlId = '';
+const createGettingUrlId = (musicInfo) => {
+    const tInfo = 'progress' in musicInfo ? musicInfo.metadata.musicInfo.meta.toggleMusicInfo : musicInfo.meta.toggleMusicInfo;
+    return `${musicInfo.id}_${tInfo?.id ?? ''}`;
+};
+const createDelayNextTimeout = (delay) => {
+    let timeout;
+    const clearDelayNextTimeout = () => {
+        // console.log(this.timeout)
+        if (timeout) {
+            clearTimeout(timeout);
+            timeout = null;
+        }
+    };
+    const addDelayNextTimeout = () => {
+        clearDelayNextTimeout();
+        timeout = setTimeout(() => {
+            timeout = null;
+            if (window.lx.isPlayedStop)
+                return;
+            console.warn('delay next timeout timeout', delay);
+            void playNext(true);
+        }, delay);
+    };
+    return {
+        clearDelayNextTimeout,
+        addDelayNextTimeout,
+    };
+};
+const { addDelayNextTimeout, clearDelayNextTimeout } = createDelayNextTimeout(5000);
+const { addDelayNextTimeout: addLoadTimeout, clearDelayNextTimeout: clearLoadTimeout } = createDelayNextTimeout(100000);
+/**
+ * 检查音乐信息是否已更改
+ */
+const diffCurrentMusicInfo = (curMusicInfo) => {
+    // return curMusicInfo !== playMusicInfo.musicInfo || isPlay.value
+    return gettingUrlId != createGettingUrlId(curMusicInfo) || curMusicInfo.id != playMusicInfo.musicInfo?.id || isPlay.value;
+};
+let cancelDelayRetry = null;
+const delayRetry = async (musicInfo, isRefresh = false) => {
+    // if (cancelDelayRetry) cancelDelayRetry()
+    return new Promise((resolve, reject) => {
+        const time = getRandom(2, 6);
+        setAllStatus(window.i18n.t('player__getting_url_delay_retry', { time }));
+        const tiemout = setTimeout(() => {
+            getMusicPlayUrl(musicInfo, isRefresh, true).then((result) => {
+                cancelDelayRetry = null;
+                resolve(result);
+            }).catch(async (err) => {
+                cancelDelayRetry = null;
+                reject(err);
+            });
+        }, time * 1000);
+        cancelDelayRetry = () => {
+            clearTimeout(tiemout);
+            cancelDelayRetry = null;
+            resolve(null);
+        };
+    });
+};
+const getMusicPlayUrl = async (musicInfo, isRefresh = false, isRetryed = false) => {
+    // this.musicInfo.url = await getMusicPlayUrl(targetSong, type)
+    setAllStatus(window.i18n.t('player__getting_url'));
+    if (appSetting['player.autoSkipOnError'])
+        addLoadTimeout();
+    // const type = getPlayType(appSetting['player.highQuality'], musicInfo)
+    let toggleMusicInfo = ('progress' in musicInfo ? musicInfo.metadata.musicInfo : musicInfo).meta.toggleMusicInfo;
+    return (toggleMusicInfo ? getMusicUrl({
+        musicInfo: toggleMusicInfo,
+        isRefresh,
+        allowToggleSource: false,
+    }) : Promise.reject(new Error('not found'))).catch(async () => {
+        return getMusicUrl({
+            musicInfo,
+            isRefresh,
+            onToggleSource(mInfo) {
+                if (diffCurrentMusicInfo(musicInfo))
+                    return;
+                setAllStatus(window.i18n.t('toggle_source_try'));
+            },
+        });
+    }).then(url => {
+        if (window.lx.isPlayedStop || diffCurrentMusicInfo(musicInfo))
+            return null;
+        return url;
+        // eslint-disable-next-line @typescript-eslint/promise-function-async
+    }).catch(err => {
+        // console.log('err', err.message)
+        if (window.lx.isPlayedStop ||
+            diffCurrentMusicInfo(musicInfo) ||
+            err.message == requestMsg.cancelRequest)
+            return null;
+        if (err.message == requestMsg.tooManyRequests)
+            return delayRetry(musicInfo, isRefresh);
+        if (!isRetryed)
+            return getMusicPlayUrl(musicInfo, isRefresh, true);
+        throw err;
+    });
+};
+export const setMusicUrl = (musicInfo, isRefresh) => {
+    // if (appSetting['player.autoSkipOnError']) addLoadTimeout()
+    if (!diffCurrentMusicInfo(musicInfo))
+        return;
+    if (cancelDelayRetry)
+        cancelDelayRetry();
+    gettingUrlId = createGettingUrlId(musicInfo);
+    void getMusicPlayUrl(musicInfo, isRefresh).then((url) => {
+        if (!url)
+            return;
+        setResource(url);
+    }).catch((err) => {
+        console.log(err);
+        setAllStatus(err.message);
+        window.app_event.error();
+        if (appSetting['player.autoSkipOnError'])
+            addDelayNextTimeout();
+    }).finally(() => {
+        if (musicInfo === playMusicInfo.musicInfo) {
+            gettingUrlId = '';
+            clearLoadTimeout();
+        }
+    });
+};
+// 恢复上次播放的状态
+const handleRestorePlay = async (restorePlayInfo) => {
+    const musicInfo = playMusicInfo.musicInfo;
+    if (!musicInfo)
+        return;
+    setImmediate(() => {
+        if (musicInfo.id != playMusicInfo.musicInfo?.id)
+            return;
+        window.app_event.setProgress(appSetting['player.isSavePlayTime'] ? restorePlayInfo.time : 0, restorePlayInfo.maxTime);
+        window.app_event.pause();
+    });
+    void getPicPath({ musicInfo, listId: playMusicInfo.listId }).then((url) => {
+        if (musicInfo.id != playMusicInfo.musicInfo?.id || url == _musicInfo.pic)
+            return;
+        setMusicInfo({ pic: url });
+        window.app_event.picUpdated();
+    }).catch(_ => _);
+    void getLyricInfo({ musicInfo }).then((lyricInfo) => {
+        if (musicInfo.id != playMusicInfo.musicInfo?.id)
+            return;
+        setMusicInfo({
+            lrc: lyricInfo.lyric,
+            tlrc: lyricInfo.tlyric,
+            lxlrc: lyricInfo.lxlyric,
+            rlrc: lyricInfo.rlyric,
+            rawlrc: lyricInfo.rawlrcInfo.lyric,
+        });
+        window.app_event.lyricUpdated();
+    }).catch((err) => {
+        console.log(err);
+        if (musicInfo.id != playMusicInfo.musicInfo?.id)
+            return;
+        setAllStatus(window.i18n.t('lyric__load_error'));
+    });
+    if (appSetting['player.togglePlayMethod'] == 'random' && !playMusicInfo.isTempPlay)
+        addPlayedList({ ...playMusicInfo });
+};
+// 处理音乐播放
+const handlePlay = () => {
+    window.lx.isPlayedStop &&= false;
+    resetRandomNextMusicInfo();
+    if (window.lx.restorePlayInfo) {
+        void handleRestorePlay(window.lx.restorePlayInfo);
+        window.lx.restorePlayInfo = null;
+        return;
+    }
+    const musicInfo = playMusicInfo.musicInfo;
+    if (!musicInfo)
+        return;
+    setStop();
+    window.app_event.pause();
+    clearDelayNextTimeout();
+    clearLoadTimeout();
+    if (appSetting['player.togglePlayMethod'] == 'random' && !playMusicInfo.isTempPlay)
+        addPlayedList({ ...playMusicInfo });
+    setMusicUrl(musicInfo);
+    void getPicPath({ musicInfo, listId: playMusicInfo.listId }).then((url) => {
+        if (musicInfo.id != playMusicInfo.musicInfo?.id || url == _musicInfo.pic)
+            return;
+        setMusicInfo({ pic: url });
+        window.app_event.picUpdated();
+    }).catch(_ => _);
+    void getLyricInfo({ musicInfo }).then((lyricInfo) => {
+        if (musicInfo.id != playMusicInfo.musicInfo?.id)
+            return;
+        setMusicInfo({
+            lrc: lyricInfo.lyric,
+            tlrc: lyricInfo.tlyric,
+            lxlrc: lyricInfo.lxlyric,
+            rlrc: lyricInfo.rlyric,
+            rawlrc: lyricInfo.rawlrcInfo.lyric,
+        });
+        window.app_event.lyricUpdated();
+    }).catch((err) => {
+        console.log(err);
+        if (musicInfo.id != playMusicInfo.musicInfo?.id)
+            return;
+        setAllStatus(window.i18n.t('lyric__load_error'));
+    });
+};
+/**
+ * 播放列表内歌曲
+ * @param listId 列表id
+ * @param id 歌曲id
+ */
+export const playListById = (listId, id) => {
+    const prevListId = playInfo.playerListId;
+    setPlayListId(listId);
+    // pause()
+    const musicInfo = getList(listId).find(m => m.id == id);
+    if (!musicInfo)
+        return;
+    setPlayMusicInfo(listId, musicInfo);
+    if (appSetting['player.isAutoCleanPlayedList'] || prevListId != listId)
+        clearPlayedList();
+    clearTempPlayeList();
+    handlePlay();
+};
+/**
+ * 播放列表内歌曲
+ * @param listId 列表id
+ * @param index 播放的歌曲位置
+ */
+export const playList = (listId, index) => {
+    const prevListId = playInfo.playerListId;
+    setPlayListId(listId);
+    // pause()
+    setPlayMusicInfo(listId, getList(listId)[index]);
+    if (appSetting['player.isAutoCleanPlayedList'] || prevListId != listId)
+        clearPlayedList();
+    clearTempPlayeList();
+    handlePlay();
+};
+const handleToggleStop = () => {
+    stop();
+    setTimeout(() => {
+        setPlayMusicInfo(null, null);
+    });
+};
+const randomNextMusicInfo = {
+    info: null,
+    // index: -1,
+};
+export const resetRandomNextMusicInfo = () => {
+    if (randomNextMusicInfo.info) {
+        randomNextMusicInfo.info = null;
+        // randomNextMusicInfo.index = -1
+    }
+};
+export const getNextPlayMusicInfo = async () => {
+    if (tempPlayList.length) { // 如果稍后播放列表存在歌曲则直接播放改列表的歌曲
+        const playMusicInfo = tempPlayList[0];
+        return playMusicInfo;
+    }
+    if (playMusicInfo.musicInfo == null)
+        return null;
+    if (randomNextMusicInfo.info)
+        return randomNextMusicInfo.info;
+    // console.log(playInfo.playerListId)
+    const currentListId = playInfo.playerListId;
+    if (!currentListId)
+        return null;
+    const currentList = getList(currentListId);
+    if (playedList.length) { // 移除已播放列表内不存在原列表的歌曲
+        let currentId;
+        if (playMusicInfo.isTempPlay) {
+            const musicInfo = currentList[playInfo.playerPlayIndex];
+            if (musicInfo)
+                currentId = musicInfo.id;
+        }
+        else {
+            currentId = playMusicInfo.musicInfo.id;
+        }
+        // 从已播放列表移除播放列表已删除的歌曲
+        let index;
+        for (index = playedList.findIndex(m => m.musicInfo.id === currentId) + 1; index < playedList.length; index++) {
+            const playMusicInfo = playedList[index];
+            const currentId = playMusicInfo.musicInfo.id;
+            if (playMusicInfo.listId == currentListId && !currentList.some(m => m.id === currentId)) {
+                removePlayedList(index);
+                continue;
+            }
+            break;
+        }
+        if (index < playedList.length)
+            return playedList[index];
+    }
+    // const isCheckFile = findNum > 2 // 针对下载列表，如果超过两次都碰到无效歌曲，则过滤整个列表内的无效歌曲
+    let { filteredList, playerIndex } = await filterList({
+        listId: currentListId,
+        list: currentList,
+        playedList,
+        playerMusicInfo: currentList[playInfo.playerPlayIndex],
+        isNext: true,
+    });
+    if (!filteredList.length)
+        return null;
+    // let currentIndex: number = filteredList.indexOf(currentList[playInfo.playerPlayIndex])
+    if (playerIndex == -1 && filteredList.length)
+        playerIndex = 0;
+    let nextIndex = playerIndex;
+    let togglePlayMethod = appSetting['player.togglePlayMethod'];
+    switch (togglePlayMethod) {
+        case 'listLoop':
+            nextIndex = playerIndex === filteredList.length - 1 ? 0 : playerIndex + 1;
+            break;
+        case 'random':
+            nextIndex = getRandom(0, filteredList.length);
+            break;
+        case 'list':
+            nextIndex = playerIndex === filteredList.length - 1 ? -1 : playerIndex + 1;
+            break;
+        case 'singleLoop':
+            break;
+        default:
+            return null;
+    }
+    if (nextIndex < 0)
+        return null;
+    const nextPlayMusicInfo = {
+        musicInfo: filteredList[nextIndex],
+        listId: currentListId,
+        isTempPlay: false,
+    };
+    if (togglePlayMethod == 'random') {
+        randomNextMusicInfo.info = nextPlayMusicInfo;
+        // randomNextMusicInfo.index = nextIndex
+    }
+    return nextPlayMusicInfo;
+};
+const handlePlayNext = (playMusicInfo) => {
+    // pause()
+    setPlayMusicInfo(playMusicInfo.listId, playMusicInfo.musicInfo, playMusicInfo.isTempPlay);
+    handlePlay();
+};
+/**
+ * 下一曲
+ * @param isAutoToggle 是否自动切换
+ * @returns
+ */
+export const playNext = async (isAutoToggle = false) => {
+    console.log('skip next', isAutoToggle);
+    if (tempPlayList.length) { // 如果稍后播放列表存在歌曲则直接播放改列表的歌曲
+        const playMusicInfo = tempPlayList[0];
+        removeTempPlayList(0);
+        handlePlayNext(playMusicInfo);
+        console.log('play temp list');
+        return;
+    }
+    if (playMusicInfo.musicInfo == null) {
+        handleToggleStop();
+        console.log('musicInfo empty');
+        return;
+    }
+    // console.log(playInfo.playerListId)
+    const currentListId = playInfo.playerListId;
+    if (!currentListId) {
+        handleToggleStop();
+        console.log('currentListId empty');
+        return;
+    }
+    const currentList = getList(currentListId);
+    if (playedList.length) { // 移除已播放列表内不存在原列表的歌曲
+        let currentId;
+        if (playMusicInfo.isTempPlay) {
+            const musicInfo = currentList[playInfo.playerPlayIndex];
+            if (musicInfo)
+                currentId = musicInfo.id;
+        }
+        else {
+            currentId = playMusicInfo.musicInfo.id;
+        }
+        // 从已播放列表移除播放列表已删除的歌曲
+        let index;
+        for (index = playedList.findIndex(m => m.musicInfo.id === currentId) + 1; index < playedList.length; index++) {
+            const playMusicInfo = playedList[index];
+            const currentId = playMusicInfo.musicInfo.id;
+            if (playMusicInfo.listId == currentListId && !currentList.some(m => m.id === currentId)) {
+                removePlayedList(index);
+                continue;
+            }
+            break;
+        }
+        if (index < playedList.length) {
+            handlePlayNext(playedList[index]);
+            console.log('play played list');
+            return;
+        }
+    }
+    if (randomNextMusicInfo.info) {
+        handlePlayNext(randomNextMusicInfo.info);
+        return;
+    }
+    // const isCheckFile = findNum > 2 // 针对下载列表，如果超过两次都碰到无效歌曲，则过滤整个列表内的无效歌曲
+    let { filteredList, playerIndex } = await filterList({
+        listId: currentListId,
+        list: currentList,
+        playedList,
+        playerMusicInfo: currentList[playInfo.playerPlayIndex],
+        isNext: true,
+    });
+    if (!filteredList.length) {
+        handleToggleStop();
+        console.log('filtered list empty');
+        return;
+    }
+    // let currentIndex: number = filteredList.indexOf(currentList[playInfo.playerPlayIndex])
+    if (playerIndex == -1 && filteredList.length)
+        playerIndex = 0;
+    let nextIndex = playerIndex;
+    let togglePlayMethod = appSetting['player.togglePlayMethod'];
+    if (!isAutoToggle) {
+        switch (togglePlayMethod) {
+            case 'list':
+            case 'singleLoop':
+            case 'none':
+                togglePlayMethod = 'listLoop';
+        }
+    }
+    switch (togglePlayMethod) {
+        case 'listLoop':
+            nextIndex = playerIndex === filteredList.length - 1 ? 0 : playerIndex + 1;
+            break;
+        case 'random':
+            nextIndex = getRandom(0, filteredList.length);
+            break;
+        case 'list':
+            nextIndex = playerIndex === filteredList.length - 1 ? -1 : playerIndex + 1;
+            break;
+        case 'singleLoop':
+            break;
+        default:
+            nextIndex = -1;
+            console.log('stop toggle play', togglePlayMethod, isAutoToggle);
+            return;
+    }
+    if (nextIndex < 0) {
+        console.log('next index empty');
+        return;
+    }
+    handlePlayNext({
+        musicInfo: filteredList[nextIndex],
+        listId: currentListId,
+        isTempPlay: false,
+    });
+};
+/**
+ * 上一曲
+ */
+export const playPrev = async (isAutoToggle = false) => {
+    if (playMusicInfo.musicInfo == null) {
+        handleToggleStop();
+        return;
+    }
+    const currentListId = playInfo.playerListId;
+    if (!currentListId) {
+        handleToggleStop();
+        return;
+    }
+    const currentList = getList(currentListId);
+    if (playedList.length) {
+        let currentId;
+        if (playMusicInfo.isTempPlay) {
+            const musicInfo = currentList[playInfo.playerPlayIndex];
+            if (musicInfo)
+                currentId = musicInfo.id;
+        }
+        else {
+            currentId = playMusicInfo.musicInfo.id;
+        }
+        // 从已播放列表移除播放列表已删除的歌曲
+        let index;
+        for (index = playedList.findIndex(m => m.musicInfo.id === currentId) - 1; index > -1; index--) {
+            const playMusicInfo = playedList[index];
+            const currentId = playMusicInfo.musicInfo.id;
+            if (playMusicInfo.listId == currentListId && !currentList.some(m => m.id === currentId)) {
+                removePlayedList(index);
+                continue;
+            }
+            break;
+        }
+        if (index > -1) {
+            handlePlayNext(playedList[index]);
+            return;
+        }
+    }
+    // const isCheckFile = findNum > 2
+    let { filteredList, playerIndex } = await filterList({
+        listId: currentListId,
+        list: currentList,
+        playedList,
+        playerMusicInfo: currentList[playInfo.playerPlayIndex],
+        isNext: false,
+    });
+    if (!filteredList.length) {
+        handleToggleStop();
+        return;
+    }
+    // let currentIndex = filteredList.indexOf(currentList[playInfo.playerPlayIndex])
+    if (playerIndex == -1 && filteredList.length)
+        playerIndex = 0;
+    let nextIndex = playerIndex;
+    if (!playMusicInfo.isTempPlay) {
+        let togglePlayMethod = appSetting['player.togglePlayMethod'];
+        if (!isAutoToggle) {
+            switch (togglePlayMethod) {
+                case 'list':
+                case 'singleLoop':
+                case 'none':
+                    togglePlayMethod = 'listLoop';
+            }
+        }
+        switch (togglePlayMethod) {
+            case 'random':
+                nextIndex = getRandom(0, filteredList.length);
+                break;
+            case 'listLoop':
+            case 'list':
+                nextIndex = playerIndex === 0 ? filteredList.length - 1 : playerIndex - 1;
+                break;
+            case 'singleLoop':
+                break;
+            default:
+                nextIndex = -1;
+                return;
+        }
+        if (nextIndex < 0)
+            return;
+    }
+    handlePlayNext({
+        musicInfo: filteredList[nextIndex],
+        listId: currentListId,
+        isTempPlay: false,
+    });
+};
+/**
+ * 恢复播放
+ */
+export const play = () => {
+    window.lx.isPlayedStop &&= false;
+    if (playMusicInfo.musicInfo == null)
+        return;
+    if (isEmpty()) {
+        if (createGettingUrlId(playMusicInfo.musicInfo) != gettingUrlId)
+            setMusicUrl(playMusicInfo.musicInfo);
+        return;
+    }
+    setPlay();
+};
+/**
+ * 暂停播放
+ */
+export const pause = () => {
+    setPause();
+};
+/**
+ * 停止播放
+ */
+export const stop = () => {
+    setStop();
+    setTimeout(() => {
+        window.app_event.stop();
+    });
+};
+/**
+ * 播放、暂停播放切换
+ */
+export const togglePlay = () => {
+    window.lx.isPlayedStop &&= false;
+    if (isPlay.value) {
+        pause();
+    }
+    else {
+        play();
+    }
+};
+/**
+ * 收藏当前播放的歌曲
+ */
+export const collectMusic = () => {
+    if (!playMusicInfo.musicInfo)
+        return;
+    void addListMusics(loveList.id, ['progress' in playMusicInfo.musicInfo ? playMusicInfo.musicInfo.metadata.musicInfo : playMusicInfo.musicInfo]);
+};
+/**
+ * 取消收藏当前播放的歌曲
+ */
+export const uncollectMusic = () => {
+    if (!playMusicInfo.musicInfo)
+        return;
+    void removeListMusics({ listId: loveList.id, ids: ['progress' in playMusicInfo.musicInfo ? playMusicInfo.musicInfo.metadata.musicInfo.id : playMusicInfo.musicInfo.id] });
+};
+/**
+ * 不喜欢当前播放的歌曲
+ */
+export const dislikeMusic = async () => {
+    if (!playMusicInfo.musicInfo)
+        return;
+    const minfo = 'progress' in playMusicInfo.musicInfo ? playMusicInfo.musicInfo.metadata.musicInfo : playMusicInfo.musicInfo;
+    await addDislikeInfo([{ name: minfo.name, singer: minfo.singer }]);
+    await playNext(true);
+};
+
+
+######## renderer.js.map :: src/renderer/core/player/utils.ts (2310 chars)
+import { toRaw, markRawList } from '@common/utils/vueTools';
+// import { qualityList } from '@renderer/store'
+import { clearPlayedList } from '@renderer/store/player/action';
+import { appSetting } from '@renderer/store/setting';
+import { dislikeInfo } from '@renderer/store/dislikeList';
+import { setPowerSaveBlocker as setPowerSaveBlockerRemote } from '@renderer/utils/ipc';
+// export const getPlayType = (highQuality: boolean, musicInfo: LX.Music.MusicInfo | LX.Download.ListItem): LX.Quality | null => {
+//   if ('progress' in musicInfo || musicInfo.source == 'local') return null
+//   let type: LX.Quality = '128k'
+//   let list = qualityList.value[musicInfo.source]
+//   if (highQuality && musicInfo.meta._qualitys['320k'] && list?.includes('320k')) type = '320k'
+//   return type
+// }
+/**
+ * 过滤列表中已播放的歌曲
+ */
+export const filterList = async ({ playedList, listId, list, playerMusicInfo, isNext }) => {
+    // if (this.list.listName === null) return
+    // console.log(isCheckFile)
+    let { filteredList, canPlayList, playerIndex } = await window.lx.worker.main.filterMusicList({
+        listId,
+        list: list.map(m => toRaw(m)),
+        playedList: toRaw(playedList),
+        // savePath: appSetting['download.savePath'],
+        playerMusicInfo: toRaw(playerMusicInfo),
+        dislikeInfo: { names: toRaw(dislikeInfo.names), musicNames: toRaw(dislikeInfo.musicNames), singerNames: toRaw(dislikeInfo.singerNames) },
+        isNext,
+    });
+    if (!filteredList.length && playedList.length) {
+        clearPlayedList();
+        return { filteredList: markRawList(canPlayList), playerIndex };
+    }
+    return { filteredList: markRawList(filteredList), playerIndex };
+};
+let timeout = null;
+const clearTimer = () => {
+    if (!timeout)
+        return;
+    clearTimeout(timeout);
+    timeout = null;
+};
+export const setPowerSaveBlocker = (enabled, force = false) => {
+    if (enabled) {
+        clearTimer();
+        if (!force && !appSetting['player.powerSaveBlocker'])
+            return;
+        setPowerSaveBlockerRemote(true);
+    }
+    else if (force) {
+        clearTimer();
+        setPowerSaveBlockerRemote(false);
+    }
+    else {
+        if (timeout)
+            return;
+        timeout = setTimeout(() => {
+            setPowerSaveBlockerRemote(false);
+        }, 60_000 * 1.5);
+    }
+};
+
+
+######## renderer.js.map :: src/renderer/core/player/timeoutStop.ts (2496 chars)
+import { ref, computed } from '@common/utils/vueTools';
+import { isPlay } from '@renderer/store/player/state';
+import { appSetting } from '@renderer/store/setting';
+// import { interval, intervalCancel } from '@renderer/utils/ipc'
+import { pause } from './action';
+const time = ref(-1);
+const timeoutTools = {
+    isRunning: false,
+    timeout: null,
+    // time: -1,
+    endTime: 0,
+    interval: null,
+    exit() {
+        window.lx.isPlayedStop = true;
+        if (!appSetting['player.waitPlayEndStop'] && isPlay.value) {
+            pause();
+        }
+    },
+    clearTimeout() {
+        if (this.interval) {
+            window.clearInterval(this.interval);
+            this.interval = null;
+        }
+        if (this.timeout) {
+            clearTimeout(this.timeout);
+            this.timeout = null;
+        }
+        if (!this.isRunning)
+            return;
+        // this.time = -1
+        time.value = -1;
+        this.isRunning = false;
+    },
+    start(_time) {
+        this.clearTimeout();
+        // this.time = _time
+        time.value = _time;
+        this.isRunning = true;
+        this.endTime = performance.now() + _time * 1000;
+        this.interval = window.setInterval(() => {
+            // this.endTime = performance.now()
+            // if (this.time > 0) {
+            //   this.time--
+            // }
+            time.value = Math.max(0, Math.round((this.endTime - performance.now()) / 1000));
+        }, 1000);
+        this.timeout = setTimeout(() => {
+            this.timeout = null;
+            time.value = -1;
+            this.clearTimeout();
+            this.exit();
+        }, _time * 1000);
+    },
+};
+export const startTimeoutStop = (time) => {
+    window.lx.isPlayedStop &&= false;
+    timeoutTools.start(time);
+};
+export const stopTimeoutStop = () => {
+    console.warn('stopTimeoutStop');
+    window.lx.isPlayedStop &&= false;
+    timeoutTools.clearTimeout();
+};
+const formatTime = (time) => {
+    // let d = parseInt(time / 86400)
+    // d = d ? d.toString() + ':' : ''
+    // time = time % 86400
+    let h = Math.trunc(time / 3600);
+    h = h ? h.toString() + ':' : '';
+    time = time % 3600;
+    const m = Math.trunc(time / 60).toString().padStart(2, '0');
+    const s = Math.trunc(time % 60).toString().padStart(2, '0');
+    return `${h}${m}:${s}`;
+};
+export const useTimeout = () => {
+    const timeLabel = computed(() => {
+        return time.value > 0 ? formatTime(time.value) : '';
+    });
+    return {
+        time,
+        timeLabel,
+    };
+};
+
+
+######## renderer.js.map :: src/renderer/store/player/state.ts (1007 chars)
+import { reactive, shallowReactive, ref } from '@common/utils/vueTools';
+export const musicInfo = window.lxData.musicInfo = reactive({
+    id: null,
+    pic: null,
+    lrc: null,
+    tlrc: null,
+    rlrc: null,
+    lxlrc: null,
+    rawlrc: null,
+    // url: null,
+    name: '',
+    singer: '',
+    album: '',
+});
+export const isPlay = ref(false);
+export const status = window.lxData.status = ref('');
+export const statusText = ref('');
+export const isShowPlayerDetail = ref(false);
+export const isShowPlayComment = ref(false);
+export const isShowLrcSelectContent = ref(false);
+export const playMusicInfo = shallowReactive({
+    listId: null,
+    musicInfo: null,
+    isTempPlay: false,
+});
+export const playInfo = shallowReactive({
+    playIndex: -1,
+    playerListId: null,
+    playerPlayIndex: -1,
+});
+export const playedList = window.lxData.playedList = shallowReactive([]);
+export const tempPlayList = shallowReactive([]);
+window.lxData.playInfo = playInfo;
+window.lxData.playMusicInfo = playMusicInfo;
+
+
+######## renderer.js.map :: src/renderer/store/player/action.ts (6334 chars)
+// import { reactive, ref, shallowRef } from '@common/utils/vueTools'
+import { musicInfo, isPlay, status, statusText, isShowPlayerDetail, isShowPlayComment, isShowLrcSelectContent, playInfo, playMusicInfo, playedList, tempPlayList, } from './state';
+import { getListMusicsFromCache } from '@renderer/store/list/action';
+import { downloadList } from '@renderer/store/download/state';
+import { setProgress } from './playProgress';
+import { playNext } from '@renderer/core/player';
+import { LIST_IDS } from '@common/constants';
+import { toRaw } from '@common/utils/vueTools';
+import { arrPush, arrUnshift } from '@common/utils/common';
+const musicInfoKeys = Object.keys(musicInfo);
+export const setMusicInfo = (_musicInfo) => {
+    for (const key of musicInfoKeys) {
+        const val = _musicInfo[key];
+        if (val !== undefined) {
+            // @ts-expect-error
+            musicInfo[key] = val;
+        }
+    }
+};
+export const setPlay = (val) => {
+    isPlay.value = val;
+};
+export const setStatus = (val) => {
+    console.log('setStatus', val);
+    status.value = val;
+};
+export const setStatusText = (val) => {
+    statusText.value = val;
+};
+export const setAllStatus = (val) => {
+    console.log('setAllStatus', val);
+    status.value = val;
+    statusText.value = val;
+};
+export const setShowPlayerDetail = (val) => {
+    isShowPlayerDetail.value = val;
+};
+export const setShowPlayComment = (val) => {
+    isShowPlayComment.value = val;
+};
+export const setShowPlayLrcSelectContentLrc = (val) => {
+    isShowLrcSelectContent.value = val;
+};
+export const setPlayListId = (listId) => {
+    playInfo.playerListId = listId;
+};
+export const getList = (listId) => {
+    return listId == LIST_IDS.DOWNLOAD ? downloadList : getListMusicsFromCache(listId);
+};
+/**
+ * 更新播放位置
+ * @returns 播放位置
+ */
+export const updatePlayIndex = () => {
+    const indexInfo = getPlayIndex(playMusicInfo.listId, playMusicInfo.musicInfo, playMusicInfo.isTempPlay);
+    // console.log(indexInfo)
+    playInfo.playIndex = indexInfo.playIndex;
+    playInfo.playerPlayIndex = indexInfo.playerPlayIndex;
+    return indexInfo;
+};
+export const getPlayIndex = (listId, musicInfo, isTempPlay) => {
+    const playerList = getList(playInfo.playerListId);
+    // if (listIndex < 0) throw new Error('music info not found')
+    // playInfo.playIndex = listIndex
+    let playIndex = -1;
+    let playerPlayIndex = -1;
+    if (playerList.length) {
+        playerPlayIndex = Math.min(playInfo.playerPlayIndex, playerList.length - 1);
+    }
+    const list = getList(listId);
+    if (list.length && musicInfo) {
+        const currentId = musicInfo.id;
+        playIndex = list.findIndex(m => m.id == currentId);
+        if (!isTempPlay) {
+            if (playIndex < 0) {
+                playerPlayIndex = playerPlayIndex < 1 ? (list.length - 1) : (playerPlayIndex - 1);
+            }
+            else {
+                playerPlayIndex = playIndex;
+            }
+        }
+    }
+    return {
+        playIndex,
+        playerPlayIndex,
+    };
+};
+export const resetPlayerMusicInfo = () => {
+    setMusicInfo({
+        id: null,
+        pic: null,
+        lrc: null,
+        tlrc: null,
+        rlrc: null,
+        lxlrc: null,
+        rawlrc: null,
+        name: '',
+        singer: '',
+        album: '',
+    });
+};
+const setPlayerMusicInfo = (musicInfo) => {
+    if (musicInfo) {
+        setMusicInfo('progress' in musicInfo ? {
+            id: musicInfo.id,
+            pic: musicInfo.metadata.musicInfo.meta.picUrl,
+            name: musicInfo.metadata.musicInfo.name,
+            singer: musicInfo.metadata.musicInfo.singer,
+            album: musicInfo.metadata.musicInfo.meta.albumName ?? '',
+            lrc: null,
+            tlrc: null,
+            rlrc: null,
+            lxlrc: null,
+            rawlrc: null,
+        } : {
+            id: musicInfo.id,
+            pic: musicInfo.meta.picUrl,
+            name: musicInfo.name,
+            singer: musicInfo.singer,
+            album: musicInfo.meta.albumName ?? '',
+            lrc: null,
+            tlrc: null,
+            rlrc: null,
+            lxlrc: null,
+            rawlrc: null,
+        });
+    }
+    else
+        resetPlayerMusicInfo();
+};
+/**
+ * 设置当前播放歌曲的信息
+ * @param listId 歌曲所属的列表id
+ * @param musicInfo 歌曲信息
+ * @param isTempPlay 是否临时播放
+ */
+export const setPlayMusicInfo = (listId, musicInfo, isTempPlay = false) => {
+    musicInfo = toRaw(musicInfo);
+    playMusicInfo.listId = listId;
+    playMusicInfo.musicInfo = musicInfo;
+    playMusicInfo.isTempPlay = isTempPlay;
+    setPlayerMusicInfo(musicInfo);
+    setProgress(0, 0);
+    if (musicInfo == null) {
+        playInfo.playIndex = -1;
+        playInfo.playerListId = null;
+        playInfo.playerPlayIndex = -1;
+    }
+    else {
+        const { playIndex, playerPlayIndex } = getPlayIndex(listId, musicInfo, isTempPlay);
+        playInfo.playIndex = playIndex;
+        playInfo.playerPlayIndex = playerPlayIndex;
+        window.app_event.musicToggled();
+    }
+};
+/**
+ * 将歌曲添加到已播放列表
+ * @param playMusicInfo playMusicInfo对象
+ */
+export const addPlayedList = (playMusicInfo) => {
+    const id = playMusicInfo.musicInfo.id;
+    if (playedList.some(m => m.musicInfo.id === id))
+        return;
+    playedList.push(playMusicInfo);
+};
+/**
+ * 将歌曲从已播放列表移除
+ * @param index 歌曲位置
+ */
+export const removePlayedList = (index) => {
+    playedList.splice(index, 1);
+};
+/**
+ * 清空已播放列表
+ */
+export const clearPlayedList = () => {
+    playedList.splice(0, playedList.length);
+};
+/**
+ * 添加歌曲到稍后播放列表
+ * @param list 歌曲列表
+ */
+export const addTempPlayList = (list) => {
+    const topList = [];
+    const bottomList = list.filter(({ isTop, ...musicInfo }) => {
+        if (isTop) {
+            topList.push(musicInfo);
+            return false;
+        }
+        return true;
+    });
+    if (topList.length)
+        arrUnshift(tempPlayList, topList.map(({ musicInfo, listId }) => ({ musicInfo, listId, isTempPlay: true })));
+    if (bottomList.length)
+        arrPush(tempPlayList, bottomList.map(({ musicInfo, listId }) => ({ musicInfo, listId, isTempPlay: true })));
+    if (!playMusicInfo.musicInfo)
+        void playNext();
+};
+/**
+ * 从稍后播放列表移除歌曲
+ * @param index 歌曲位置
+ */
+export const removeTempPlayList = (index) => {
+    tempPlayList.splice(index, 1);
+};
+/**
+ * 清空稍后播放列表
+ */
+export const clearTempPlayeList = () => {
+    tempPlayList.splice(0, tempPlayList.length);
+};
+
+
+######## renderer.js.map :: src/renderer/store/player/lyric.ts (544 chars)
+import { reactive } from '@common/utils/vueTools';
+export const lyric = reactive({
+    lines: [],
+    text: '',
+    line: 0,
+    offset: 0, // 歌词延迟
+    tempOffset: 0, // 歌词临时延迟
+});
+export const setLines = (lines) => {
+    if (!lines.length && !lyric.lines.length)
+        return;
+    lyric.lines = lines;
+};
+export const setText = (text, line) => {
+    lyric.text = text;
+    lyric.line = line;
+};
+export const setOffset = (offset) => {
+    lyric.offset = offset;
+};
+export const setTempOffset = (offset) => {
+    lyric.tempOffset = offset;
+};
+
+
+######## renderer.js.map :: src/renderer/store/player/playProgress.ts (831 chars)
+import { reactive } from '@common/utils/vueTools';
+import { formatPlayTime2 } from '@common/utils/common';
+export const playProgress = reactive({
+    nowPlayTime: 0,
+    maxPlayTime: 0,
+    progress: 0,
+    nowPlayTimeStr: '00:00',
+    maxPlayTimeStr: '00:00',
+});
+export const setNowPlayTime = (time) => {
+    playProgress.nowPlayTime = time;
+    playProgress.nowPlayTimeStr = formatPlayTime2(time);
+    playProgress.progress = playProgress.maxPlayTime ? time / playProgress.maxPlayTime : 0;
+};
+export const setMaxplayTime = (time) => {
+    playProgress.maxPlayTime = time;
+    playProgress.maxPlayTimeStr = formatPlayTime2(time);
+    playProgress.progress = time ? playProgress.nowPlayTime / time : 0;
+};
+export const setProgress = (currentTime, totalTime) => {
+    setMaxplayTime(totalTime);
+    setNowPlayTime(currentTime);
+};
+
+
+######## renderer.js.map :: src/renderer/store/player/volume.ts (236 chars)
+import { ref } from '@common/utils/vueTools';
+export const volume = ref(0);
+export const isMute = ref(false);
+export const setVolume = (num) => {
+    volume.value = num;
+};
+export const setMute = (flag) => {
+    isMute.value = flag;
+};
+
+
+######## renderer.js.map :: src/renderer/store/player/playbackRate.ts (157 chars)
+import { ref } from '@common/utils/vueTools';
+export const playbackRate = ref(1);
+export const setPlaybackRate = (num) => {
+    playbackRate.value = num;
+};
+
+
+######## renderer.js.map :: src/renderer/plugins/player/index.ts (19167 chars)
+let audio = null;
+let audioContext;
+let mediaSource;
+let analyser;
+// https://developer.mozilla.org/en-US/docs/Web/API/BaseAudioContext
+// https://benzleung.gitbooks.io/web-audio-api-mini-guide/content/chapter5-1.html
+export const freqs = [31, 62, 125, 250, 500, 1000, 2000, 4000, 8000, 16000];
+let biquads;
+export const freqsPreset = [
+    { name: 'pop', hz31: 6, hz62: 5, hz125: -3, hz250: -2, hz500: 5, hz1000: 4, hz2000: -4, hz4000: -3, hz8000: 6, hz16000: 4 },
+    { name: 'dance', hz31: 4, hz62: 3, hz125: -4, hz250: -6, hz500: 0, hz1000: 0, hz2000: 3, hz4000: 4, hz8000: 4, hz16000: 5 },
+    { name: 'rock', hz31: 7, hz62: 6, hz125: 2, hz250: 1, hz500: -3, hz1000: -4, hz2000: 2, hz4000: 1, hz8000: 4, hz16000: 5 },
+    { name: 'classical', hz31: 6, hz62: 7, hz125: 1, hz250: 2, hz500: -1, hz1000: 1, hz2000: -4, hz4000: -6, hz8000: -7, hz16000: -8 },
+    { name: 'vocal', hz31: -5, hz62: -6, hz125: -4, hz250: -3, hz500: 3, hz1000: 4, hz2000: 5, hz4000: 4, hz8000: -3, hz16000: -3 },
+    { name: 'slow', hz31: 5, hz62: 4, hz125: 2, hz250: 0, hz500: -2, hz1000: 0, hz2000: 3, hz4000: 6, hz8000: 7, hz16000: 8 },
+    { name: 'electronic', hz31: 6, hz62: 5, hz125: 0, hz250: -5, hz500: -4, hz1000: 0, hz2000: 6, hz4000: 8, hz8000: 8, hz16000: 7 },
+    { name: 'subwoofer', hz31: 8, hz62: 7, hz125: 5, hz250: 4, hz500: 0, hz1000: 0, hz2000: 0, hz4000: 0, hz8000: 0, hz16000: 0 },
+    { name: 'soft', hz31: -5, hz62: -5, hz125: -4, hz250: -4, hz500: 3, hz1000: 2, hz2000: 4, hz4000: 4, hz8000: 0, hz16000: 0 },
+];
+export const convolutions = [
+    { name: 'telephone', mainGain: 0.0, sendGain: 3.0, source: 'filter-telephone.wav' }, // 电话
+    { name: 's2_r4_bd', mainGain: 1.8, sendGain: 0.9, source: 's2_r4_bd.wav' }, // 教堂
+    { name: 'bright_hall', mainGain: 0.8, sendGain: 2.4, source: 'bright-hall.wav' },
+    { name: 'cinema_diningroom', mainGain: 0.6, sendGain: 2.3, source: 'cinema-diningroom.wav' },
+    { name: 'dining_living_true_stereo', mainGain: 0.6, sendGain: 1.8, source: 'dining-living-true-stereo.wav' },
+    { name: 'living_bedroom_leveled', mainGain: 0.6, sendGain: 2.1, source: 'living-bedroom-leveled.wav' },
+    { name: 'spreader50_65ms', mainGain: 1, sendGain: 2.5, source: 'spreader50-65ms.wav' },
+    // { name: 'spreader25_125ms', mainGain: 1, sendGain: 2.5, source: 'spreader25-125ms.wav' },
+    // { name: 'backslap', mainGain: 1.8, sendGain: 0.8, source: 'backslap1.wav' },
+    { name: 's3_r1_bd', mainGain: 1.8, sendGain: 0.8, source: 's3_r1_bd.wav' },
+    { name: 'matrix_1', mainGain: 1.5, sendGain: 0.9, source: 'matrix-reverb1.wav' },
+    { name: 'matrix_2', mainGain: 1.3, sendGain: 1, source: 'matrix-reverb2.wav' },
+    { name: 'cardiod_35_10_spread', mainGain: 1.8, sendGain: 0.6, source: 'cardiod-35-10-spread.wav' },
+    { name: 'tim_omni_35_10_magnetic', mainGain: 1, sendGain: 0.2, source: 'tim-omni-35-10-magnetic.wav' },
+    // { name: 'spatialized', mainGain: 1.8, sendGain: 0.8, source: 'spatialized8.wav' },
+    // { name: 'zing_long_stereo', mainGain: 0.8, sendGain: 1.8, source: 'zing-long-stereo.wav' },
+    { name: 'feedback_spring', mainGain: 1.8, sendGain: 0.8, source: 'feedback-spring.wav' },
+    // { name: 'tim_omni_rear_blend', mainGain: 1.8, sendGain: 0.8, source: 'tim-omni-rear-blend.wav' },
+];
+// 半音
+// export const semitones = [-1.5, -1, -0.5, 0.5, 1, 1.5, 2, 2.5, 3, 3.5] as const
+let convolver;
+let convolverSourceGainNode;
+let convolverOutputGainNode;
+let convolverDynamicsCompressor;
+let gainNode;
+let panner;
+let pitchShifterNode;
+let pitchShifterNodePitchFactor;
+let pitchShifterNodeLoadStatus = 'none';
+let pitchShifterNodeTempValue = 1;
+let defaultChannelCount = 2;
+export const soundR = 0.5;
+export const createAudio = () => {
+    if (audio)
+        return;
+    audio = new window.Audio();
+    audio.controls = false;
+    audio.autoplay = true;
+    audio.preload = 'auto';
+    audio.crossOrigin = 'anonymous';
+    // https://developer.chrome.com/blog/autoplay
+    audio.addEventListener('playing', () => {
+        if (audioContext?.state == 'suspended') {
+            void audioContext.resume().catch((err) => {
+                console.error('Resume audio context failed:', err);
+                throw err;
+            });
+        }
+    });
+};
+const initAnalyser = () => {
+    analyser = audioContext.createAnalyser();
+    analyser.fftSize = 256;
+};
+const initBiquadFilter = () => {
+    biquads = new Map();
+    let i;
+    for (const item of freqs) {
+        const filter = audioContext.createBiquadFilter();
+        biquads.set(`hz${item}`, filter);
+        filter.type = 'peaking';
+        filter.frequency.value = item;
+        filter.Q.value = 1.4;
+        filter.gain.value = 0;
+    }
+    for (i = 1; i < freqs.length; i++) {
+        (biquads.get(`hz${freqs[i - 1]}`)).connect(biquads.get(`hz${freqs[i]}`));
+    }
+};
+const initConvolver = () => {
+    convolverSourceGainNode = audioContext.createGain();
+    convolverOutputGainNode = audioContext.createGain();
+    convolverDynamicsCompressor = audioContext.createDynamicsCompressor();
+    convolver = audioContext.createConvolver();
+    convolver.connect(convolverOutputGainNode);
+    convolverSourceGainNode.connect(convolverDynamicsCompressor);
+    convolverOutputGainNode.connect(convolverDynamicsCompressor);
+};
+const initPanner = () => {
+    panner = audioContext.createPanner();
+};
+const initGain = () => {
+    gainNode = audioContext.createGain();
+};
+const initAdvancedAudioFeatures = () => {
+    if (audioContext)
+        return;
+    if (!audio)
+        throw new Error('audio not defined');
+    audioContext = new window.AudioContext({ latencyHint: 'playback' });
+    defaultChannelCount = audioContext.destination.channelCount;
+    initAnalyser();
+    initBiquadFilter();
+    initConvolver();
+    initPanner();
+    initGain();
+    // source -> analyser -> biquadFilter -> pitchShifter -> [(convolver & convolverSource)->convolverDynamicsCompressor] -> panner -> gain
+    mediaSource = audioContext.createMediaElementSource(audio);
+    mediaSource.connect(analyser);
+    analyser.connect(biquads.get(`hz${freqs[0]}`));
+    const lastBiquadFilter = (biquads.get(`hz${freqs.at(-1)}`));
+    lastBiquadFilter.connect(convolverSourceGainNode);
+    lastBiquadFilter.connect(convolver);
+    convolverDynamicsCompressor.connect(panner);
+    panner.connect(gainNode);
+    gainNode.connect(audioContext.destination);
+    // 音频输出设备改变时刷新 audio node 连接
+    window.app_event.on('playerDeviceChanged', handleMediaListChange);
+    // audio.addEventListener('playing', connectAudioNode)
+    // audio.addEventListener('pause', disconnectAudioNode)
+    // audio.addEventListener('waiting', disconnectAudioNode)
+    // audio.addEventListener('emptied', disconnectAudioNode)
+    // if (!audio.paused) connectAudioNode()
+};
+const handleMediaListChange = () => {
+    mediaSource.disconnect();
+    mediaSource.connect(analyser);
+};
+// let isConnected = true
+// const connectAudioNode = () => {
+//   if (isConnected) return
+//   console.log('connect Node')
+//   mediaSource.connect(analyser)
+//   isConnected = true
+//   if (pitchShifterNodeTempValue == 1 && pitchShifterNodeLoadStatus == 'connected') {
+//     disconnectPitchShifterNode()
+//   }
+// }
+// const disconnectAudioNode = () => {
+//   if (!isConnected) return
+//   console.log('disconnect Node')
+//   mediaSource.disconnect()
+//   isConnected = false
+//   if (pitchShifterNodeTempValue == 1 && pitchShifterNodeLoadStatus == 'connected') {
+//     disconnectPitchShifterNode()
+//   }
+// }
+export const getAudioContext = () => {
+    initAdvancedAudioFeatures();
+    return audioContext;
+};
+let unsubMediaListChangeEvent = null;
+export const setMaxOutputChannelCount = (enable) => {
+    if (enable) {
+        initAdvancedAudioFeatures();
+        audioContext.destination.channelCountMode = 'max';
+        audioContext.destination.channelCount = audioContext.destination.maxChannelCount;
+        // navigator.mediaDevices.addEventListener('devicechange', handleMediaListChange)
+        if (!unsubMediaListChangeEvent) {
+            let handleMediaListChange = () => {
+                setMaxOutputChannelCount(true);
+            };
+            window.app_event.on('playerDeviceChanged', handleMediaListChange);
+            unsubMediaListChangeEvent = () => {
+                window.app_event.off('playerDeviceChanged', handleMediaListChange);
+                unsubMediaListChangeEvent = null;
+            };
+        }
+    }
+    else {
+        unsubMediaListChangeEvent?.();
+        if (audioContext && audioContext.destination.channelCountMode != 'explicit') {
+            audioContext.destination.channelCount = defaultChannelCount;
+            // audioContext.destination.channelInterpretation
+            audioContext.destination.channelCountMode = 'explicit';
+        }
+    }
+};
+export const getAnalyser = () => {
+    initAdvancedAudioFeatures();
+    return analyser;
+};
+export const getBiquadFilter = () => {
+    initAdvancedAudioFeatures();
+    return biquads;
+};
+// let isConvolverConnected = false
+export const setConvolver = (buffer, mainGain, sendGain) => {
+    initAdvancedAudioFeatures();
+    convolver.buffer = buffer;
+    // console.log(mainGain, sendGain)
+    if (buffer) {
+        convolverSourceGainNode.gain.value = mainGain;
+        convolverOutputGainNode.gain.value = sendGain;
+    }
+    else {
+        convolverSourceGainNode.gain.value = 1;
+        convolverOutputGainNode.gain.value = 0;
+    }
+};
+export const setConvolverMainGain = (gain) => {
+    if (convolverSourceGainNode.gain.value == gain)
+        return;
+    // console.log(gain)
+    convolverSourceGainNode.gain.value = gain;
+};
+export const setConvolverSendGain = (gain) => {
+    if (convolverOutputGainNode.gain.value == gain)
+        return;
+    // console.log(gain)
+    convolverOutputGainNode.gain.value = gain;
+};
+let pannerInfo = {
+    x: 0,
+    y: 0,
+    z: 0,
+    soundR: 0.5,
+    rad: 0,
+    speed: 1,
+    intv: null,
+};
+const setPannerXYZ = (nx, ny, nz) => {
+    pannerInfo.x = nx;
+    pannerInfo.y = ny;
+    pannerInfo.z = nz;
+    // console.log(pannerInfo)
+    panner.positionX.value = nx * pannerInfo.soundR;
+    panner.positionY.value = ny * pannerInfo.soundR;
+    panner.positionZ.value = nz * pannerInfo.soundR;
+};
+export const setPannerSoundR = (r) => {
+    pannerInfo.soundR = r;
+};
+export const setPannerSpeed = (speed) => {
+    pannerInfo.speed = speed;
+    if (pannerInfo.intv)
+        startPanner();
+};
+export const stopPanner = () => {
+    if (pannerInfo.intv) {
+        clearInterval(pannerInfo.intv);
+        pannerInfo.intv = null;
+        pannerInfo.rad = 0;
+    }
+    panner.positionX.value = 0;
+    panner.positionY.value = 0;
+    panner.positionZ.value = 0;
+};
+export const startPanner = () => {
+    initAdvancedAudioFeatures();
+    if (pannerInfo.intv) {
+        clearInterval(pannerInfo.intv);
+        pannerInfo.intv = null;
+        pannerInfo.rad = 0;
+    }
+    pannerInfo.intv = setInterval(() => {
+        pannerInfo.rad += 1;
+        if (pannerInfo.rad > 360)
+            pannerInfo.rad -= 360;
+        setPannerXYZ(Math.sin(pannerInfo.rad * Math.PI / 180), Math.cos(pannerInfo.rad * Math.PI / 180), Math.cos(pannerInfo.rad * Math.PI / 180));
+    }, pannerInfo.speed * 10);
+};
+let isConnected = true;
+const connectNode = () => {
+    if (isConnected)
+        return;
+    console.log('connect Node');
+    analyser?.connect(biquads.get(`hz${freqs[0]}`));
+    isConnected = true;
+    if (pitchShifterNodeTempValue == 1 && pitchShifterNodeLoadStatus == 'connected') {
+        disconnectPitchShifterNode();
+    }
+};
+const disconnectNode = () => {
+    if (!isConnected)
+        return;
+    console.log('disconnect Node');
+    analyser?.disconnect();
+    isConnected = false;
+    if (pitchShifterNodeTempValue == 1 && pitchShifterNodeLoadStatus == 'connected') {
+        disconnectPitchShifterNode();
+    }
+};
+const connectPitchShifterNode = () => {
+    console.log('connect Pitch Shifter Node');
+    audio.addEventListener('playing', connectNode);
+    audio.addEventListener('pause', disconnectNode);
+    audio.addEventListener('waiting', disconnectNode);
+    audio.addEventListener('emptied', disconnectNode);
+    if (audio.paused)
+        disconnectNode();
+    const lastBiquadFilter = (biquads.get(`hz${freqs.at(-1)}`));
+    lastBiquadFilter.disconnect();
+    lastBiquadFilter.connect(pitchShifterNode);
+    pitchShifterNode.connect(convolver);
+    pitchShifterNode.connect(convolverSourceGainNode);
+    // convolverDynamicsCompressor.disconnect(panner)
+    // convolverDynamicsCompressor.connect(pitchShifterNode)
+    // pitchShifterNode.connect(panner)
+    pitchShifterNodeLoadStatus = 'connected';
+    pitchShifterNodePitchFactor.value = pitchShifterNodeTempValue;
+};
+const disconnectPitchShifterNode = () => {
+    console.log('disconnect Pitch Shifter Node');
+    const lastBiquadFilter = (biquads.get(`hz${freqs.at(-1)}`));
+    lastBiquadFilter.disconnect();
+    lastBiquadFilter.connect(convolver);
+    lastBiquadFilter.connect(convolverSourceGainNode);
+    pitchShifterNodeLoadStatus = 'unconnect';
+    audio.removeEventListener('playing', connectNode);
+    audio.removeEventListener('pause', disconnectNode);
+    audio.removeEventListener('waiting', disconnectNode);
+    audio.removeEventListener('emptied', disconnectNode);
+    connectNode();
+};
+const loadPitchShifterNode = () => {
+    pitchShifterNodeLoadStatus = 'loading';
+    initAdvancedAudioFeatures();
+    // source -> analyser -> biquadFilter -> audioWorklet(pitch shifter) -> [(convolver & convolverSource)->convolverDynamicsCompressor] -> panner -> gain
+    void audioContext.audioWorklet.addModule(new URL(
+    /* webpackChunkName: 'pitch_shifter.audioWorklet' */
+    './pitch-shifter/phase-vocoder.js', import.meta.url)).then(() => {
+        console.log('pitch shifter audio worklet loaded');
+        // https://github.com/olvb/phaze/issues/26#issuecomment-1574629971
+        pitchShifterNode = new AudioWorkletNode(audioContext, 'phase-vocoder-processor', { outputChannelCount: [2] });
+        let pitchFactorParam = pitchShifterNode.parameters.get('pitchFactor');
+        if (!pitchFactorParam)
+            return;
+        pitchShifterNodePitchFactor = pitchFactorParam;
+        pitchShifterNodeLoadStatus = 'unconnect';
+        if (pitchShifterNodeTempValue == 1)
+            return;
+        connectPitchShifterNode();
+    });
+};
+export const setPitchShifter = (val) => {
+    // console.log('setPitchShifter', val)
+    pitchShifterNodeTempValue = val;
+    switch (pitchShifterNodeLoadStatus) {
+        case 'loading':
+            break;
+        case 'none':
+            loadPitchShifterNode();
+            break;
+        case 'connected':
+            // a: 1 = 半音
+            // value = 2 ** (a / 12)
+            pitchShifterNodePitchFactor.value = val;
+            break;
+        case 'unconnect':
+            connectPitchShifterNode();
+            break;
+    }
+};
+export const hasInitedAdvancedAudioFeatures = () => audioContext != null;
+export const setResource = (src) => {
+    if (audio)
+        audio.src = src;
+};
+export const setPlay = () => {
+    void audio?.play();
+};
+export const setPause = () => {
+    audio?.pause();
+};
+export const setStop = () => {
+    if (audio) {
+        audio.src = '';
+        audio.removeAttribute('src');
+    }
+};
+export const isEmpty = () => !audio?.src;
+export const setLoopPlay = (isLoop) => {
+    if (audio)
+        audio.loop = isLoop;
+};
+export const getPlaybackRate = () => {
+    return audio?.defaultPlaybackRate ?? 1;
+};
+export const setPlaybackRate = (rate) => {
+    if (!audio)
+        return;
+    audio.defaultPlaybackRate = rate;
+    audio.playbackRate = rate;
+};
+export const setPreservesPitch = (preservesPitch) => {
+    if (!audio)
+        return;
+    audio.preservesPitch = preservesPitch;
+};
+export const getMute = () => {
+    return audio?.muted ?? false;
+};
+export const setMute = (isMute) => {
+    if (audio)
+        audio.muted = isMute;
+};
+export const getCurrentTime = () => {
+    // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
+    return audio?.currentTime || 0;
+};
+export const setCurrentTime = (time) => {
+    if (audio)
+        audio.currentTime = time;
+};
+export const setMediaDeviceId = async (mediaDeviceId) => {
+    if (!audio)
+        return;
+    return audio.setSinkId(mediaDeviceId);
+};
+export const setVolume = (volume) => {
+    if (audio)
+        audio.volume = volume;
+};
+export const getDuration = () => {
+    // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
+    return audio?.duration || 0;
+};
+export const onPlaying = (callback) => {
+    if (!audio)
+        throw new Error('audio not defined');
+    audio.addEventListener('playing', callback);
+    return () => {
+        audio?.removeEventListener('playing', callback);
+    };
+};
+export const onPause = (callback) => {
+    if (!audio)
+        throw new Error('audio not defined');
+    audio?.addEventListener('pause', callback);
+    return () => {
+        audio?.removeEventListener('pause', callback);
+    };
+};
+export const onEnded = (callback) => {
+    if (!audio)
+        throw new Error('audio not defined');
+    audio.addEventListener('ended', callback);
+    return () => {
+        audio?.removeEventListener('ended', callback);
+    };
+};
+export const onError = (callback) => {
+    if (!audio)
+        throw new Error('audio not defined');
+    audio.addEventListener('error', callback);
+    return () => {
+        audio?.removeEventListener('error', callback);
+    };
+};
+export const onLoadeddata = (callback) => {
+    if (!audio)
+        throw new Error('audio not defined');
+    audio.addEventListener('loadeddata', callback);
+    return () => {
+        audio?.removeEventListener('loadeddata', callback);
+    };
+};
+export const onLoadstart = (callback) => {
+    if (!audio)
+        throw new Error('audio not defined');
+    audio.addEventListener('loadstart', callback);
+    return () => {
+        audio?.removeEventListener('loadstart', callback);
+    };
+};
+export const onCanplay = (callback) => {
+    if (!audio)
+        throw new Error('audio not defined');
+    audio.addEventListener('canplay', callback);
+    return () => {
+        audio?.removeEventListener('canplay', callback);
+    };
+};
+export const onEmptied = (callback) => {
+    if (!audio)
+        throw new Error('audio not defined');
+    audio.addEventListener('emptied', callback);
+    return () => {
+        audio?.removeEventListener('emptied', callback);
+    };
+};
+export const onTimeupdate = (callback) => {
+    if (!audio)
+        throw new Error('audio not defined');
+    audio.addEventListener('timeupdate', callback);
+    return () => {
+        audio?.removeEventListener('timeupdate', callback);
+    };
+};
+// 缓冲中
+export const onWaiting = (callback) => {
+    if (!audio)
+        throw new Error('audio not defined');
+    audio.addEventListener('waiting', callback);
+    return () => {
+        audio?.removeEventListener('waiting', callback);
+    };
+};
+// 可见性改变
+export const onVisibilityChange = (callback) => {
+    document.addEventListener('visibilitychange', callback);
+    return () => {
+        document.removeEventListener('visibilitychange', callback);
+    };
+};
+export const getErrorCode = () => {
+    return audio?.error?.code;
+};
+
+
+######## renderer.download.worker.js.map :: src/common/constants.ts (1723 chars)
+export const URL_SCHEME_RXP = /^lxmusic:\/\//;
+export const SPLIT_CHAR = {
+    DISLIKE_NAME: '@',
+    DISLIKE_NAME_ALIAS: '#',
+};
+export const STORE_NAMES = {
+    APP_SETTINGS: 'config_v2',
+    DATA: 'data',
+    SYNC: 'sync',
+    HOTKEY: 'hot_key',
+    USER_API: 'user_api',
+    LRC_RAW: 'lyrics',
+    LRC_EDITED: 'lyrics_edited',
+    THEME: 'theme',
+    SOUND_EFFECT: 'sound_effect',
+};
+export const APP_EVENT_NAMES = {
+    winMainName: 'win_main',
+    winLyricName: 'win_lyric',
+    trayName: 'tray',
+};
+export const LIST_IDS = {
+    DEFAULT: 'default',
+    LOVE: 'love',
+    TEMP: 'temp',
+    DOWNLOAD: 'download',
+    PLAY_LATER: null,
+};
+export const DATA_KEYS = {
+    viewPrevState: 'viewPrevState',
+    playInfo: 'playInfo',
+    searchHistoryList: 'searchHistoryList',
+    listScrollPosition: 'listScrollPosition',
+    listPrevSelectId: 'listPrevSelectId',
+    listUpdateInfo: 'listUpdateInfo',
+    ignoreVersion: 'ignoreVersion',
+    leaderboardSetting: 'leaderboardSetting',
+    songListSetting: 'songListSetting',
+    searchSetting: 'searchSetting',
+    lastStartInfo: 'lastStartInfo',
+};
+export const DEFAULT_SETTING = {
+    leaderboard: {
+        source: 'kw',
+        boardId: 'kw__16',
+    },
+    songList: {
+        source: 'kw',
+        sortId: 'new',
+        tagId: '',
+    },
+    search: {
+        temp_source: 'kw',
+        source: 'all',
+        type: 'music',
+    },
+    viewPrevState: {
+        url: '/search',
+        query: {},
+    },
+};
+export const DOWNLOAD_STATUS = {
+    RUN: 'run',
+    WAITING: 'waiting',
+    PAUSE: 'pause',
+    ERROR: 'error',
+    COMPLETED: 'completed',
+};
+export const QUALITYS = ['flac24bit', 'flac', 'wav', 'ape', '320k', '192k', '128k'];
+export const TRAY_AUTO_ID = -1;
+
+
+######## renderer.js.map :: src/common/constants.ts (1723 chars)
+export const URL_SCHEME_RXP = /^lxmusic:\/\//;
+export const SPLIT_CHAR = {
+    DISLIKE_NAME: '@',
+    DISLIKE_NAME_ALIAS: '#',
+};
+export const STORE_NAMES = {
+    APP_SETTINGS: 'config_v2',
+    DATA: 'data',
+    SYNC: 'sync',
+    HOTKEY: 'hot_key',
+    USER_API: 'user_api',
+    LRC_RAW: 'lyrics',
+    LRC_EDITED: 'lyrics_edited',
+    THEME: 'theme',
+    SOUND_EFFECT: 'sound_effect',
+};
+export const APP_EVENT_NAMES = {
+    winMainName: 'win_main',
+    winLyricName: 'win_lyric',
+    trayName: 'tray',
+};
+export const LIST_IDS = {
+    DEFAULT: 'default',
+    LOVE: 'love',
+    TEMP: 'temp',
+    DOWNLOAD: 'download',
+    PLAY_LATER: null,
+};
+export const DATA_KEYS = {
+    viewPrevState: 'viewPrevState',
+    playInfo: 'playInfo',
+    searchHistoryList: 'searchHistoryList',
+    listScrollPosition: 'listScrollPosition',
+    listPrevSelectId: 'listPrevSelectId',
+    listUpdateInfo: 'listUpdateInfo',
+    ignoreVersion: 'ignoreVersion',
+    leaderboardSetting: 'leaderboardSetting',
+    songListSetting: 'songListSetting',
+    searchSetting: 'searchSetting',
+    lastStartInfo: 'lastStartInfo',
+};
+export const DEFAULT_SETTING = {
+    leaderboard: {
+        source: 'kw',
+        boardId: 'kw__16',
+    },
+    songList: {
+        source: 'kw',
+        sortId: 'new',
+        tagId: '',
+    },
+    search: {
+        temp_source: 'kw',
+        source: 'all',
+        type: 'music',
+    },
+    viewPrevState: {
+        url: '/search',
+        query: {},
+    },
+};
+export const DOWNLOAD_STATUS = {
+    RUN: 'run',
+    WAITING: 'waiting',
+    PAUSE: 'pause',
+    ERROR: 'error',
+    COMPLETED: 'completed',
+};
+export const QUALITYS = ['flac24bit', 'flac', 'wav', 'ape', '320k', '192k', '128k'];
+export const TRAY_AUTO_ID = -1;
+
+
+######## renderer.main.worker.js.map :: src/common/constants.ts (1723 chars)
+export const URL_SCHEME_RXP = /^lxmusic:\/\//;
+export const SPLIT_CHAR = {
+    DISLIKE_NAME: '@',
+    DISLIKE_NAME_ALIAS: '#',
+};
+export const STORE_NAMES = {
+    APP_SETTINGS: 'config_v2',
+    DATA: 'data',
+    SYNC: 'sync',
+    HOTKEY: 'hot_key',
+    USER_API: 'user_api',
+    LRC_RAW: 'lyrics',
+    LRC_EDITED: 'lyrics_edited',
+    THEME: 'theme',
+    SOUND_EFFECT: 'sound_effect',
+};
+export const APP_EVENT_NAMES = {
+    winMainName: 'win_main',
+    winLyricName: 'win_lyric',
+    trayName: 'tray',
+};
+export const LIST_IDS = {
+    DEFAULT: 'default',
+    LOVE: 'love',
+    TEMP: 'temp',
+    DOWNLOAD: 'download',
+    PLAY_LATER: null,
+};
+export const DATA_KEYS = {
+    viewPrevState: 'viewPrevState',
+    playInfo: 'playInfo',
+    searchHistoryList: 'searchHistoryList',
+    listScrollPosition: 'listScrollPosition',
+    listPrevSelectId: 'listPrevSelectId',
+    listUpdateInfo: 'listUpdateInfo',
+    ignoreVersion: 'ignoreVersion',
+    leaderboardSetting: 'leaderboardSetting',
+    songListSetting: 'songListSetting',
+    searchSetting: 'searchSetting',
+    lastStartInfo: 'lastStartInfo',
+};
+export const DEFAULT_SETTING = {
+    leaderboard: {
+        source: 'kw',
+        boardId: 'kw__16',
+    },
+    songList: {
+        source: 'kw',
+        sortId: 'new',
+        tagId: '',
+    },
+    search: {
+        temp_source: 'kw',
+        source: 'all',
+        type: 'music',
+    },
+    viewPrevState: {
+        url: '/search',
+        query: {},
+    },
+};
+export const DOWNLOAD_STATUS = {
+    RUN: 'run',
+    WAITING: 'waiting',
+    PAUSE: 'pause',
+    ERROR: 'error',
+    COMPLETED: 'completed',
+};
+export const QUALITYS = ['flac24bit', 'flac', 'wav', 'ape', '320k', '192k', '128k'];
+export const TRAY_AUTO_ID = -1;
+
+
+######## renderer-lyric.js.map :: src/common/ipcNames.ts (7646 chars)
+const modules = {
+    common: {
+        get_env_params: 'get_env_params',
+        deeplink: 'deeplink',
+        clear_env_params_deeplink: 'clear_env_params_deeplink',
+        system_theme_change: 'system_theme_change',
+        theme_change: 'theme_change',
+        get_system_fonts: 'get_system_fonts',
+        get_app_setting: 'get_app_setting',
+        set_app_setting: 'set_app_setting',
+    },
+    player: {
+        invoke_play_music: 'play_music',
+        invoke_play_next: 'play_next',
+        invoke_play_prev: 'play_prev',
+        invoke_toggle_play: 'toggle_play',
+        player_play: 'player_play',
+        player_pause: 'player_pause',
+        player_stop: 'player_stop',
+        player_error: 'player_error',
+        list_data_overwire: 'list_data_overwire',
+        list_get: 'list_get',
+        list_add: 'list_add',
+        list_remove: 'list_remove',
+        list_update: 'list_update',
+        list_update_position: 'list_update_position',
+        list_music_get: 'list_music_get',
+        list_music_add: 'list_music_add',
+        list_music_move: 'list_music_move',
+        list_music_remove: 'list_music_remove',
+        list_music_update: 'list_music_update',
+        list_music_update_position: 'list_music_update_position',
+        list_music_overwrite: 'list_music_overwrite',
+        list_music_clear: 'list_music_clear',
+        list_music_check_exist: 'list_music_check_exist',
+        list_music_get_list_ids: 'list_music_get_list_ids',
+    },
+    dislike: {
+        get_dislike_music_infos: 'get_dislike_music_infos',
+        add_dislike_music_infos: 'add_dislike_music_infos',
+        overwrite_dislike_music_infos: 'overwrite_dislike_music_infos',
+        clear_dislike_music_infos: 'clear_dislike_music_infos',
+    },
+    winMain: {
+        focus: 'focus',
+        close: 'close',
+        min: 'min',
+        max: 'max',
+        fullscreen: 'fullscreen',
+        set_app_name: 'set_app_name',
+        clear_cache: 'clear_cache',
+        get_cache_size: 'get_cache_size',
+        inited: 'inited',
+        show_save_dialog: 'show_save_dialog',
+        show_select_dialog: 'show_select_dialog',
+        show_dialog: 'show_dialog',
+        open_dir_in_explorer: 'open_dir_in_explorer',
+        open_dev_tools: 'open_dev_tools',
+        set_power_save_blocker: 'set_power_save_blocker',
+        player_status: 'player_status',
+        change_tray: 'change_tray',
+        quit_update: 'quit_update',
+        update_check: 'update_check',
+        update_download_update: 'update_download_update',
+        update_available: 'update_available',
+        update_error: 'update_error',
+        update_progress: 'update_progress',
+        update_downloaded: 'update_downloaded',
+        update_not_available: 'update_not_available',
+        set_ignore_mouse_events: 'set_ignore_mouse_events',
+        set_window_size: 'set_window_size',
+        handle_request: 'handle_request',
+        cancel_request: 'cancel_request',
+        restart_window: 'restart_window',
+        get_lyric_info: 'get_lyric_info',
+        set_lyric_info: 'set_lyric_info',
+        set_config: 'set_config',
+        set_hot_key_config: 'set_hot_key_config',
+        on_config_change: 'on_config_change',
+        key_down: 'key_down',
+        quit: 'quit',
+        min_toggle: 'min_toggle',
+        hide_toggle: 'hide_toggle',
+        get_other_source: 'get_other_source',
+        save_other_source: 'save_other_source',
+        clear_other_source: 'clear_other_source',
+        get_other_source_count: 'get_other_source_count',
+        get_data: 'get_data',
+        save_data: 'save_data',
+        get_sound_effect_eq_preset: 'get_sound_effect_eq_preset',
+        save_sound_effect_eq_preset: 'save_sound_effect_eq_preset',
+        get_sound_effect_convolution_preset: 'get_sound_effect_convolution_preset',
+        save_sound_effect_convolution_preset: 'save_sound_effect_convolution_preset',
+        // get_sound_effect_pitch_shifter_preset: 'get_sound_effect_pitch_shifter_preset',
+        // save_sound_effect_pitch_shifter_preset: 'save_sound_effect_pitch_shifter_preset',
+        get_hot_key: 'get_hot_key',
+        import_user_api: 'import_user_api',
+        remove_user_api: 'remove_user_api',
+        set_user_api: 'set_user_api',
+        get_user_api_list: 'get_user_api_list',
+        request_user_api: 'request_user_api',
+        request_user_api_cancel: 'request_user_api_cancel',
+        get_user_api_status: 'get_user_api_status',
+        user_api_status: 'user_api_status',
+        user_api_show_update_alert: 'user_api_show_update_alert',
+        user_api_set_allow_update_alert: 'user_api_set_allow_update_alert',
+        get_palyer_lyric: 'get_lyric',
+        // save_lyric: 'save_lyric',
+        // clear_lyric: 'clear_lyric',
+        get_lyric_raw: 'get_lyric_raw',
+        save_lyric_raw: 'save_lyric_raw',
+        clear_lyric_raw: 'clear_lyric_raw',
+        get_lyric_raw_count: 'get_lyric_raw_count',
+        get_lyric_edited: 'get_lyric_edited',
+        save_lyric_edited: 'save_lyric_edited',
+        remove_lyric_edited: 'remove_lyric_edited',
+        clear_lyric_edited: 'clear_lyric_edited',
+        get_lyric_edited_count: 'get_lyric_edited_count',
+        get_music_url: 'get_music_url',
+        save_music_url: 'save_music_url',
+        clear_music_url: 'clear_music_url',
+        get_music_url_count: 'get_music_url_count',
+        open_api_action: 'open_api_action',
+        sync_action: 'sync_action',
+        sync_get_server_devices: 'sync_get_server_devices',
+        sync_remove_server_device: 'sync_remove_server_device',
+        process_new_desktop_lyric_client: 'process_new_desktop_lyric_client',
+        player_action_set_buttons: 'player_action_set_buttons',
+        // player_action_set_thumbnail_clip: 'player_action_set_thumbnail_clip',
+        player_action_on_button_click: 'player_action_on_button_click',
+        get_themes: 'get_themes',
+        save_theme: 'save_theme',
+        remove_theme: 'remove_theme',
+        download_list_get: 'download_list_get',
+        download_list_add: 'download_list_add',
+        download_list_update: 'download_list_update',
+        download_list_remove: 'download_list_remove',
+        download_list_clear: 'download_list_clear',
+    },
+    winLyric: {
+        close: 'close',
+        set_config: 'set_config',
+        get_config: 'get_config',
+        on_config_change: 'on_config_change',
+        main_window_inited: 'main_window_inited',
+        set_win_bounds: 'set_win_bounds',
+        set_win_resizeable: 'set_win_resizeable',
+        key_down: 'key_down',
+        request_main_window_channel: 'request_main_window_channel',
+        provide_main_window_channel: 'provide_main_window_channel',
+        mouse_enter_leave: 'mouse_enter_leave',
+    },
+    hotKey: {
+        enable: 'enable',
+        status: 'status',
+        set_config: 'set_config',
+    },
+};
+for (const moduleName of Object.keys(modules)) {
+    let eventNames = modules[moduleName];
+    for (const eventName of Object.keys(eventNames)) {
+        eventNames[eventName] = `${moduleName}_${eventName}`;
+    }
+}
+// for (const moduleName of Object.keys(modules) as Array<keyof typeof modules>) {
+//   let eventNames = modules[moduleName]
+//   for (const eventName of Object.keys(eventNames)) {
+//     eventNames[eventName] = `${moduleName}_${eventName}`
+//   }
+// }
+export const CMMON_EVENT_NAME = modules.common;
+export const PLAYER_EVENT_NAME = modules.player;
+export const DISLIKE_EVENT_NAME = modules.dislike;
+export const WIN_MAIN_RENDERER_EVENT_NAME = modules.winMain;
+export const WIN_LYRIC_RENDERER_EVENT_NAME = modules.winLyric;
+export const HOTKEY_RENDERER_EVENT_NAME = modules.hotKey;
+
+
+######## renderer.js.map :: src/common/ipcNames.ts (7646 chars)
+const modules = {
+    common: {
+        get_env_params: 'get_env_params',
+        deeplink: 'deeplink',
+        clear_env_params_deeplink: 'clear_env_params_deeplink',
+        system_theme_change: 'system_theme_change',
+        theme_change: 'theme_change',
+        get_system_fonts: 'get_system_fonts',
+        get_app_setting: 'get_app_setting',
+        set_app_setting: 'set_app_setting',
+    },
+    player: {
+        invoke_play_music: 'play_music',
+        invoke_play_next: 'play_next',
+        invoke_play_prev: 'play_prev',
+        invoke_toggle_play: 'toggle_play',
+        player_play: 'player_play',
+        player_pause: 'player_pause',
+        player_stop: 'player_stop',
+        player_error: 'player_error',
+        list_data_overwire: 'list_data_overwire',
+        list_get: 'list_get',
+        list_add: 'list_add',
+        list_remove: 'list_remove',
+        list_update: 'list_update',
+        list_update_position: 'list_update_position',
+        list_music_get: 'list_music_get',
+        list_music_add: 'list_music_add',
+        list_music_move: 'list_music_move',
+        list_music_remove: 'list_music_remove',
+        list_music_update: 'list_music_update',
+        list_music_update_position: 'list_music_update_position',
+        list_music_overwrite: 'list_music_overwrite',
+        list_music_clear: 'list_music_clear',
+        list_music_check_exist: 'list_music_check_exist',
+        list_music_get_list_ids: 'list_music_get_list_ids',
+    },
+    dislike: {
+        get_dislike_music_infos: 'get_dislike_music_infos',
+        add_dislike_music_infos: 'add_dislike_music_infos',
+        overwrite_dislike_music_infos: 'overwrite_dislike_music_infos',
+        clear_dislike_music_infos: 'clear_dislike_music_infos',
+    },
+    winMain: {
+        focus: 'focus',
+        close: 'close',
+        min: 'min',
+        max: 'max',
+        fullscreen: 'fullscreen',
+        set_app_name: 'set_app_name',
+        clear_cache: 'clear_cache',
+        get_cache_size: 'get_cache_size',
+        inited: 'inited',
+        show_save_dialog: 'show_save_dialog',
+        show_select_dialog: 'show_select_dialog',
+        show_dialog: 'show_dialog',
+        open_dir_in_explorer: 'open_dir_in_explorer',
+        open_dev_tools: 'open_dev_tools',
+        set_power_save_blocker: 'set_power_save_blocker',
+        player_status: 'player_status',
+        change_tray: 'change_tray',
+        quit_update: 'quit_update',
+        update_check: 'update_check',
+        update_download_update: 'update_download_update',
+        update_available: 'update_available',
+        update_error: 'update_error',
+        update_progress: 'update_progress',
+        update_downloaded: 'update_downloaded',
+        update_not_available: 'update_not_available',
+        set_ignore_mouse_events: 'set_ignore_mouse_events',
+        set_window_size: 'set_window_size',
+        handle_request: 'handle_request',
+        cancel_request: 'cancel_request',
+        restart_window: 'restart_window',
+        get_lyric_info: 'get_lyric_info',
+        set_lyric_info: 'set_lyric_info',
+        set_config: 'set_config',
+        set_hot_key_config: 'set_hot_key_config',
+        on_config_change: 'on_config_change',
+        key_down: 'key_down',
+        quit: 'quit',
+        min_toggle: 'min_toggle',
+        hide_toggle: 'hide_toggle',
+        get_other_source: 'get_other_source',
+        save_other_source: 'save_other_source',
+        clear_other_source: 'clear_other_source',
+        get_other_source_count: 'get_other_source_count',
+        get_data: 'get_data',
+        save_data: 'save_data',
+        get_sound_effect_eq_preset: 'get_sound_effect_eq_preset',
+        save_sound_effect_eq_preset: 'save_sound_effect_eq_preset',
+        get_sound_effect_convolution_preset: 'get_sound_effect_convolution_preset',
+        save_sound_effect_convolution_preset: 'save_sound_effect_convolution_preset',
+        // get_sound_effect_pitch_shifter_preset: 'get_sound_effect_pitch_shifter_preset',
+        // save_sound_effect_pitch_shifter_preset: 'save_sound_effect_pitch_shifter_preset',
+        get_hot_key: 'get_hot_key',
+        import_user_api: 'import_user_api',
+        remove_user_api: 'remove_user_api',
+        set_user_api: 'set_user_api',
+        get_user_api_list: 'get_user_api_list',
+        request_user_api: 'request_user_api',
+        request_user_api_cancel: 'request_user_api_cancel',
+        get_user_api_status: 'get_user_api_status',
+        user_api_status: 'user_api_status',
+        user_api_show_update_alert: 'user_api_show_update_alert',
+        user_api_set_allow_update_alert: 'user_api_set_allow_update_alert',
+        get_palyer_lyric: 'get_lyric',
+        // save_lyric: 'save_lyric',
+        // clear_lyric: 'clear_lyric',
+        get_lyric_raw: 'get_lyric_raw',
+        save_lyric_raw: 'save_lyric_raw',
+        clear_lyric_raw: 'clear_lyric_raw',
+        get_lyric_raw_count: 'get_lyric_raw_count',
+        get_lyric_edited: 'get_lyric_edited',
+        save_lyric_edited: 'save_lyric_edited',
+        remove_lyric_edited: 'remove_lyric_edited',
+        clear_lyric_edited: 'clear_lyric_edited',
+        get_lyric_edited_count: 'get_lyric_edited_count',
+        get_music_url: 'get_music_url',
+        save_music_url: 'save_music_url',
+        clear_music_url: 'clear_music_url',
+        get_music_url_count: 'get_music_url_count',
+        open_api_action: 'open_api_action',
+        sync_action: 'sync_action',
+        sync_get_server_devices: 'sync_get_server_devices',
+        sync_remove_server_device: 'sync_remove_server_device',
+        process_new_desktop_lyric_client: 'process_new_desktop_lyric_client',
+        player_action_set_buttons: 'player_action_set_buttons',
+        // player_action_set_thumbnail_clip: 'player_action_set_thumbnail_clip',
+        player_action_on_button_click: 'player_action_on_button_click',
+        get_themes: 'get_themes',
+        save_theme: 'save_theme',
+        remove_theme: 'remove_theme',
+        download_list_get: 'download_list_get',
+        download_list_add: 'download_list_add',
+        download_list_update: 'download_list_update',
+        download_list_remove: 'download_list_remove',
+        download_list_clear: 'download_list_clear',
+    },
+    winLyric: {
+        close: 'close',
+        set_config: 'set_config',
+        get_config: 'get_config',
+        on_config_change: 'on_config_change',
+        main_window_inited: 'main_window_inited',
+        set_win_bounds: 'set_win_bounds',
+        set_win_resizeable: 'set_win_resizeable',
+        key_down: 'key_down',
+        request_main_window_channel: 'request_main_window_channel',
+        provide_main_window_channel: 'provide_main_window_channel',
+        mouse_enter_leave: 'mouse_enter_leave',
+    },
+    hotKey: {
+        enable: 'enable',
+        status: 'status',
+        set_config: 'set_config',
+    },
+};
+for (const moduleName of Object.keys(modules)) {
+    let eventNames = modules[moduleName];
+    for (const eventName of Object.keys(eventNames)) {
+        eventNames[eventName] = `${moduleName}_${eventName}`;
+    }
+}
+// for (const moduleName of Object.keys(modules) as Array<keyof typeof modules>) {
+//   let eventNames = modules[moduleName]
+//   for (const eventName of Object.keys(eventNames)) {
+//     eventNames[eventName] = `${moduleName}_${eventName}`
+//   }
+// }
+export const CMMON_EVENT_NAME = modules.common;
+export const PLAYER_EVENT_NAME = modules.player;
+export const DISLIKE_EVENT_NAME = modules.dislike;
+export const WIN_MAIN_RENDERER_EVENT_NAME = modules.winMain;
+export const WIN_LYRIC_RENDERER_EVENT_NAME = modules.winLyric;
+export const HOTKEY_RENDERER_EVENT_NAME = modules.hotKey;
+
+
+######## renderer.js.map :: src/common/constants_sync.ts (1791 chars)
+export const ENV_PARAMS = [
+    'PORT',
+    'BIND_IP',
+    'CONFIG_PATH',
+    'LOG_PATH',
+    'DATA_PATH',
+    'PROXY_HEADER',
+    'MAX_SNAPSHOT_NUM',
+    'LIST_ADD_MUSIC_LOCATION_TYPE',
+    'LX_USER_',
+];
+export const LIST_IDS = {
+    DEFAULT: 'default',
+    LOVE: 'love',
+    TEMP: 'temp',
+    DOWNLOAD: 'download',
+    PLAY_LATER: null,
+};
+export const SYNC_CODE = {
+    helloMsg: 'Hello~::^-^::~v4~',
+    idPrefix: 'OjppZDo6',
+    authMsg: 'lx-music auth::',
+    msgAuthFailed: 'Auth failed',
+    msgBlockedIp: 'Blocked IP',
+    msgConnect: 'lx-music connect',
+    authFailed: 'Auth failed',
+    missingAuthCode: 'Missing auth code',
+    getServiceIdFailed: 'Get service id failed',
+    connectServiceFailed: 'Connect service failed',
+    connecting: 'Connecting...',
+    unknownServiceAddress: 'Unknown service address',
+};
+export const SYNC_CLOSE_CODE = {
+    normal: 1000,
+    failed: 4100,
+};
+export const TRANS_MODE = {
+    merge_local_remote: 'merge_remote_local',
+    merge_remote_local: 'merge_local_remote',
+    overwrite_local_remote: 'overwrite_remote_local',
+    overwrite_remote_local: 'overwrite_local_remote',
+    overwrite_local_remote_full: 'overwrite_remote_local_full',
+    overwrite_remote_local_full: 'overwrite_local_remote_full',
+    cancel: 'cancel',
+};
+export const File = {
+    serverDataPath: 'sync/server',
+    clientDataPath: 'sync/client',
+    serverInfoJSON: 'serverInfo.json',
+    userDir: 'users',
+    userDevicesJSON: 'devices.json',
+    listDir: 'list',
+    listSnapshotDir: 'snapshot',
+    listSnapshotInfoJSON: 'snapshotInfo.json',
+    dislikeDir: 'dislike',
+    dislikeSnapshotDir: 'snapshot',
+    dislikeSnapshotInfoJSON: 'snapshotInfo.json',
+    syncAuthKeysJSON: 'syncAuthKey.json',
+};
+export const FeaturesList = [
+    'list',
+    'dislike',
+];
+
+
+######## renderer.js.map :: src/common/defaultSetting.ts (5758 chars)
+import path from 'node:path';
+import os from 'node:os';
+const isMac = process.platform == 'darwin';
+const isWin = process.platform == 'win32';
+const defaultSetting = {
+    version: '2.1.0',
+    'common.windowSizeId': 3,
+    'common.fontSize': 16,
+    'common.startInFullscreen': false,
+    'common.langId': null,
+    'common.apiSource': 'temp',
+    'common.sourceNameType': 'alias',
+    'common.font': '',
+    'common.isShowAnimation': true,
+    'common.randomAnimate': true,
+    'common.isAgreePact': false,
+    'common.controlBtnPosition': isMac ? 'left' : 'right',
+    'common.playBarProgressStyle': 'mini',
+    'common.transparentWindow': !isMac,
+    'common.tryAutoUpdate': true,
+    'common.showChangeLog': true,
+    'player.startupAutoPlay': false,
+    'player.togglePlayMethod': 'listLoop',
+    'player.playQuality': '128k',
+    'player.isShowTaskProgess': true,
+    'player.isShowStatusBarLyric': false,
+    'player.volume': 1,
+    'player.powerSaveBlocker': true,
+    'player.isMute': false,
+    'player.playbackRate': 1,
+    'player.preservesPitch': true,
+    'player.isMaxOutputChannelCount': false,
+    'player.mediaDeviceId': 'default',
+    'player.isMediaDeviceRemovedStopPlay': false,
+    'player.isShowLyricTranslation': false,
+    'player.isShowLyricRoma': false,
+    'player.isSwapLyricTranslationAndRoma': false,
+    'player.isS2t': false,
+    'player.isPlayLxlrc': !isMac,
+    'player.isSavePlayTime': false,
+    'player.audioVisualization': false,
+    'player.waitPlayEndStop': true,
+    'player.waitPlayEndStopTime': '',
+    'player.autoSkipOnError': true,
+    'player.isAutoCleanPlayedList': false,
+    'player.soundEffect.convolution.fileName': '',
+    'player.soundEffect.convolution.mainGain': 10,
+    'player.soundEffect.convolution.sendGain': 0,
+    'player.soundEffect.biquadFilter.hz31': 0,
+    'player.soundEffect.biquadFilter.hz62': 0,
+    'player.soundEffect.biquadFilter.hz125': 0,
+    'player.soundEffect.biquadFilter.hz250': 0,
+    'player.soundEffect.biquadFilter.hz500': 0,
+    'player.soundEffect.biquadFilter.hz1000': 0,
+    'player.soundEffect.biquadFilter.hz2000': 0,
+    'player.soundEffect.biquadFilter.hz4000': 0,
+    'player.soundEffect.biquadFilter.hz8000': 0,
+    'player.soundEffect.biquadFilter.hz16000': 0,
+    'player.soundEffect.panner.enable': false,
+    'player.soundEffect.panner.soundR': 5,
+    'player.soundEffect.panner.speed': 25,
+    'player.soundEffect.pitchShifter.playbackRate': 1,
+    'playDetail.isZoomActiveLrc': false,
+    'playDetail.isShowLyricProgressSetting': false,
+    'playDetail.style.fontSize': 140,
+    'playDetail.style.align': 'center',
+    'playDetail.isDelayScroll': true,
+    'desktopLyric.enable': false,
+    'desktopLyric.isLock': false,
+    'desktopLyric.isAlwaysOnTop': false,
+    'desktopLyric.isAlwaysOnTopLoop': false,
+    'desktopLyric.isShowTaskbar': false,
+    'desktopLyric.audioVisualization': false,
+    'desktopLyric.fullscreenHide': true,
+    'desktopLyric.pauseHide': true,
+    'desktopLyric.width': 450,
+    'desktopLyric.height': 300,
+    'desktopLyric.x': null,
+    'desktopLyric.y': null,
+    'desktopLyric.isLockScreen': isWin,
+    'desktopLyric.isDelayScroll': true,
+    'desktopLyric.scrollAlign': 'center',
+    'desktopLyric.isHoverHide': false,
+    'desktopLyric.direction': 'horizontal',
+    'desktopLyric.style.align': 'center',
+    'desktopLyric.style.font': '',
+    'desktopLyric.style.fontSize': 20,
+    'desktopLyric.style.lineGap': 15,
+    'desktopLyric.style.lyricUnplayColor': 'rgba(255, 255, 255, 1)',
+    'desktopLyric.style.lyricPlayedColor': 'rgba(7, 197, 86, 1)',
+    'desktopLyric.style.lyricShadowColor': 'rgba(0, 0, 0, 0.18)',
+    // 'desktopLyric.style.fontWeight': false,
+    'desktopLyric.style.opacity': 95,
+    'desktopLyric.style.ellipsis': false,
+    'desktopLyric.style.isZoomActiveLrc': false,
+    'desktopLyric.style.isFontWeightFont': true,
+    'desktopLyric.style.isFontWeightLine': true,
+    'desktopLyric.style.isFontWeightExtended': true,
+    'list.isClickPlayList': false,
+    'list.isShowSource': true,
+    'list.isSaveScrollLocation': true,
+    'list.addMusicLocationType': 'top',
+    'list.actionButtonsVisible': false,
+    'download.enable': false,
+    'download.isSavePathGroupByListName': false,
+    'download.savePath': path.join(os.homedir(), 'Desktop'),
+    'download.fileName': '歌名 - 歌手',
+    'download.maxDownloadNum': 3,
+    'download.skipExistFile': true,
+    'download.isDownloadLrc': false,
+    'download.isDownloadLxLrc': true,
+    'download.isDownloadTLrc': false,
+    'download.isDownloadRLrc': false,
+    'download.lrcFormat': 'utf8',
+    'download.isEmbedPic': true,
+    'download.isEmbedLyric': false,
+    'download.isEmbedLyricLx': true,
+    'download.isEmbedLyricT': false,
+    'download.isEmbedLyricR': false,
+    'download.isUseOtherSource': false,
+    'search.isShowHotSearch': false,
+    'search.isShowHistorySearch': false,
+    'search.isFocusSearchBox': false,
+    'network.proxy.enable': false,
+    'network.proxy.host': '',
+    'network.proxy.port': '',
+    'tray.enable': false,
+    // 'tray.isToTray': false,
+    'tray.themeId': 0,
+    'sync.mode': 'server',
+    'sync.enable': false,
+    'sync.server.port': '23332',
+    'sync.server.maxSsnapshotNum': 5,
+    'sync.client.host': '',
+    'openAPI.enable': false,
+    'openAPI.port': '23330',
+    'openAPI.bindLan': false,
+    // 'theme.id': 'blue_plus',
+    'theme.id': 'green',
+    'theme.lightId': 'green',
+    'theme.darkId': 'black',
+    'odc.isAutoClearSearchInput': false,
+    'odc.isAutoClearSearchList': false,
+};
+// 使用新年皮肤
+if (new Date().getMonth() < 2) {
+    defaultSetting['theme.id'] = 'happy_new_year';
+    defaultSetting['desktopLyric.style.lyricPlayedColor'] = 'rgba(255, 57, 71, 1)';
+}
+export default defaultSetting;

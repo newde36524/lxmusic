@@ -1,0 +1,317 @@
+######## renderer.js.map :: src/renderer/views/Download/useTab.js (785 chars)
+import { computed, ref } from '@common/utils/vueTools'
+
+export default () => {
+  const tabs = computed(() => {
+    return [
+      {
+        label: window.i18n.t('download__all'),
+        id: 'all',
+      },
+      {
+        label: window.i18n.t('download__running'),
+        id: 'runing',
+      },
+      {
+        label: window.i18n.t('download__paused'),
+        id: 'paused',
+      },
+      {
+        label: window.i18n.t('download__error'),
+        id: 'error',
+      },
+      {
+        label: window.i18n.t('download__finished'),
+        id: 'finished',
+      },
+    ]
+  })
+  const activeTab = ref('all')
+
+  // const setActiveTab = (tab) => {
+  //   activeTab.value = tab
+  // }
+
+  return {
+    tabs,
+    activeTab,
+    // setActiveTab,
+  }
+}
+
+
+######## renderer.js.map :: src/renderer/views/Download/useTaskActions.js (2648 chars)
+import { useRouter } from '@common/utils/vueRouter'
+import musicSdk from '@renderer/utils/musicSdk'
+import { openUrl } from '@common/utils/electron'
+import { checkPath } from '@common/utils/nodejs'
+// import { dialog } from '@renderer/plugins/Dialog'
+// import { useI18n } from '@renderer/plugins/i18n'
+// import { appSetting } from '@renderer/store/setting'
+import { toOldMusicInfo } from '@renderer/utils/index'
+import { startDownloadTasks, pauseDownloadTasks, removeDownloadTasks } from '@renderer/store/download/action'
+import { openDirInExplorer } from '@renderer/utils/ipc'
+
+export default ({ list, selectedList, removeAllSelect }) => {
+  const router = useRouter()
+  // const t = useI18n()
+
+  const handleSearch = index => {
+    const info = list.value[index].metadata.musicInfo
+    router.push({
+      path: '/search',
+      query: {
+        text: `${info.name} ${info.singer}`,
+      },
+    })
+  }
+
+  const handleOpenMusicDetail = index => {
+    const task = list.value[index]
+    const mInfo = toOldMusicInfo(task.metadata.musicInfo)
+    const url = musicSdk[mInfo.source]?.getMusicDetailPageUrl?.(mInfo)
+    if (!url) return
+    openUrl(url)
+  }
+
+  const handleStartTask = async(index, single) => {
+    if (selectedList.value.length && !single) {
+      startDownloadTasks([...selectedList.value])
+      removeAllSelect()
+    } else {
+      startDownloadTasks([list.value[index]])
+    }
+  }
+
+  const handlePauseTask = async(index, single) => {
+    if (selectedList.value.length && !single) {
+      pauseDownloadTasks([...selectedList.value])
+      removeAllSelect()
+    } else {
+      pauseDownloadTasks([list.value[index]])
+    }
+  }
+
+  const handleRemoveTask = async(index, single) => {
+    if (selectedList.value.length && !single) {
+      // const confirm = await (selectedList.value.length > 1
+      //   ? dialog.confirm({
+      //     message: t('lists__remove_music_tip', { len: selectedList.value.length }),
+      //     confirmButtonText: t('lists__remove_tip_button'),
+      //   })
+      //   : Promise.resolve(true)
+      // )
+      // if (!confirm) return
+      removeDownloadTasks(selectedList.value.map(m => m.id))
+      removeAllSelect()
+    } else {
+      removeDownloadTasks([list.value[index].id])
+    }
+  }
+
+  const handleOpenFile = async(index) => {
+    const task = list.value[index]
+    if (!checkPath(task.metadata.filePath)) return
+    openDirInExplorer(task.metadata.filePath)
+  }
+
+  return {
+    handleSearch,
+    handleOpenMusicDetail,
+    handleStartTask,
+    handlePauseTask,
+    handleRemoveTask,
+    handleOpenFile,
+  }
+}
+
+
+######## renderer.js.map :: src/renderer/views/Download/useMenu.js (3933 chars)
+import { computed, ref, shallowReactive, reactive, nextTick } from '@common/utils/vueTools'
+import musicSdk from '@renderer/utils/musicSdk'
+import { useI18n } from '@renderer/plugins/i18n'
+import { DOWNLOAD_STATUS } from '@common/constants'
+
+export default ({
+  handleStartTask,
+  handlePauseTask,
+  handleRemoveTask,
+  handleOpenFile,
+  handlePlayMusic,
+  handlePlayMusicLater,
+  handleShowMusicAddModal,
+  handleSearch,
+  handleOpenMusicDetail,
+}) => {
+  const itemMenuControl = reactive({
+    play: true,
+    start: true,
+    pause: true,
+    playLater: true,
+    file: true,
+    sourceDetail: true,
+    search: true,
+    remove: true,
+    addTo: true,
+  })
+  const t = useI18n()
+  const menuLocation = shallowReactive({ x: 0, y: 0 })
+  const isShowItemMenu = ref(false)
+
+  const menus = computed(() => {
+    return [
+      {
+        name: t('list__play'),
+        action: 'play',
+        hide: !itemMenuControl.play,
+      },
+      {
+        name: t('list__start'),
+        action: 'start',
+        hide: !itemMenuControl.start,
+      },
+      {
+        name: t('list__pause'),
+        action: 'pause',
+        hide: !itemMenuControl.pause,
+      },
+      {
+        name: t('list__play_later'),
+        action: 'playLater',
+        hide: !itemMenuControl.playLater,
+      },
+      {
+        name: t('list__file'),
+        action: 'file',
+        hide: !itemMenuControl.file,
+      },
+      {
+        name: t('list__add_to'),
+        action: 'addTo',
+        disabled: !itemMenuControl.addTo,
+      },
+      {
+        name: t('list__source_detail'),
+        action: 'sourceDetail',
+        disabled: !itemMenuControl.sourceDetail,
+      },
+      {
+        name: t('list__search'),
+        action: 'search',
+        hide: !itemMenuControl.search,
+      },
+      {
+        name: t('list__remove'),
+        action: 'remove',
+        hide: !itemMenuControl.remove,
+      },
+    ]
+  })
+
+  const showMenu = (event, taskInfo) => {
+    itemMenuControl.sourceDetail = !!musicSdk[taskInfo.metadata.musicInfo.source]?.getMusicDetailPageUrl
+
+    if (taskInfo.isComplate) {
+      itemMenuControl.play =
+        itemMenuControl.playLater =
+        itemMenuControl.file = true
+      itemMenuControl.start =
+        itemMenuControl.pause = false
+    } else if (taskInfo.status === DOWNLOAD_STATUS.ERROR || taskInfo.status === DOWNLOAD_STATUS.PAUSE) {
+      itemMenuControl.play =
+        itemMenuControl.playLater =
+        itemMenuControl.pause =
+        itemMenuControl.file = false
+      itemMenuControl.start = true
+    } else {
+      itemMenuControl.play =
+        itemMenuControl.playLater =
+        itemMenuControl.start =
+        itemMenuControl.file = false
+      itemMenuControl.pause = true
+    }
+
+    menuLocation.x = event.pageX
+    menuLocation.y = event.pageY
+
+    if (isShowItemMenu.value) return
+
+    nextTick(() => {
+      isShowItemMenu.value = true
+    })
+  }
+
+  const hideMenu = () => {
+    isShowItemMenu.value = false
+  }
+
+  const menuClick = (action, index) => {
+    // console.log(action)
+    hideMenu()
+    if (!action) return
+    switch (action.action) {
+      case 'start':
+        handleStartTask(index)
+        break
+      case 'pause':
+        handlePauseTask(index)
+        break
+      case 'file':
+        handleOpenFile(index)
+        break
+      case 'play':
+        handlePlayMusic(index)
+        break
+      case 'playLater':
+        handlePlayMusicLater(index)
+        break
+      case 'addTo':
+        handleShowMusicAddModal(index)
+        break
+      case 'search':
+        handleSearch(index)
+        break
+      case 'remove':
+        handleRemoveTask(index)
+        break
+      case 'sourceDetail':
+        handleOpenMusicDetail(index)
+    }
+  }
+
+  return {
+    menus,
+    menuLocation,
+    isShowItemMenu,
+    showMenu,
+    menuClick,
+  }
+}
+
+
+######## renderer.js.map :: src/renderer/views/Download/useMusicAdd.js (708 chars)
+import { ref, shallowRef, nextTick, markRaw } from '@common/utils/vueTools'
+
+export default ({ selectedList, list }) => {
+  const isShowListAdd = ref(false)
+  const isShowListAddMultiple = ref(false)
+  const selectedAddMusicInfo = shallowRef(null)
+
+  const handleShowMusicAddModal = (index, single) => {
+    if (selectedList.value.length && !single) {
+      isShowListAddMultiple.value = true
+    } else {
+      selectedAddMusicInfo.value = markRaw(list.value[index].metadata.musicInfo)
+      nextTick(() => {
+        isShowListAdd.value = true
+      })
+    }
+  }
+
+  return {
+    isShowListAdd,
+    isShowListAddMultiple,
+    selectedAddMusicInfo,
+    handleShowMusicAddModal,
+  }
+}

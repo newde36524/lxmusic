@@ -1,0 +1,1769 @@
+######## renderer.js.map :: src/common/constants_sync.ts (1791 chars)
+export const ENV_PARAMS = [
+    'PORT',
+    'BIND_IP',
+    'CONFIG_PATH',
+    'LOG_PATH',
+    'DATA_PATH',
+    'PROXY_HEADER',
+    'MAX_SNAPSHOT_NUM',
+    'LIST_ADD_MUSIC_LOCATION_TYPE',
+    'LX_USER_',
+];
+export const LIST_IDS = {
+    DEFAULT: 'default',
+    LOVE: 'love',
+    TEMP: 'temp',
+    DOWNLOAD: 'download',
+    PLAY_LATER: null,
+};
+export const SYNC_CODE = {
+    helloMsg: 'Hello~::^-^::~v4~',
+    idPrefix: 'OjppZDo6',
+    authMsg: 'lx-music auth::',
+    msgAuthFailed: 'Auth failed',
+    msgBlockedIp: 'Blocked IP',
+    msgConnect: 'lx-music connect',
+    authFailed: 'Auth failed',
+    missingAuthCode: 'Missing auth code',
+    getServiceIdFailed: 'Get service id failed',
+    connectServiceFailed: 'Connect service failed',
+    connecting: 'Connecting...',
+    unknownServiceAddress: 'Unknown service address',
+};
+export const SYNC_CLOSE_CODE = {
+    normal: 1000,
+    failed: 4100,
+};
+export const TRANS_MODE = {
+    merge_local_remote: 'merge_remote_local',
+    merge_remote_local: 'merge_local_remote',
+    overwrite_local_remote: 'overwrite_remote_local',
+    overwrite_remote_local: 'overwrite_local_remote',
+    overwrite_local_remote_full: 'overwrite_remote_local_full',
+    overwrite_remote_local_full: 'overwrite_local_remote_full',
+    cancel: 'cancel',
+};
+export const File = {
+    serverDataPath: 'sync/server',
+    clientDataPath: 'sync/client',
+    serverInfoJSON: 'serverInfo.json',
+    userDir: 'users',
+    userDevicesJSON: 'devices.json',
+    listDir: 'list',
+    listSnapshotDir: 'snapshot',
+    listSnapshotInfoJSON: 'snapshotInfo.json',
+    dislikeDir: 'dislike',
+    dislikeSnapshotDir: 'snapshot',
+    dislikeSnapshotInfoJSON: 'snapshotInfo.json',
+    syncAuthKeysJSON: 'syncAuthKey.json',
+};
+export const FeaturesList = [
+    'list',
+    'dislike',
+];
+
+
+######## renderer.js.map :: src/common/hotKey.ts (3066 chars)
+import { APP_EVENT_NAMES } from './constants';
+const keyName = {
+    common: APP_EVENT_NAMES.winMainName,
+    player: APP_EVENT_NAMES.winMainName,
+    desktop_lyric: APP_EVENT_NAMES.winLyricName,
+};
+const hotKey = {
+    common: {
+        min: {
+            name: 'min',
+            action: 'min',
+            type: '',
+        },
+        min_toggle: {
+            name: 'toggle_min',
+            action: 'toggle_min',
+            type: '',
+        },
+        hide_toggle: {
+            name: 'toggle_hide',
+            action: 'toggle_hide',
+            type: '',
+        },
+        close: {
+            name: 'toggle_close',
+            action: 'toggle_close',
+            type: '',
+        },
+        focusSearchInput: {
+            name: 'focus_search_input',
+            action: 'focus_search_input',
+            type: '',
+        },
+    },
+    player: {
+        toggle_play: {
+            name: 'toggle_play',
+            action: 'toggle_play',
+            type: '',
+        },
+        next: {
+            name: 'next',
+            action: 'next',
+            type: '',
+        },
+        prev: {
+            name: 'prev',
+            action: 'prev',
+            type: '',
+        },
+        seekbackward: {
+            name: 'seekbackward',
+            action: 'seekbackward',
+            type: '',
+        },
+        seekforward: {
+            name: 'seekforward',
+            action: 'seekforward',
+            type: '',
+        },
+        volume_up: {
+            name: 'volume_up',
+            action: 'volume_up',
+            type: '',
+        },
+        volume_down: {
+            name: 'volume_down',
+            action: 'volume_down',
+            type: '',
+        },
+        volume_mute: {
+            name: 'volume_mute',
+            action: 'volume_mute',
+            type: '',
+        },
+        music_love: {
+            name: 'music_love',
+            action: 'music_love',
+            type: '',
+        },
+        music_unlove: {
+            name: 'music_unlove',
+            action: 'music_unlove',
+            type: '',
+        },
+        music_dislike: {
+            name: 'music_dislike',
+            action: 'music_dislike',
+            type: '',
+        },
+    },
+    desktop_lyric: {
+        toggle_visible: {
+            name: 'toggle_visible',
+            action: 'toggle_visible',
+            type: '',
+        },
+        toggle_lock: {
+            name: 'toggle_lock',
+            action: 'toggle_lock',
+            type: '',
+        },
+        toggle_always_top: {
+            name: 'toggle_always_top',
+            action: 'toggle_always_top',
+            type: '',
+        },
+    },
+};
+for (const type of Object.keys(hotKey)) {
+    let keys = hotKey[type];
+    for (const key of Object.keys(keys)) {
+        const keyInfo = keys[key];
+        keyInfo.action = `${type}_${keyInfo.action}`;
+        keyInfo.name = `${type}_${keyInfo.name}`;
+        keyInfo.type = keyName[type];
+    }
+}
+export const HOTKEY_COMMON = hotKey.common;
+export const HOTKEY_PLAYER = hotKey.player;
+export const HOTKEY_DESKTOP_LYRIC = hotKey.desktop_lyric;
+
+
+######## renderer-lyric.js.map :: src/common/ipcNames.ts (7646 chars)
+const modules = {
+    common: {
+        get_env_params: 'get_env_params',
+        deeplink: 'deeplink',
+        clear_env_params_deeplink: 'clear_env_params_deeplink',
+        system_theme_change: 'system_theme_change',
+        theme_change: 'theme_change',
+        get_system_fonts: 'get_system_fonts',
+        get_app_setting: 'get_app_setting',
+        set_app_setting: 'set_app_setting',
+    },
+    player: {
+        invoke_play_music: 'play_music',
+        invoke_play_next: 'play_next',
+        invoke_play_prev: 'play_prev',
+        invoke_toggle_play: 'toggle_play',
+        player_play: 'player_play',
+        player_pause: 'player_pause',
+        player_stop: 'player_stop',
+        player_error: 'player_error',
+        list_data_overwire: 'list_data_overwire',
+        list_get: 'list_get',
+        list_add: 'list_add',
+        list_remove: 'list_remove',
+        list_update: 'list_update',
+        list_update_position: 'list_update_position',
+        list_music_get: 'list_music_get',
+        list_music_add: 'list_music_add',
+        list_music_move: 'list_music_move',
+        list_music_remove: 'list_music_remove',
+        list_music_update: 'list_music_update',
+        list_music_update_position: 'list_music_update_position',
+        list_music_overwrite: 'list_music_overwrite',
+        list_music_clear: 'list_music_clear',
+        list_music_check_exist: 'list_music_check_exist',
+        list_music_get_list_ids: 'list_music_get_list_ids',
+    },
+    dislike: {
+        get_dislike_music_infos: 'get_dislike_music_infos',
+        add_dislike_music_infos: 'add_dislike_music_infos',
+        overwrite_dislike_music_infos: 'overwrite_dislike_music_infos',
+        clear_dislike_music_infos: 'clear_dislike_music_infos',
+    },
+    winMain: {
+        focus: 'focus',
+        close: 'close',
+        min: 'min',
+        max: 'max',
+        fullscreen: 'fullscreen',
+        set_app_name: 'set_app_name',
+        clear_cache: 'clear_cache',
+        get_cache_size: 'get_cache_size',
+        inited: 'inited',
+        show_save_dialog: 'show_save_dialog',
+        show_select_dialog: 'show_select_dialog',
+        show_dialog: 'show_dialog',
+        open_dir_in_explorer: 'open_dir_in_explorer',
+        open_dev_tools: 'open_dev_tools',
+        set_power_save_blocker: 'set_power_save_blocker',
+        player_status: 'player_status',
+        change_tray: 'change_tray',
+        quit_update: 'quit_update',
+        update_check: 'update_check',
+        update_download_update: 'update_download_update',
+        update_available: 'update_available',
+        update_error: 'update_error',
+        update_progress: 'update_progress',
+        update_downloaded: 'update_downloaded',
+        update_not_available: 'update_not_available',
+        set_ignore_mouse_events: 'set_ignore_mouse_events',
+        set_window_size: 'set_window_size',
+        handle_request: 'handle_request',
+        cancel_request: 'cancel_request',
+        restart_window: 'restart_window',
+        get_lyric_info: 'get_lyric_info',
+        set_lyric_info: 'set_lyric_info',
+        set_config: 'set_config',
+        set_hot_key_config: 'set_hot_key_config',
+        on_config_change: 'on_config_change',
+        key_down: 'key_down',
+        quit: 'quit',
+        min_toggle: 'min_toggle',
+        hide_toggle: 'hide_toggle',
+        get_other_source: 'get_other_source',
+        save_other_source: 'save_other_source',
+        clear_other_source: 'clear_other_source',
+        get_other_source_count: 'get_other_source_count',
+        get_data: 'get_data',
+        save_data: 'save_data',
+        get_sound_effect_eq_preset: 'get_sound_effect_eq_preset',
+        save_sound_effect_eq_preset: 'save_sound_effect_eq_preset',
+        get_sound_effect_convolution_preset: 'get_sound_effect_convolution_preset',
+        save_sound_effect_convolution_preset: 'save_sound_effect_convolution_preset',
+        // get_sound_effect_pitch_shifter_preset: 'get_sound_effect_pitch_shifter_preset',
+        // save_sound_effect_pitch_shifter_preset: 'save_sound_effect_pitch_shifter_preset',
+        get_hot_key: 'get_hot_key',
+        import_user_api: 'import_user_api',
+        remove_user_api: 'remove_user_api',
+        set_user_api: 'set_user_api',
+        get_user_api_list: 'get_user_api_list',
+        request_user_api: 'request_user_api',
+        request_user_api_cancel: 'request_user_api_cancel',
+        get_user_api_status: 'get_user_api_status',
+        user_api_status: 'user_api_status',
+        user_api_show_update_alert: 'user_api_show_update_alert',
+        user_api_set_allow_update_alert: 'user_api_set_allow_update_alert',
+        get_palyer_lyric: 'get_lyric',
+        // save_lyric: 'save_lyric',
+        // clear_lyric: 'clear_lyric',
+        get_lyric_raw: 'get_lyric_raw',
+        save_lyric_raw: 'save_lyric_raw',
+        clear_lyric_raw: 'clear_lyric_raw',
+        get_lyric_raw_count: 'get_lyric_raw_count',
+        get_lyric_edited: 'get_lyric_edited',
+        save_lyric_edited: 'save_lyric_edited',
+        remove_lyric_edited: 'remove_lyric_edited',
+        clear_lyric_edited: 'clear_lyric_edited',
+        get_lyric_edited_count: 'get_lyric_edited_count',
+        get_music_url: 'get_music_url',
+        save_music_url: 'save_music_url',
+        clear_music_url: 'clear_music_url',
+        get_music_url_count: 'get_music_url_count',
+        open_api_action: 'open_api_action',
+        sync_action: 'sync_action',
+        sync_get_server_devices: 'sync_get_server_devices',
+        sync_remove_server_device: 'sync_remove_server_device',
+        process_new_desktop_lyric_client: 'process_new_desktop_lyric_client',
+        player_action_set_buttons: 'player_action_set_buttons',
+        // player_action_set_thumbnail_clip: 'player_action_set_thumbnail_clip',
+        player_action_on_button_click: 'player_action_on_button_click',
+        get_themes: 'get_themes',
+        save_theme: 'save_theme',
+        remove_theme: 'remove_theme',
+        download_list_get: 'download_list_get',
+        download_list_add: 'download_list_add',
+        download_list_update: 'download_list_update',
+        download_list_remove: 'download_list_remove',
+        download_list_clear: 'download_list_clear',
+    },
+    winLyric: {
+        close: 'close',
+        set_config: 'set_config',
+        get_config: 'get_config',
+        on_config_change: 'on_config_change',
+        main_window_inited: 'main_window_inited',
+        set_win_bounds: 'set_win_bounds',
+        set_win_resizeable: 'set_win_resizeable',
+        key_down: 'key_down',
+        request_main_window_channel: 'request_main_window_channel',
+        provide_main_window_channel: 'provide_main_window_channel',
+        mouse_enter_leave: 'mouse_enter_leave',
+    },
+    hotKey: {
+        enable: 'enable',
+        status: 'status',
+        set_config: 'set_config',
+    },
+};
+for (const moduleName of Object.keys(modules)) {
+    let eventNames = modules[moduleName];
+    for (const eventName of Object.keys(eventNames)) {
+        eventNames[eventName] = `${moduleName}_${eventName}`;
+    }
+}
+// for (const moduleName of Object.keys(modules) as Array<keyof typeof modules>) {
+//   let eventNames = modules[moduleName]
+//   for (const eventName of Object.keys(eventNames)) {
+//     eventNames[eventName] = `${moduleName}_${eventName}`
+//   }
+// }
+export const CMMON_EVENT_NAME = modules.common;
+export const PLAYER_EVENT_NAME = modules.player;
+export const DISLIKE_EVENT_NAME = modules.dislike;
+export const WIN_MAIN_RENDERER_EVENT_NAME = modules.winMain;
+export const WIN_LYRIC_RENDERER_EVENT_NAME = modules.winLyric;
+export const HOTKEY_RENDERER_EVENT_NAME = modules.hotKey;
+
+
+######## renderer.js.map :: src/common/ipcNames.ts (7646 chars)
+const modules = {
+    common: {
+        get_env_params: 'get_env_params',
+        deeplink: 'deeplink',
+        clear_env_params_deeplink: 'clear_env_params_deeplink',
+        system_theme_change: 'system_theme_change',
+        theme_change: 'theme_change',
+        get_system_fonts: 'get_system_fonts',
+        get_app_setting: 'get_app_setting',
+        set_app_setting: 'set_app_setting',
+    },
+    player: {
+        invoke_play_music: 'play_music',
+        invoke_play_next: 'play_next',
+        invoke_play_prev: 'play_prev',
+        invoke_toggle_play: 'toggle_play',
+        player_play: 'player_play',
+        player_pause: 'player_pause',
+        player_stop: 'player_stop',
+        player_error: 'player_error',
+        list_data_overwire: 'list_data_overwire',
+        list_get: 'list_get',
+        list_add: 'list_add',
+        list_remove: 'list_remove',
+        list_update: 'list_update',
+        list_update_position: 'list_update_position',
+        list_music_get: 'list_music_get',
+        list_music_add: 'list_music_add',
+        list_music_move: 'list_music_move',
+        list_music_remove: 'list_music_remove',
+        list_music_update: 'list_music_update',
+        list_music_update_position: 'list_music_update_position',
+        list_music_overwrite: 'list_music_overwrite',
+        list_music_clear: 'list_music_clear',
+        list_music_check_exist: 'list_music_check_exist',
+        list_music_get_list_ids: 'list_music_get_list_ids',
+    },
+    dislike: {
+        get_dislike_music_infos: 'get_dislike_music_infos',
+        add_dislike_music_infos: 'add_dislike_music_infos',
+        overwrite_dislike_music_infos: 'overwrite_dislike_music_infos',
+        clear_dislike_music_infos: 'clear_dislike_music_infos',
+    },
+    winMain: {
+        focus: 'focus',
+        close: 'close',
+        min: 'min',
+        max: 'max',
+        fullscreen: 'fullscreen',
+        set_app_name: 'set_app_name',
+        clear_cache: 'clear_cache',
+        get_cache_size: 'get_cache_size',
+        inited: 'inited',
+        show_save_dialog: 'show_save_dialog',
+        show_select_dialog: 'show_select_dialog',
+        show_dialog: 'show_dialog',
+        open_dir_in_explorer: 'open_dir_in_explorer',
+        open_dev_tools: 'open_dev_tools',
+        set_power_save_blocker: 'set_power_save_blocker',
+        player_status: 'player_status',
+        change_tray: 'change_tray',
+        quit_update: 'quit_update',
+        update_check: 'update_check',
+        update_download_update: 'update_download_update',
+        update_available: 'update_available',
+        update_error: 'update_error',
+        update_progress: 'update_progress',
+        update_downloaded: 'update_downloaded',
+        update_not_available: 'update_not_available',
+        set_ignore_mouse_events: 'set_ignore_mouse_events',
+        set_window_size: 'set_window_size',
+        handle_request: 'handle_request',
+        cancel_request: 'cancel_request',
+        restart_window: 'restart_window',
+        get_lyric_info: 'get_lyric_info',
+        set_lyric_info: 'set_lyric_info',
+        set_config: 'set_config',
+        set_hot_key_config: 'set_hot_key_config',
+        on_config_change: 'on_config_change',
+        key_down: 'key_down',
+        quit: 'quit',
+        min_toggle: 'min_toggle',
+        hide_toggle: 'hide_toggle',
+        get_other_source: 'get_other_source',
+        save_other_source: 'save_other_source',
+        clear_other_source: 'clear_other_source',
+        get_other_source_count: 'get_other_source_count',
+        get_data: 'get_data',
+        save_data: 'save_data',
+        get_sound_effect_eq_preset: 'get_sound_effect_eq_preset',
+        save_sound_effect_eq_preset: 'save_sound_effect_eq_preset',
+        get_sound_effect_convolution_preset: 'get_sound_effect_convolution_preset',
+        save_sound_effect_convolution_preset: 'save_sound_effect_convolution_preset',
+        // get_sound_effect_pitch_shifter_preset: 'get_sound_effect_pitch_shifter_preset',
+        // save_sound_effect_pitch_shifter_preset: 'save_sound_effect_pitch_shifter_preset',
+        get_hot_key: 'get_hot_key',
+        import_user_api: 'import_user_api',
+        remove_user_api: 'remove_user_api',
+        set_user_api: 'set_user_api',
+        get_user_api_list: 'get_user_api_list',
+        request_user_api: 'request_user_api',
+        request_user_api_cancel: 'request_user_api_cancel',
+        get_user_api_status: 'get_user_api_status',
+        user_api_status: 'user_api_status',
+        user_api_show_update_alert: 'user_api_show_update_alert',
+        user_api_set_allow_update_alert: 'user_api_set_allow_update_alert',
+        get_palyer_lyric: 'get_lyric',
+        // save_lyric: 'save_lyric',
+        // clear_lyric: 'clear_lyric',
+        get_lyric_raw: 'get_lyric_raw',
+        save_lyric_raw: 'save_lyric_raw',
+        clear_lyric_raw: 'clear_lyric_raw',
+        get_lyric_raw_count: 'get_lyric_raw_count',
+        get_lyric_edited: 'get_lyric_edited',
+        save_lyric_edited: 'save_lyric_edited',
+        remove_lyric_edited: 'remove_lyric_edited',
+        clear_lyric_edited: 'clear_lyric_edited',
+        get_lyric_edited_count: 'get_lyric_edited_count',
+        get_music_url: 'get_music_url',
+        save_music_url: 'save_music_url',
+        clear_music_url: 'clear_music_url',
+        get_music_url_count: 'get_music_url_count',
+        open_api_action: 'open_api_action',
+        sync_action: 'sync_action',
+        sync_get_server_devices: 'sync_get_server_devices',
+        sync_remove_server_device: 'sync_remove_server_device',
+        process_new_desktop_lyric_client: 'process_new_desktop_lyric_client',
+        player_action_set_buttons: 'player_action_set_buttons',
+        // player_action_set_thumbnail_clip: 'player_action_set_thumbnail_clip',
+        player_action_on_button_click: 'player_action_on_button_click',
+        get_themes: 'get_themes',
+        save_theme: 'save_theme',
+        remove_theme: 'remove_theme',
+        download_list_get: 'download_list_get',
+        download_list_add: 'download_list_add',
+        download_list_update: 'download_list_update',
+        download_list_remove: 'download_list_remove',
+        download_list_clear: 'download_list_clear',
+    },
+    winLyric: {
+        close: 'close',
+        set_config: 'set_config',
+        get_config: 'get_config',
+        on_config_change: 'on_config_change',
+        main_window_inited: 'main_window_inited',
+        set_win_bounds: 'set_win_bounds',
+        set_win_resizeable: 'set_win_resizeable',
+        key_down: 'key_down',
+        request_main_window_channel: 'request_main_window_channel',
+        provide_main_window_channel: 'provide_main_window_channel',
+        mouse_enter_leave: 'mouse_enter_leave',
+    },
+    hotKey: {
+        enable: 'enable',
+        status: 'status',
+        set_config: 'set_config',
+    },
+};
+for (const moduleName of Object.keys(modules)) {
+    let eventNames = modules[moduleName];
+    for (const eventName of Object.keys(eventNames)) {
+        eventNames[eventName] = `${moduleName}_${eventName}`;
+    }
+}
+// for (const moduleName of Object.keys(modules) as Array<keyof typeof modules>) {
+//   let eventNames = modules[moduleName]
+//   for (const eventName of Object.keys(eventNames)) {
+//     eventNames[eventName] = `${moduleName}_${eventName}`
+//   }
+// }
+export const CMMON_EVENT_NAME = modules.common;
+export const PLAYER_EVENT_NAME = modules.player;
+export const DISLIKE_EVENT_NAME = modules.dislike;
+export const WIN_MAIN_RENDERER_EVENT_NAME = modules.winMain;
+export const WIN_LYRIC_RENDERER_EVENT_NAME = modules.winLyric;
+export const HOTKEY_RENDERER_EVENT_NAME = modules.hotKey;
+
+
+######## renderer-lyric.js.map :: src/common/rendererIpc.ts (781 chars)
+import { ipcRenderer } from 'electron';
+export function rendererSend(name, params) {
+    ipcRenderer.send(name, params);
+}
+export function rendererSendSync(name, params) {
+    ipcRenderer.sendSync(name, params);
+}
+export async function rendererInvoke(name, params) {
+    return ipcRenderer.invoke(name, params);
+}
+export function rendererOn(name, listener) {
+    ipcRenderer.on(name, (event, params) => {
+        listener({ event, params });
+    });
+}
+export function rendererOnce(name, listener) {
+    ipcRenderer.once(name, (event, params) => {
+        listener({ event, params });
+    });
+}
+export const rendererOff = (name, listener) => {
+    ipcRenderer.removeListener(name, listener);
+};
+export const rendererOffAll = (name) => {
+    ipcRenderer.removeAllListeners(name);
+};
+
+
+######## renderer.js.map :: src/common/rendererIpc.ts (781 chars)
+import { ipcRenderer } from 'electron';
+export function rendererSend(name, params) {
+    ipcRenderer.send(name, params);
+}
+export function rendererSendSync(name, params) {
+    ipcRenderer.sendSync(name, params);
+}
+export async function rendererInvoke(name, params) {
+    return ipcRenderer.invoke(name, params);
+}
+export function rendererOn(name, listener) {
+    ipcRenderer.on(name, (event, params) => {
+        listener({ event, params });
+    });
+}
+export function rendererOnce(name, listener) {
+    ipcRenderer.once(name, (event, params) => {
+        listener({ event, params });
+    });
+}
+export const rendererOff = (name, listener) => {
+    ipcRenderer.removeListener(name, listener);
+};
+export const rendererOffAll = (name) => {
+    ipcRenderer.removeAllListeners(name);
+};
+
+
+######## renderer.js.map :: src/renderer/utils/ipc.ts (26220 chars)
+import { rendererSend, rendererInvoke, rendererOn, rendererOff } from '@common/rendererIpc';
+import { HOTKEY_RENDERER_EVENT_NAME, WIN_MAIN_RENDERER_EVENT_NAME, CMMON_EVENT_NAME } from '@common/ipcNames';
+import { markRaw } from '@common/utils/vueTools';
+import * as hotKeys from '@common/hotKey';
+import { APP_EVENT_NAMES, DATA_KEYS, DEFAULT_SETTING } from '@common/constants';
+export const getSetting = async () => {
+    return rendererInvoke(CMMON_EVENT_NAME.get_app_setting);
+};
+export const updateSetting = async (setting) => {
+    await rendererInvoke(CMMON_EVENT_NAME.set_app_setting, setting);
+};
+export const onSettingChanged = (listener) => {
+    rendererOn(WIN_MAIN_RENDERER_EVENT_NAME.on_config_change, listener);
+    return () => {
+        rendererOff(WIN_MAIN_RENDERER_EVENT_NAME.on_config_change, listener);
+    };
+};
+export const sendInited = () => {
+    rendererSend(WIN_MAIN_RENDERER_EVENT_NAME.inited);
+};
+export const getOtherSource = async (id) => {
+    return rendererInvoke(WIN_MAIN_RENDERER_EVENT_NAME.get_other_source, id);
+};
+export const saveOtherSource = async (id, sourceInfo) => {
+    await rendererInvoke(WIN_MAIN_RENDERER_EVENT_NAME.save_other_source, {
+        id,
+        list: sourceInfo,
+    });
+};
+export const clearOtherSource = async () => {
+    await rendererInvoke(WIN_MAIN_RENDERER_EVENT_NAME.clear_other_source);
+};
+export const getOtherSourceCount = async () => {
+    return rendererInvoke(WIN_MAIN_RENDERER_EVENT_NAME.get_other_source_count);
+};
+// export const updateDislikeInfo = async(dislikeInfo: LX.Dislike.ListItem[]) => {
+//   await rendererInvoke<LX.Dislike.ListItem[]>(WIN_MAIN_RENDERER_EVENT_NAME.update_dislike_music_infos, dislikeInfo)
+// }
+// export const removeDislikeInfo = async(ids: string[]) => {
+//   await rendererInvoke<string[]>(WIN_MAIN_RENDERER_EVENT_NAME.remove_dislike_music_infos, ids)
+// }
+// export const clearDislikeInfo = async() => {
+//   await rendererInvoke(WIN_MAIN_RENDERER_EVENT_NAME.clear_dislike_music_infos)
+// }
+export const getHotKeyConfig = async () => {
+    return rendererInvoke(WIN_MAIN_RENDERER_EVENT_NAME.get_hot_key);
+};
+export const setIgnoreMouseEvents = (ignore) => {
+    rendererSend(WIN_MAIN_RENDERER_EVENT_NAME.set_ignore_mouse_events, ignore);
+};
+export const getEnvParams = async () => {
+    return rendererInvoke(CMMON_EVENT_NAME.get_env_params);
+};
+export const clearEnvParamsDeeplink = () => {
+    rendererSend(CMMON_EVENT_NAME.clear_env_params_deeplink);
+};
+export const onDeeplink = (listener) => {
+    rendererOn(CMMON_EVENT_NAME.deeplink, listener);
+    return () => {
+        rendererOff(CMMON_EVENT_NAME.deeplink, listener);
+    };
+};
+export const checkUpdate = () => {
+    rendererSend(WIN_MAIN_RENDERER_EVENT_NAME.update_check);
+};
+export const downloadUpdate = () => {
+    rendererSend(WIN_MAIN_RENDERER_EVENT_NAME.update_download_update);
+};
+export const quitUpdate = () => {
+    rendererSend(WIN_MAIN_RENDERER_EVENT_NAME.quit_update);
+};
+export const onUpdateAvailable = (listener) => {
+    rendererOn(WIN_MAIN_RENDERER_EVENT_NAME.update_available, listener);
+    return () => {
+        rendererOff(WIN_MAIN_RENDERER_EVENT_NAME.update_available, listener);
+    };
+};
+export const onUpdateError = (listener) => {
+    rendererOn(WIN_MAIN_RENDERER_EVENT_NAME.update_error, listener);
+    return () => {
+        rendererOff(WIN_MAIN_RENDERER_EVENT_NAME.update_error, listener);
+    };
+};
+export const onUpdateProgress = (listener) => {
+    rendererOn(WIN_MAIN_RENDERER_EVENT_NAME.update_progress, listener);
+    return () => {
+        rendererOff(WIN_MAIN_RENDERER_EVENT_NAME.update_progress, listener);
+    };
+};
+export const onUpdateDownloaded = (listener) => {
+    rendererOn(WIN_MAIN_RENDERER_EVENT_NAME.update_downloaded, listener);
+    return () => {
+        rendererOff(WIN_MAIN_RENDERER_EVENT_NAME.update_downloaded, listener);
+    };
+};
+export const onUpdateNotAvailable = (listener) => {
+    rendererOn(WIN_MAIN_RENDERER_EVENT_NAME.update_not_available, listener);
+    return () => {
+        rendererOff(WIN_MAIN_RENDERER_EVENT_NAME.update_not_available, listener);
+    };
+};
+export const importUserApi = async (fileText) => {
+    return rendererInvoke(WIN_MAIN_RENDERER_EVENT_NAME.import_user_api, fileText);
+};
+export const setUserApi = async (source) => {
+    return rendererInvoke(WIN_MAIN_RENDERER_EVENT_NAME.set_user_api, source);
+};
+export const removeUserApi = async (ids) => {
+    return rendererInvoke(WIN_MAIN_RENDERER_EVENT_NAME.remove_user_api, ids);
+};
+export const onShowUserApiUpdateAlert = (listener) => {
+    rendererOn(WIN_MAIN_RENDERER_EVENT_NAME.user_api_show_update_alert, listener);
+    return () => {
+        rendererOff(WIN_MAIN_RENDERER_EVENT_NAME.user_api_show_update_alert, listener);
+    };
+};
+export const setAllowShowUserApiUpdateAlert = async (id, enable) => {
+    return rendererInvoke(WIN_MAIN_RENDERER_EVENT_NAME.user_api_set_allow_update_alert, { id, enable });
+};
+export const onUserApiStatus = (listener) => {
+    rendererOn(WIN_MAIN_RENDERER_EVENT_NAME.user_api_status, listener);
+    return () => {
+        rendererOff(WIN_MAIN_RENDERER_EVENT_NAME.user_api_status, listener);
+    };
+};
+export const getUserApiList = async () => {
+    return rendererInvoke(WIN_MAIN_RENDERER_EVENT_NAME.get_user_api_list);
+};
+export const sendUserApiRequest = async ({ requestKey, data }) => {
+    return rendererInvoke(WIN_MAIN_RENDERER_EVENT_NAME.request_user_api, {
+        requestKey,
+        data,
+    });
+};
+export const userApiRequestCancel = (requestKey) => {
+    rendererSend(WIN_MAIN_RENDERER_EVENT_NAME.request_user_api_cancel, requestKey);
+};
+// export const setDesktopLyricInfo = (type, data, info) => {
+//   rendererSend(WIN_MAIN_RENDERER_EVENT_NAME.set_lyric_info, {
+//     type,
+//     data,
+//     info,
+//   })
+// }
+// export const onGetDesktopLyricInfo = callback => {
+//   rendererOn(WIN_MAIN_RENDERER_EVENT_NAME.get_lyric_info, callback)
+//   return () => {
+//     rendererOff(callback)
+//   }
+// }
+export const sendPlayerStatus = (status) => {
+    rendererSend(WIN_MAIN_RENDERER_EVENT_NAME.player_status, status);
+};
+export const sendOpenAPIAction = async (action) => {
+    return rendererInvoke(WIN_MAIN_RENDERER_EVENT_NAME.open_api_action, action);
+};
+export const saveLastStartInfo = (version) => {
+    rendererSend(WIN_MAIN_RENDERER_EVENT_NAME.save_data, {
+        path: DATA_KEYS.lastStartInfo,
+        data: version,
+    });
+};
+// 获取最后一次启动时的版本号
+export const getLastStartInfo = async () => {
+    return rendererInvoke(WIN_MAIN_RENDERER_EVENT_NAME.get_data, DATA_KEYS.lastStartInfo);
+};
+export const savePlayInfo = (playInfo) => {
+    rendererSend(WIN_MAIN_RENDERER_EVENT_NAME.save_data, {
+        path: DATA_KEYS.playInfo,
+        data: playInfo,
+    });
+};
+// 获取上次关闭时的当前歌曲播放信息
+export const getPlayInfo = async () => {
+    return rendererInvoke(WIN_MAIN_RENDERER_EVENT_NAME.get_data, DATA_KEYS.playInfo);
+};
+export const saveSearchHistoryList = (list) => {
+    rendererSend(WIN_MAIN_RENDERER_EVENT_NAME.save_data, {
+        path: DATA_KEYS.searchHistoryList,
+        data: list,
+    });
+};
+// 获取搜索历史列表
+export const getSearchHistoryList = async () => {
+    return rendererInvoke(WIN_MAIN_RENDERER_EVENT_NAME.get_data, DATA_KEYS.searchHistoryList);
+};
+export const saveListPositionInfo = (listPosition) => {
+    rendererSend(WIN_MAIN_RENDERER_EVENT_NAME.save_data, {
+        path: DATA_KEYS.listScrollPosition,
+        data: listPosition,
+    });
+};
+// 获取搜索历史列表
+export const getListPositionInfo = async () => {
+    return rendererInvoke(WIN_MAIN_RENDERER_EVENT_NAME.get_data, DATA_KEYS.listScrollPosition);
+};
+export const saveListPrevSelectId = (listPosition) => {
+    rendererSend(WIN_MAIN_RENDERER_EVENT_NAME.save_data, {
+        path: DATA_KEYS.listPrevSelectId,
+        data: listPosition,
+    });
+};
+// 获取上一次选中的列表id
+export const getListPrevSelectId = async () => {
+    return rendererInvoke(WIN_MAIN_RENDERER_EVENT_NAME.get_data, DATA_KEYS.listPrevSelectId);
+};
+export const saveListUpdateInfo = (listPosition) => {
+    rendererSend(WIN_MAIN_RENDERER_EVENT_NAME.save_data, {
+        path: DATA_KEYS.listUpdateInfo,
+        data: listPosition,
+    });
+};
+// 获取列表更新记录
+export const getListUpdateInfo = async () => {
+    return rendererInvoke(WIN_MAIN_RENDERER_EVENT_NAME.get_data, DATA_KEYS.listUpdateInfo);
+};
+export const saveIgnoreVersion = (version) => {
+    rendererSend(WIN_MAIN_RENDERER_EVENT_NAME.save_data, {
+        path: DATA_KEYS.ignoreVersion,
+        data: version,
+    });
+};
+// 获取忽略更新的版本号
+export const getIgnoreVersion = async () => {
+    return rendererInvoke(WIN_MAIN_RENDERER_EVENT_NAME.get_data, DATA_KEYS.ignoreVersion);
+};
+export const saveLeaderboardSetting = (source) => {
+    rendererSend(WIN_MAIN_RENDERER_EVENT_NAME.save_data, {
+        path: DATA_KEYS.leaderboardSetting,
+        data: source,
+    });
+};
+export const getLeaderboardSetting = async () => {
+    return (await rendererInvoke(WIN_MAIN_RENDERER_EVENT_NAME.get_data, DATA_KEYS.leaderboardSetting)) ?? { ...DEFAULT_SETTING.leaderboard };
+};
+export const saveSongListSetting = (setting) => {
+    rendererSend(WIN_MAIN_RENDERER_EVENT_NAME.save_data, {
+        path: DATA_KEYS.songListSetting,
+        data: setting,
+    });
+};
+export const getSongListSetting = async () => {
+    return (await rendererInvoke(WIN_MAIN_RENDERER_EVENT_NAME.get_data, DATA_KEYS.songListSetting)) ?? { ...DEFAULT_SETTING.songList };
+};
+export const saveSearchSetting = (setting) => {
+    rendererSend(WIN_MAIN_RENDERER_EVENT_NAME.save_data, {
+        path: DATA_KEYS.searchSetting,
+        data: setting,
+    });
+};
+export const getSearchSetting = async () => {
+    return (await rendererInvoke(WIN_MAIN_RENDERER_EVENT_NAME.get_data, DATA_KEYS.searchSetting)) ?? { ...DEFAULT_SETTING.search };
+};
+export const saveViewPrevState = (state) => {
+    rendererSend(WIN_MAIN_RENDERER_EVENT_NAME.save_data, {
+        path: DATA_KEYS.viewPrevState,
+        data: state,
+    });
+};
+export const getViewPrevState = async () => {
+    return (await rendererInvoke(WIN_MAIN_RENDERER_EVENT_NAME.get_data, DATA_KEYS.viewPrevState)) ?? { ...DEFAULT_SETTING.viewPrevState };
+};
+export const getSystemFonts = async () => {
+    return rendererInvoke(CMMON_EVENT_NAME.get_system_fonts).catch(() => {
+        return [];
+    });
+};
+export const getUserSoundEffectEQPresetList = async () => {
+    return rendererInvoke(WIN_MAIN_RENDERER_EVENT_NAME.get_sound_effect_eq_preset);
+};
+export const saveUserSoundEffectEQPresetList = (list) => {
+    rendererSend(WIN_MAIN_RENDERER_EVENT_NAME.save_sound_effect_eq_preset, list);
+};
+export const getUserSoundEffectConvolutionPresetList = async () => {
+    return rendererInvoke(WIN_MAIN_RENDERER_EVENT_NAME.get_sound_effect_convolution_preset);
+};
+export const saveUserSoundEffectConvolutionPresetList = (list) => {
+    rendererSend(WIN_MAIN_RENDERER_EVENT_NAME.save_sound_effect_convolution_preset, list);
+};
+// export const getUserSoundEffectPitchShifterPresetList = async() => {
+//   return rendererInvoke<LX.SoundEffect.PitchShifterPreset[]>(WIN_MAIN_RENDERER_EVENT_NAME.get_sound_effect_pitch_shifter_preset)
+// }
+// export const saveUserSoundEffectPitchShifterPresetList = (list: LX.SoundEffect.PitchShifterPreset[]) => {
+//   rendererSend<LX.SoundEffect.PitchShifterPreset[]>(WIN_MAIN_RENDERER_EVENT_NAME.save_sound_effect_pitch_shifter_preset, list)
+// }
+export const allHotKeys = markRaw({
+    local: [
+        {
+            name: hotKeys.HOTKEY_PLAYER.toggle_play.name,
+            action: hotKeys.HOTKEY_PLAYER.toggle_play.action,
+            type: APP_EVENT_NAMES.winMainName,
+        },
+        {
+            name: hotKeys.HOTKEY_PLAYER.prev.name,
+            action: hotKeys.HOTKEY_PLAYER.prev.action,
+            type: APP_EVENT_NAMES.winMainName,
+        },
+        {
+            name: hotKeys.HOTKEY_PLAYER.next.name,
+            action: hotKeys.HOTKEY_PLAYER.next.action,
+            type: APP_EVENT_NAMES.winMainName,
+        },
+        {
+            name: hotKeys.HOTKEY_PLAYER.seekbackward.name,
+            action: hotKeys.HOTKEY_PLAYER.seekbackward.action,
+            type: APP_EVENT_NAMES.winMainName,
+        },
+        {
+            name: hotKeys.HOTKEY_PLAYER.seekforward.name,
+            action: hotKeys.HOTKEY_PLAYER.seekforward.action,
+            type: APP_EVENT_NAMES.winMainName,
+        },
+        {
+            name: hotKeys.HOTKEY_PLAYER.music_dislike.name,
+            action: hotKeys.HOTKEY_PLAYER.music_dislike.action,
+            type: APP_EVENT_NAMES.winMainName,
+        },
+        {
+            name: hotKeys.HOTKEY_COMMON.focusSearchInput.name,
+            action: hotKeys.HOTKEY_COMMON.focusSearchInput.action,
+            type: APP_EVENT_NAMES.winMainName,
+        },
+        {
+            name: hotKeys.HOTKEY_COMMON.min.name,
+            action: hotKeys.HOTKEY_COMMON.min.action,
+            type: APP_EVENT_NAMES.winMainName,
+        },
+        {
+            name: hotKeys.HOTKEY_COMMON.close.name,
+            action: hotKeys.HOTKEY_COMMON.close.action,
+            type: APP_EVENT_NAMES.winMainName,
+        },
+    ],
+    global: [
+        {
+            name: hotKeys.HOTKEY_COMMON.min_toggle.name,
+            action: hotKeys.HOTKEY_COMMON.min_toggle.action,
+            type: APP_EVENT_NAMES.winMainName,
+        },
+        {
+            name: hotKeys.HOTKEY_COMMON.hide_toggle.name,
+            action: hotKeys.HOTKEY_COMMON.hide_toggle.action,
+            type: APP_EVENT_NAMES.winMainName,
+        },
+        {
+            name: hotKeys.HOTKEY_COMMON.close.name,
+            action: hotKeys.HOTKEY_COMMON.close.action,
+            type: APP_EVENT_NAMES.winMainName,
+        },
+        {
+            name: hotKeys.HOTKEY_PLAYER.toggle_play.name,
+            action: hotKeys.HOTKEY_PLAYER.toggle_play.action,
+            type: APP_EVENT_NAMES.winMainName,
+        },
+        {
+            name: hotKeys.HOTKEY_PLAYER.prev.name,
+            action: hotKeys.HOTKEY_PLAYER.prev.action,
+            type: APP_EVENT_NAMES.winMainName,
+        },
+        {
+            name: hotKeys.HOTKEY_PLAYER.next.name,
+            action: hotKeys.HOTKEY_PLAYER.next.action,
+            type: APP_EVENT_NAMES.winMainName,
+        },
+        {
+            name: hotKeys.HOTKEY_PLAYER.seekbackward.name,
+            action: hotKeys.HOTKEY_PLAYER.seekbackward.action,
+            type: APP_EVENT_NAMES.winMainName,
+        },
+        {
+            name: hotKeys.HOTKEY_PLAYER.seekforward.name,
+            action: hotKeys.HOTKEY_PLAYER.seekforward.action,
+            type: APP_EVENT_NAMES.winMainName,
+        },
+        {
+            name: hotKeys.HOTKEY_PLAYER.volume_up.name,
+            action: hotKeys.HOTKEY_PLAYER.volume_up.action,
+            type: APP_EVENT_NAMES.winMainName,
+        },
+        {
+            name: hotKeys.HOTKEY_PLAYER.volume_down.name,
+            action: hotKeys.HOTKEY_PLAYER.volume_down.action,
+            type: APP_EVENT_NAMES.winMainName,
+        },
+        {
+            name: hotKeys.HOTKEY_PLAYER.volume_mute.name,
+            action: hotKeys.HOTKEY_PLAYER.volume_mute.action,
+            type: APP_EVENT_NAMES.winMainName,
+        },
+        {
+            name: hotKeys.HOTKEY_PLAYER.music_love.name,
+            action: hotKeys.HOTKEY_PLAYER.music_love.action,
+            type: APP_EVENT_NAMES.winMainName,
+        },
+        {
+            name: hotKeys.HOTKEY_PLAYER.music_unlove.name,
+            action: hotKeys.HOTKEY_PLAYER.music_unlove.action,
+            type: APP_EVENT_NAMES.winMainName,
+        },
+        {
+            name: hotKeys.HOTKEY_PLAYER.music_dislike.name,
+            action: hotKeys.HOTKEY_PLAYER.music_dislike.action,
+            type: APP_EVENT_NAMES.winMainName,
+        },
+        {
+            name: hotKeys.HOTKEY_DESKTOP_LYRIC.toggle_visible.name,
+            action: hotKeys.HOTKEY_DESKTOP_LYRIC.toggle_visible.action,
+            type: APP_EVENT_NAMES.winLyricName,
+        },
+        {
+            name: hotKeys.HOTKEY_DESKTOP_LYRIC.toggle_lock.name,
+            action: hotKeys.HOTKEY_DESKTOP_LYRIC.toggle_lock.action,
+            type: APP_EVENT_NAMES.winLyricName,
+        },
+        {
+            name: hotKeys.HOTKEY_DESKTOP_LYRIC.toggle_always_top.name,
+            action: hotKeys.HOTKEY_DESKTOP_LYRIC.toggle_always_top.action,
+            type: APP_EVENT_NAMES.winLyricName,
+        },
+    ],
+});
+export const hotKeySetEnable = async (enable) => {
+    return rendererInvoke(HOTKEY_RENDERER_EVENT_NAME.enable, enable);
+};
+export const hotKeySetConfig = async (config) => {
+    return rendererInvoke(HOTKEY_RENDERER_EVENT_NAME.set_config, config);
+};
+export const hotKeyGetStatus = async () => {
+    return rendererInvoke(HOTKEY_RENDERER_EVENT_NAME.status);
+};
+// 主进程操作播放器状态
+export const onPlayerAction = (listener) => {
+    rendererOn(WIN_MAIN_RENDERER_EVENT_NAME.player_action_on_button_click, listener);
+    return () => {
+        rendererOff(WIN_MAIN_RENDERER_EVENT_NAME.player_action_on_button_click, listener);
+    };
+};
+// export const setTaskbarThumbnailClip = async(clip: Electron.Rectangle) => {
+//   await rendererInvoke(WIN_MAIN_RENDERER_EVENT_NAME.taskbar_set_thumbnail_clip, clip)
+// }
+// 播放器状态更新 通知主进程
+export const setPlayerAction = (buttons) => {
+    rendererSend(WIN_MAIN_RENDERER_EVENT_NAME.player_action_set_buttons, buttons);
+};
+/**
+ * On Theme Change
+ * @param listener LX.IpcRendererEventListenerParams<shouldUseDarkColors: boolean>
+ * @returns RemoveListener Fn
+ */
+export const onThemeChange = (listener) => {
+    rendererOn(CMMON_EVENT_NAME.theme_change, listener);
+    return () => {
+        rendererOff(CMMON_EVENT_NAME.theme_change, listener);
+    };
+};
+/**
+ * 选择路径
+ */
+export const showSelectDialog = async (options) => {
+    return rendererInvoke(WIN_MAIN_RENDERER_EVENT_NAME.show_select_dialog, options);
+};
+/**
+ * 打开保存对话框
+ */
+export const openSaveDir = async (options) => {
+    return rendererInvoke(WIN_MAIN_RENDERER_EVENT_NAME.show_save_dialog, options);
+};
+/**
+ * 在资源管理器中定位文件
+ */
+export const openDirInExplorer = async (path) => {
+    return rendererSend(WIN_MAIN_RENDERER_EVENT_NAME.open_dir_in_explorer, path);
+};
+/**
+ * 获取缓存大小
+ */
+export const getCacheSize = async () => {
+    return rendererInvoke(WIN_MAIN_RENDERER_EVENT_NAME.get_cache_size);
+};
+/**
+ * 清除缓存
+ */
+export const clearCache = async () => {
+    await rendererInvoke(WIN_MAIN_RENDERER_EVENT_NAME.clear_cache);
+};
+/**
+ * 设置窗口大小
+ * @param {*} width
+ * @param {*} height
+ */
+export const setWindowSize = (width, height) => {
+    const params = {
+        width,
+        height,
+    };
+    rendererSend(WIN_MAIN_RENDERER_EVENT_NAME.set_window_size, params);
+};
+export const getPlayerLyric = async (musicInfo) => {
+    return rendererInvoke(WIN_MAIN_RENDERER_EVENT_NAME.get_palyer_lyric, musicInfo.id);
+};
+export const getLyricRaw = async (musicInfo) => {
+    return rendererInvoke(WIN_MAIN_RENDERER_EVENT_NAME.get_lyric_raw, musicInfo.id);
+};
+export const clearLyricRaw = async () => {
+    await rendererInvoke(WIN_MAIN_RENDERER_EVENT_NAME.clear_lyric_raw);
+};
+export const getLyricRawCount = async () => {
+    return rendererInvoke(WIN_MAIN_RENDERER_EVENT_NAME.get_lyric_raw_count);
+};
+export const getLyricEdited = async (musicInfo) => {
+    return rendererInvoke(WIN_MAIN_RENDERER_EVENT_NAME.get_lyric_edited, musicInfo.id);
+};
+export const saveLyric = async (musicInfo, lyricInfo) => {
+    // console.log(musicInfo)
+    if ('rawlrcInfo' in lyricInfo) {
+        const { rawlrcInfo, ...info } = lyricInfo;
+        const tasks = [
+            rendererInvoke(WIN_MAIN_RENDERER_EVENT_NAME.save_lyric_raw, {
+                id: musicInfo.id,
+                lyrics: rawlrcInfo,
+            }),
+        ];
+        if (info.lyric != rawlrcInfo.lyric) {
+            tasks.push(rendererInvoke(WIN_MAIN_RENDERER_EVENT_NAME.save_lyric_edited, {
+                id: musicInfo.id,
+                lyrics: info,
+            }));
+        }
+        console.log(tasks);
+        await Promise.all(tasks);
+    }
+    else {
+        await rendererInvoke(WIN_MAIN_RENDERER_EVENT_NAME.save_lyric_raw, {
+            id: musicInfo.id,
+            lyrics: lyricInfo,
+        });
+    }
+};
+export const saveLyricEdited = async (musicInfo, lyricInfo) => {
+    await rendererInvoke(WIN_MAIN_RENDERER_EVENT_NAME.save_lyric_edited, {
+        id: musicInfo.id,
+        lyrics: lyricInfo,
+    });
+};
+export const removeLyricEdited = async (musicInfo) => {
+    await rendererInvoke(WIN_MAIN_RENDERER_EVENT_NAME.remove_lyric_edited, musicInfo.id);
+};
+export const clearLyric = async () => {
+    await rendererInvoke(WIN_MAIN_RENDERER_EVENT_NAME.clear_lyric_raw);
+};
+export const clearLyricEdited = async () => {
+    await rendererInvoke(WIN_MAIN_RENDERER_EVENT_NAME.clear_lyric_edited);
+};
+export const getLyricEditedCount = async () => {
+    return rendererInvoke(WIN_MAIN_RENDERER_EVENT_NAME.get_lyric_edited_count);
+};
+export const saveTheme = async (theme) => {
+    return rendererInvoke(WIN_MAIN_RENDERER_EVENT_NAME.save_theme, theme);
+};
+export const removeTheme = async (id) => {
+    return rendererInvoke(WIN_MAIN_RENDERER_EVENT_NAME.remove_theme, id);
+};
+export const getThemes = async () => {
+    return rendererInvoke(WIN_MAIN_RENDERER_EVENT_NAME.get_themes);
+};
+/**
+ * 从缓存获取歌曲URL
+ * @param musicInfo 歌曲信息
+ * @param type URL音质
+ * @returns
+ */
+export const getMusicUrl = async (musicInfo, type) => {
+    return rendererInvoke(WIN_MAIN_RENDERER_EVENT_NAME.get_music_url, `${musicInfo.id}_${type}`);
+};
+/**
+ * 缓存歌曲URL
+ * @param musicInfo 歌曲信息
+ * @param type URL音质
+ * @param url 歌曲URL
+ */
+export const saveMusicUrl = async (musicInfo, type, url) => {
+    await rendererInvoke(WIN_MAIN_RENDERER_EVENT_NAME.save_music_url, {
+        id: `${musicInfo.id}_${type}`,
+        url,
+    });
+};
+/**
+ * 清理所有缓存的歌曲URL
+ */
+export const clearMusicUrl = async () => {
+    await rendererInvoke(WIN_MAIN_RENDERER_EVENT_NAME.clear_music_url);
+};
+export const getMusicUrlCount = async () => {
+    return rendererInvoke(WIN_MAIN_RENDERER_EVENT_NAME.get_music_url_count);
+};
+/**
+ * 退出应用
+ */
+export const quitApp = () => {
+    rendererSend(WIN_MAIN_RENDERER_EVENT_NAME.quit);
+};
+/**
+ * 关闭窗口
+ */
+export const closeWindow = () => {
+    rendererSend(WIN_MAIN_RENDERER_EVENT_NAME.close);
+};
+/**
+ * 最小化窗口
+ */
+export const minWindow = () => {
+    rendererSend(WIN_MAIN_RENDERER_EVENT_NAME.min);
+};
+/**
+ * 最大化窗口
+ */
+export const maxWindow = () => {
+    rendererSend(WIN_MAIN_RENDERER_EVENT_NAME.max);
+};
+/**
+ * 最小化、最大化窗口切换
+ */
+export const minMaxWindowToggle = () => {
+    rendererSend(WIN_MAIN_RENDERER_EVENT_NAME.min_toggle);
+};
+/**
+ * 显示、隐藏窗口切换
+ */
+export const showHideWindowToggle = () => {
+    rendererSend(WIN_MAIN_RENDERER_EVENT_NAME.hide_toggle);
+};
+/**
+ * 聚焦窗口
+ */
+export const focusWindow = () => {
+    rendererSend(WIN_MAIN_RENDERER_EVENT_NAME.focus);
+};
+/**
+ * 是否启用电源锁
+ */
+export const setPowerSaveBlocker = (enabled) => {
+    rendererSend(WIN_MAIN_RENDERER_EVENT_NAME.set_power_save_blocker, enabled);
+};
+/**
+ * 窗口获取焦点事件
+ * @param listener
+ * @returns
+ */
+export const onFocus = (listener) => {
+    rendererOn(WIN_MAIN_RENDERER_EVENT_NAME.focus, listener);
+    return () => {
+        rendererOff(WIN_MAIN_RENDERER_EVENT_NAME.focus, listener);
+    };
+};
+/**
+ * 快捷键触发事件
+ * @param listener
+ * @returns
+ */
+export const onKeyDown = (listener) => {
+    rendererOn(WIN_MAIN_RENDERER_EVENT_NAME.key_down, listener);
+    return () => {
+        rendererOff(WIN_MAIN_RENDERER_EVENT_NAME.key_down, listener);
+    };
+};
+/**
+ * 快捷键设置更新事件
+ * @param listener
+ * @returns
+ */
+export const onUpdateHotkey = (listener) => {
+    rendererOn(WIN_MAIN_RENDERER_EVENT_NAME.set_hot_key_config, listener);
+    return () => {
+        rendererOff(WIN_MAIN_RENDERER_EVENT_NAME.set_hot_key_config, listener);
+    };
+};
+/**
+ * 设置全屏
+ * @param isFullscreen 是否全屏
+ * @returns
+ */
+export const setFullScreen = async (isFullscreen) => {
+    return rendererInvoke(WIN_MAIN_RENDERER_EVENT_NAME.fullscreen, isFullscreen);
+};
+/**
+ * 打开开发者工具
+ * @returns
+ */
+export const openDevTools = () => {
+    rendererSend(WIN_MAIN_RENDERER_EVENT_NAME.open_dev_tools);
+};
+/**
+ * 接收同步事件
+ * @param listener
+ * @returns
+ */
+export const onSyncAction = (listener) => {
+    rendererOn(WIN_MAIN_RENDERER_EVENT_NAME.sync_action, listener);
+    return () => {
+        rendererOff(WIN_MAIN_RENDERER_EVENT_NAME.sync_action, listener);
+    };
+};
+/**
+ * 发送同步事件
+ * @param action
+ * @returns
+ */
+export const sendSyncAction = async (action) => {
+    return rendererInvoke(WIN_MAIN_RENDERER_EVENT_NAME.sync_action, action);
+};
+/**
+ * 获取同步服务端连接设备历史列表
+ * @returns
+ */
+export const getSyncServerDevices = () => {
+    return rendererInvoke(WIN_MAIN_RENDERER_EVENT_NAME.sync_get_server_devices);
+};
+/**
+ * 移除同步服务端连接设备
+ * @returns
+ */
+export const removeSyncServerDevice = (clientId) => {
+    return rendererInvoke(WIN_MAIN_RENDERER_EVENT_NAME.sync_remove_server_device, clientId);
+};
+// export const refreshSyncCode = async(): Promise<string> => {
+//   return rendererInvoke(WIN_MAIN_RENDERER_EVENT_NAME.sync_generate_code)
+// }
+// export const onSyncStatus = (listener: LX.IpcRendererEventListenerParams<LX.Sync.Status>): RemoveListener => {
+//   rendererOn(WIN_MAIN_RENDERER_EVENT_NAME.sync_status, listener)
+//   return () => {
+//     rendererOff(WIN_MAIN_RENDERER_EVENT_NAME.sync_status, listener)
+//   }
+// }
+/**
+ * 桌面歌词进程创建事件
+ * @param listener
+ * @returns
+ */
+export const onNewDesktopLyricProcess = (listener) => {
+    rendererOn(WIN_MAIN_RENDERER_EVENT_NAME.process_new_desktop_lyric_client, listener);
+    return () => {
+        rendererOff(WIN_MAIN_RENDERER_EVENT_NAME.process_new_desktop_lyric_client, listener);
+    };
+};
+export const downloadTasksGet = async () => {
+    return rendererInvoke(WIN_MAIN_RENDERER_EVENT_NAME.download_list_get);
+};
+export const downloadTasksCreate = async (list, addMusicLocationType) => {
+    return rendererInvoke(WIN_MAIN_RENDERER_EVENT_NAME.download_list_add, {
+        list,
+        addMusicLocationType,
+    });
+};
+export const downloadTasksUpdate = async (list) => {
+    return rendererInvoke(WIN_MAIN_RENDERER_EVENT_NAME.download_list_update, list);
+};
+export const downloadTasksRemove = async (ids) => {
+    return rendererInvoke(WIN_MAIN_RENDERER_EVENT_NAME.download_list_remove, ids);
+};
+export const downloadListClear = async () => {
+    return rendererInvoke(WIN_MAIN_RENDERER_EVENT_NAME.download_list_clear);
+};
+
+
+######## renderer.js.map :: src/renderer/utils/keyBind.ts (3426 chars)
+import { isMac } from '@common/utils';
+const downKeys = new Set();
+const handleEvent = (type, event, keys, isEditing) => {
+    let eventKey = event.key;
+    if (isMac) {
+        let index = keys.indexOf('meta');
+        if (index > -1)
+            keys.splice(index, 1, 'mod');
+        if (eventKey == 'Meta')
+            eventKey = 'mod';
+    }
+    else {
+        let index = keys.indexOf('ctrl');
+        if (index > -1)
+            keys.splice(index, 1, 'mod');
+        if (eventKey == 'Control')
+            eventKey = 'mod';
+    }
+    let key = keys.join('+');
+    switch (type) {
+        case 'down':
+            downKeys.add(key);
+            break;
+        case 'up':
+            downKeys.delete(key);
+            break;
+    }
+    handleSendEvent(key, eventKey, type, event, keys, isEditing);
+};
+// 修饰键处理
+const eventModifiers = (event) => {
+    let modifiers = [];
+    if (event.ctrlKey)
+        modifiers.push('ctrl');
+    if (event.shiftKey)
+        modifiers.push('shift');
+    if (event.altKey)
+        modifiers.push('alt');
+    if (event.metaKey)
+        modifiers.push('meta');
+    return modifiers;
+};
+// 是否忽略事件（表单元素等默认忽略）
+const assertStopCallback = (element) => {
+    // if the element has the class "keybind" then no need to stop
+    if (element.classList.contains('key-bind'))
+        return false;
+    // stop for input, select, and textarea
+    switch (element.tagName) {
+        case 'INPUT':
+        case 'SELECT':
+        case 'TEXTAREA':
+            return true;
+        default:
+            return !!element.isContentEditable;
+    }
+};
+const handleKeyDown = (event) => {
+    // if (assertStopCallback(event.target)) return
+    // event.preventDefault()
+    let keys = eventModifiers(event);
+    switch (event.key) {
+        case 'Control':
+        case 'Alt':
+        case 'Meta':
+        case 'Shift':
+            break;
+        case ' ':
+            keys.push('space');
+            break;
+        default:
+            keys.push((event.code.includes('Numpad') ? event.code.replace(/^Numpad(\w{1,3})\w*$/i, 'num$1') : event.key).toLowerCase());
+            break;
+    }
+    handleEvent('down', event, keys, event.target ? assertStopCallback(event.target) : false);
+};
+const handleKeyUp = (event) => {
+    // if (assertStopCallback(event.target)) return
+    event.preventDefault();
+    let keys = eventModifiers(event);
+    switch (event.key) {
+        case 'Control':
+            keys.push('ctrl');
+            break;
+        case ' ':
+            keys.push('space');
+            break;
+        default:
+            keys.push((event.code.includes('Numpad') ? event.code.replace(/^Numpad(\w{1,3})\w*$/i, 'num$1') : event.key).toLowerCase());
+            break;
+    }
+    handleEvent('up', event, keys, event.target ? assertStopCallback(event.target) : false);
+};
+let handleSendEvent;
+const bindKey = (handle = () => { }) => {
+    handleSendEvent = handle;
+    document.addEventListener('keydown', handleKeyDown);
+    document.addEventListener('keyup', handleKeyUp);
+};
+const unbindKey = () => {
+    document.removeEventListener('keydown', handleKeyDown);
+    document.removeEventListener('keyup', handleKeyUp);
+};
+const clearDownKeys = () => {
+    let keys = Array.from(downKeys);
+    for (let i = keys.length - 1; i > -1; i--) {
+        handleSendEvent(keys[i], keys[i], 'up', null, [keys[i]], false);
+    }
+    downKeys.clear();
+};
+export default {
+    bindKey,
+    unbindKey,
+    clearDownKeys,
+};
+
+
+######## renderer.js.map :: src/renderer/event/Event.ts (1555 chars)
+// import mitt from 'mitt'
+// import type { Emitter } from 'mitt'
+export default class Event {
+    listeners;
+    constructor() {
+        this.listeners = new Map();
+    }
+    on(eventName, listener) {
+        let targetListeners = this.listeners.get(eventName);
+        if (!targetListeners)
+            this.listeners.set(eventName, targetListeners = []);
+        targetListeners.push(listener);
+    }
+    off(eventName, listener) {
+        let targetListeners = this.listeners.get(eventName);
+        if (!targetListeners)
+            return;
+        const index = targetListeners.indexOf(listener);
+        if (index < 0)
+            return;
+        targetListeners.splice(index, 1);
+    }
+    emit(eventName, ...args) {
+        let targetListeners = this.listeners.get(eventName);
+        if (!targetListeners)
+            return;
+        for (const listener of targetListeners) {
+            listener(...args);
+        }
+    }
+    offAll(eventName) {
+        let targetListeners = this.listeners.get(eventName);
+        if (!targetListeners)
+            return;
+        this.listeners.delete(eventName);
+    }
+}
+// export class App_EVENT {
+//   listeners: Map<string, Array<() => void>>
+//   constructor() {
+//     this.listeners = new Map()
+//   }
+//   on(eventName: string, listener: () => void) {
+//     let targetListeners = this.listeners.get(eventName)
+//     if (targetListeners) this.listeners.set(eventName, targetListeners = [])
+//     targetListeners!.push(listener)
+//   }
+//   off(eventName: string, listener: () => void) {
+//   }
+// }
+
+
+######## renderer.js.map :: src/renderer/event/keyEvent.ts (2001 chars)
+import keyBind from '../utils/keyBind';
+import { HOTKEY_COMMON } from '@common/hotKey';
+import Event from './Event';
+import { appSetting } from '@renderer/store/setting';
+export const createKeyEventHub = () => {
+    return new Event();
+};
+window.lx.isEditingHotKey = false;
+// let appHotKeyConfig: LX.HotKeyConfigAll = window.lx.appHotKeyConfig
+export const registerKeyEvent = () => {
+    keyBind.bindKey((key, eventKey, type, event, keys, isEditing) => {
+        // console.log(`key_${key}_${type}`)
+        window.app_event.keyDown({ event, keys, key, eventKey, type });
+        // console.log(event, key)
+        // console.log(key, eventKey, type, event, keys)
+        if (window.lx.isEditingHotKey || (isEditing && type == 'down') || event?.lx_handled)
+            return;
+        if (event && window.lx.appHotKeyConfig.local.enable && window.lx.appHotKeyConfig.local.keys[key] && (key != 'escape' || !(event.target.classList.contains('ignore-esc')))) {
+            // console.log(key, eventKey, type, keys, isEditing)
+            event.preventDefault();
+            if (type == 'up')
+                return;
+            // 软件内快捷键的最小化触发时
+            // 如果已启用托盘，则隐藏程序，否则最小化程序 https://github.com/lyswhut/lx-music-desktop/issues/603
+            if (window.lx.appHotKeyConfig.local.keys[key].action == HOTKEY_COMMON.min.action && appSetting['tray.enable']) {
+                window.key_event.emit(HOTKEY_COMMON.hide_toggle.action);
+                return;
+            }
+            window.key_event.emit(window.lx.appHotKeyConfig.local.keys[key].action);
+            return;
+        }
+        // console.log(`key_${key}_${type}`)
+        window.key_event.emit(`key_${key}_${type}`, { event, keys, key, eventKey, type });
+        if (key != eventKey)
+            window.key_event.emit(`key_${eventKey}_${type}`, { event, keys, key, eventKey, type });
+    });
+};
+export const unregisterKeyEvent = () => {
+    keyBind.unbindKey();
+};
+export const clearDownKeys = () => {
+    keyBind.clearDownKeys();
+};
+
+
+######## renderer.js.map :: src/renderer/event/appEvent.ts (3015 chars)
+import Event from './Event';
+// {
+//   // sync: {
+//   //   send_action_list: 'send_action_list',
+//   //   handle_action_list: 'handle_action_list',
+//   //   send_sync_list: 'send_sync_list',
+//   //   handle_sync_list: 'handle_sync_list',
+//   // },
+// }
+export class AppEvent extends Event {
+    configUpdate(setting) {
+        this.emit('configUpdate', setting);
+    }
+    focus() {
+        this.emit('focus');
+    }
+    dragStart() {
+        this.emit('dragStart');
+    }
+    dragEnd() {
+        this.emit('dragEnd');
+    }
+    /**
+     * 音乐信息切换
+     */
+    musicToggled() {
+        this.emit('musicToggled');
+    }
+    /**
+     * 手动改变进度
+     * @param progress 进度
+     */
+    setProgress(progress, maxPlayTime) {
+        this.emit('setProgress', progress, maxPlayTime);
+    }
+    /**
+     * 设置音量大小
+     * @param volume 音量大小
+     */
+    setVolume(volume) {
+        this.emit('setVolume', volume);
+    }
+    /**
+     * 设置播放速率大小
+     * @param rate 播放速率
+     */
+    setPlaybackRate(rate) {
+        this.emit('setPlaybackRate', rate);
+    }
+    /**
+     * 设置是否静音
+     * @param isMute 是否静音
+     */
+    setVolumeIsMute(isMute) {
+        this.emit('setVolumeIsMute', isMute);
+    }
+    // 播放器事件
+    play() {
+        this.emit('play');
+    }
+    pause() {
+        this.emit('pause');
+    }
+    stop() {
+        this.emit('stop');
+    }
+    error(code) {
+        this.emit('error', code);
+    }
+    // 播放器原始事件
+    playerPlaying() {
+        this.emit('playerPlaying');
+    }
+    playerPause() {
+        this.emit('playerPause');
+    }
+    playerStop() {
+        this.emit('playerStop');
+    }
+    playerEnded() {
+        this.emit('playerEnded');
+    }
+    playerError(code) {
+        this.emit('playerError', code);
+    }
+    playerLoadeddata() {
+        this.emit('playerLoadeddata');
+    }
+    playerLoadstart() {
+        this.emit('playerLoadstart');
+    }
+    playerCanplay() {
+        this.emit('playerCanplay');
+    }
+    playerEmptied() {
+        this.emit('playerEmptied');
+    }
+    playerWaiting() {
+        this.emit('playerWaiting');
+    }
+    playerDeviceChanged() {
+        this.emit('playerDeviceChanged');
+    }
+    // 激活进度条动画事件
+    activePlayProgressTransition() {
+        this.emit('activePlayProgressTransition');
+    }
+    // 更新图片事件
+    picUpdated() {
+        this.emit('picUpdated');
+    }
+    // 更新歌词事件
+    lyricUpdated() {
+        this.emit('lyricUpdated');
+    }
+    // 更新歌词偏移
+    lyricOffsetUpdate() {
+        this.emit('lyricOffsetUpdate');
+    }
+    // 歌词行播放
+    lyricLinePlay(text, line) {
+        this.emit('lyricLinePlay', text, line);
+    }
+    // 我的列表改变事件
+    myListUpdate(ids) {
+        this.emit('myListUpdate', ids);
+    }
+    // 下载列表改变事件
+    downloadListUpdate() {
+        this.emit('downloadListUpdate');
+    }
+    // 列表里的音乐信息改变事件
+    // musicInfoUpdate(musicInfo: LX.Music.MusicInfo) {
+    //   this.emit('musicInfoUpdate', musicInfo)
+    // }
+    keyDown(event) {
+        this.emit('keyDown', event);
+    }
+}
+export const createAppEventHub = () => {
+    return new AppEvent();
+};
+
+
+######## renderer.js.map :: src/renderer/event/index.ts (1213 chars)
+import { getHotKeyConfig, onFocus, onKeyDown, onUpdateHotkey } from '@renderer/utils/ipc';
+import { registerKeyEvent, createKeyEventHub } from './keyEvent';
+// import { registerRendererEvents, unregisterRendererEvents } from './rendererEvent'
+import { createAppEventHub } from './appEvent';
+export const registerEvents = () => {
+    window.lx.isEditingHotKey = false;
+    window.app_event = createAppEventHub();
+    window.key_event = createKeyEventHub();
+    const setHotkeyConfig = ({ local, global }) => {
+        window.lx.appHotKeyConfig = {
+            local,
+            global,
+        };
+    };
+    void getHotKeyConfig().then(setHotkeyConfig);
+    onUpdateHotkey(({ params }) => {
+        setHotkeyConfig(params);
+    });
+    onKeyDown(({ params: { key } }) => {
+        const keyInfo = window.lx.appHotKeyConfig.global.keys[key];
+        if (keyInfo)
+            window.key_event.emit(keyInfo.action);
+    });
+    onFocus(() => {
+        window.app_event.focus();
+    });
+    registerKeyEvent();
+    // registerRendererEvents()
+};
+// export const unregisterEvents = () => {
+//   unregisterKeyEvent()
+//   // unregisterRendererEvents()
+// }
+export { clearDownKeys } from './keyEvent';
+registerEvents();

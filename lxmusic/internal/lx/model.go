@@ -5,15 +5,47 @@ package lx
 import "strings"
 
 // Quality identifiers, kept identical to the desktop app's own vocabulary so
-// results read the same way as the original UI.
+// results read the same way as the original UI. The set matches upstream
+// QUALITYS (common/constants.ts): ['flac24bit','flac','wav','ape','320k','192k','128k'].
 const (
-	Q128       = "128k"
-	Q320       = "320k"
-	QFlac      = "flac"
 	QFlac24    = "flac24bit"
+	QFlac      = "flac"
+	QWav       = "wav"
+	QApe       = "ape"
+	Q320       = "320k"
+	Q192       = "192k"
+	Q128       = "128k"
 	QAuto      = "auto" // pick the best quality that is available
 	QBestKnown = "best"
 )
+
+// qualityOrder is the fidelity ranking, best first, in the desktop app's own
+// order. Every quality decision — auto selection, the search table's sort key,
+// the quality column — reads from this one list, so a rendition the built-in
+// adapters never produce (wav, ape, 192k) still ranks where it belongs when a
+// user source announces it, instead of falling through as an unknown tier.
+var qualityOrder = []string{QFlac24, QFlac, QWav, QApe, Q320, Q192, Q128}
+
+// QualityRank returns a fidelity rank for one quality label, best first, or -1
+// when the label is unknown. Exported so the table sort in main and the
+// provider's own ranking cannot drift apart.
+func QualityRank(q string) int {
+	for i, name := range qualityOrder {
+		if q == name {
+			return len(qualityOrder) - i
+		}
+	}
+	return -1
+}
+
+// QualityList is the vocabulary a user may pass to --quality, plus "auto".
+func QualityList() []string {
+	out := make([]string, 0, len(qualityOrder)+1)
+	for _, q := range qualityOrder {
+		out = append(out, q)
+	}
+	return append(out, QAuto)
+}
 
 // AudioExt picks a file extension for a stream. The URL's own path extension
 // wins, because a source can hand back a different format than the label it was
@@ -29,15 +61,21 @@ func AudioExt(quality, url string) string {
 		}
 		if dot := strings.LastIndexByte(p, '.'); dot > 0 {
 			switch strings.ToLower(p[dot:]) {
-			case ".flac", ".mp3", ".ogg", ".m4a", ".aac", ".wav":
+			case ".flac", ".mp3", ".ogg", ".m4a", ".aac", ".wav", ".ape":
 				return strings.ToLower(p[dot:])
 			}
 		}
 	}
-	if quality == QFlac || quality == QFlac24 {
+	switch quality {
+	case QFlac, QFlac24:
 		return ".flac"
+	case QWav:
+		return ".wav"
+	case QApe:
+		return ".ape"
+	default:
+		return ".mp3"
 	}
-	return ".mp3"
 }
 
 // Quality is one downloadable rendition of a song.
@@ -51,8 +89,11 @@ type Quality struct {
 //
 // The field names mirror lx-music's internal shape (songmid / albumId / hash /
 // types ...) so that the JSON output of this CLI is comparable with the app's.
+// ID is always the id the platform's own endpoints take, which is what makes a
+// printed key resolvable: for mg that is the song id, not the copyright id the
+// desktop app shows.
 type Song struct {
-	Source    string    `json:"source"` // kg | kw | wy | tx
+	Source    string    `json:"source"` // kg | kw | wy | tx | mg
 	ID        string    `json:"id"`     // stable id used by url/lyric/pic
 	Name      string    `json:"name"`
 	Singer    string    `json:"singer"`
@@ -62,8 +103,11 @@ type Song struct {
 	Pic       string    `json:"pic,omitempty"`
 	Qualities []Quality `json:"qualities,omitempty"`
 	Hash      string    `json:"hash,omitempty"`   // kugou default (128k) hash
-	MID       string    `json:"mid,omitempty"`    // kugou audioid / tx song mid
+	MID       string    `json:"mid,omitempty"`    // second id: kugou audioid, tx song mid, mg copyrightId
 	NumericID string    `json:"songId,omitempty"` // tx: numeric id, required for lyrics
+	LrcURL    string    `json:"lrcUrl,omitempty"` // mg: plain lyric url
+	MrcURL    string    `json:"mrcUrl,omitempty"` // mg: per-word lyric url, encrypted
+	TrcURL    string    `json:"trcUrl,omitempty"` // mg: translated lyric url
 	PageURL   string    `json:"pageUrl,omitempty"`
 	Raw       any       `json:"-"` // provider-specific payload, kept for debugging
 }
@@ -74,7 +118,7 @@ func (s *Song) KeyString() string { return s.Source + ":" + s.ID }
 // BestQuality returns the highest available quality that is not marked as a
 // paid/encrypted VIP variant.
 func (s *Song) BestQuality() string {
-	for _, order := range []string{QFlac24, QFlac, Q320, Q128} {
+	for _, order := range qualityOrder {
 		if s.HasQuality(order) {
 			return order
 		}
@@ -85,7 +129,7 @@ func (s *Song) BestQuality() string {
 // bestOf picks the highest of a set of quality names by the fidelity order the
 // table sorts by, returning "" when none of them is recognised.
 func bestOf(qualitys []string) string {
-	for _, order := range []string{QFlac24, QFlac, Q320, Q128} {
+	for _, order := range qualityOrder {
 		for _, q := range qualitys {
 			if q == order {
 				return q

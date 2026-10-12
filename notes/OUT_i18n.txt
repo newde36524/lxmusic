@@ -1,0 +1,4 @@
+######## renderer.js.map :: src/renderer/plugins/i18n.ts (123 chars)
+import { createI18n, i18nPlugin, useI18n } from '@root/lang';
+window.i18n = createI18n();
+export { i18nPlugin, useI18n, };

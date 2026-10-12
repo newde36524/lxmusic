@@ -40,9 +40,12 @@ func TestAudioExtQualityFallback(t *testing.T) {
 		want string
 	}{
 		{Q128, ".mp3"},
+		{Q192, ".mp3"},
 		{Q320, ".mp3"},
 		{QFlac, ".flac"},
 		{QFlac24, ".flac"},
+		{QWav, ".wav"},
+		{QApe, ".ape"},
 		{"", ".mp3"},
 		{"auto", ".mp3"},
 	} {
@@ -103,8 +106,11 @@ func TestBestOf(t *testing.T) {
 		{[]string{Q320, Q128}, Q320},
 		// Duplicates are harmless.
 		{[]string{QFlac, QFlac}, QFlac},
-		// Unknown names are ignored, not trusted.
-		{[]string{"ogg", "ape", "auto"}, ""},
+		// Unknown names are ignored, not trusted. ape and wav are real tiers, so
+		// only names outside the desktop app's vocabulary are dropped.
+		{[]string{QApe}, QApe},
+		{[]string{QWav, Q128}, QWav},
+		{[]string{"ogg", "auto"}, ""},
 		{[]string{"ogg", Q128}, Q128},
 		// Case is not folded: the tiers are exact strings.
 		{[]string{"FLAC"}, ""},

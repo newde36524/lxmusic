@@ -1,0 +1,775 @@
+######## renderer.js.map :: src/renderer/core/useApp/useDeeplink/index.ts (2405 chars)
+import { onBeforeUnmount } from '@common/utils/vueTools';
+import { clearEnvParamsDeeplink, focusWindow, onDeeplink } from '@renderer/utils/ipc';
+import { useDialog } from './utils';
+import useMusicAction from './useMusicAction';
+import useSonglistAction from './useSonglistAction';
+import usePlayerAction from './usePlayerAction';
+export default () => {
+    let isInited = false;
+    const showErrorDialog = useDialog();
+    const handleMusicAction = useMusicAction();
+    const handleSonglistAction = useSonglistAction();
+    const handlePlayerAction = usePlayerAction();
+    const handleLinkAction = async (link) => {
+        // console.log(link)
+        const [url, search] = link.split('?');
+        const [type, action, ...paths] = url.replace('lxmusic://', '').split('/');
+        const params = {
+            paths: [],
+        };
+        if (search) {
+            for (const param of search.split('&')) {
+                const [key, value] = param.split('=');
+                params[key] = value;
+            }
+            if (params.data)
+                params.data = JSON.parse(decodeURIComponent(params.data));
+        }
+        params.paths = paths.map(p => decodeURIComponent(p));
+        console.log(params);
+        switch (type) {
+            case 'music':
+                await handleMusicAction(action, params);
+                break;
+            case 'songlist':
+                await handleSonglistAction(action, params);
+                break;
+            case 'player':
+                await handlePlayerAction(action);
+                break;
+            default: throw new Error('Unknown type: ' + type);
+        }
+    };
+    const rDeeplink = onDeeplink(async ({ params: link }) => {
+        console.log(link);
+        if (!isInited)
+            return;
+        clearEnvParamsDeeplink();
+        try {
+            await handleLinkAction(link);
+        }
+        catch (err) {
+            showErrorDialog(err.message);
+            focusWindow();
+        }
+    });
+    onBeforeUnmount(() => {
+        rDeeplink();
+    });
+    return async (envParams) => {
+        if (envParams.deeplink) {
+            clearEnvParamsDeeplink();
+            try {
+                await handleLinkAction(envParams.deeplink);
+            }
+            catch (err) {
+                showErrorDialog(err.message);
+                focusWindow();
+            }
+        }
+        isInited = true;
+    };
+};
+
+
+######## renderer.js.map :: src/renderer/core/useApp/useDeeplink/utils.js (1687 chars)
+import { useI18n } from '@renderer/plugins/i18n'
+import { dialog } from '@renderer/plugins/Dialog'
+
+export const useDialog = () => {
+  const t = useI18n()
+  const errorDialog = message => {
+    dialog({
+      message: `${t('deep_link__handle_error_tip', { message })}`,
+      confirmButtonText: t('ok'),
+    })
+  }
+
+  return errorDialog
+}
+
+export const sources = ['kw', 'kg', 'tx', 'wy', 'mg']
+export const sourceVerify = source => {
+  if (!sources.includes(source)) throw new Error('Source no match')
+}
+
+export const qualitys = ['128k', '320k', 'flac', 'flac24bit']
+export const qualityFilter = (source, types) => {
+  types = types.filter(({ type }) => qualitys.includes(type)).map(({ type, size, hash }) => {
+    if (size != null && typeof size != 'string') throw new Error(type + ' size type no match')
+    if (source == 'kg' && typeof hash != 'string') throw new Error(type + ' hash type no match')
+    return hash == null ? { type, size } : { type, size, hash }
+  })
+  if (!types.length) throw new Error('quality no match')
+  return types
+}
+
+export const dataVerify = (rules, data) => {
+  const newData = {}
+  for (const rule of rules) {
+    const val = data[rule.key]
+    if (rule.required && val == null) throw new Error(rule.key + ' missing')
+    if (val != null) {
+      if (rule.types && !rule.types.includes(typeof val)) throw new Error(rule.key + ' type no match')
+      if (rule.max && String(val).length > rule.max) throw new Error(rule.key + ' max length no match')
+      if (rule.min && String(val).length > rule.min) throw new Error(rule.key + ' min length no match')
+    }
+    newData[rule.key] = val
+  }
+  return newData
+}
+
+
+######## renderer.js.map :: src/renderer/core/useApp/useDeeplink/useMusicAction.js (8967 chars)
+import { markRaw } from '@common/utils/vueTools'
+import { useRouter } from '@common/utils/vueRouter'
+import { decodeName } from '@renderer/utils'
+// import { allList, defaultList, loveList, userLists } from '@renderer/store/list'
+import { playMusicInfo, isShowPlayerDetail } from '@renderer/store/player/state'
+import { setShowPlayerDetail, addTempPlayList } from '@renderer/store/player/action'
+
+import { dataVerify, qualityFilter, sources } from './utils'
+import { focusWindow } from '@renderer/utils/ipc'
+import { playNext } from '@renderer/core/player/action'
+import { toNewMusicInfo } from '@common/utils/tools'
+import { LIST_IDS } from '@common/constants'
+import { getOtherSource } from '@renderer/core/music/utils'
+
+const useSearchMusic = () => {
+  const router = useRouter()
+
+  return ({ paths, data: params }) => {
+    let text
+    let source
+    if (params) {
+      text = dataVerify([
+        { key: 'keywords', types: ['string', 'number'], max: 128, required: true },
+      ], params).keywords
+      source = params.source
+    } else {
+      if (!paths.length) throw new Error('Keyword missing')
+
+      if (paths.length > 1) {
+        text = paths[1]
+        source = paths[0]
+      } else {
+        text = paths[0]
+      }
+
+      if (text.length > 128) text = text.substring(0, 128)
+    }
+
+    if (isShowPlayerDetail.value) setShowPlayerDetail(false)
+    const sourceList = [...sources, 'all']
+    source = sourceList.includes(source) ? source : null
+    setTimeout(() => {
+      router.replace({
+        path: '/search',
+        query: {
+          text,
+          source,
+        },
+      })
+    }, 500)
+    focusWindow()
+  }
+}
+
+const usePlayMusic = () => {
+  const filterInfoByPlayMusic = musicInfo => {
+    switch (musicInfo.source) {
+      case 'kw':
+        musicInfo = dataVerify([
+          { key: 'name', types: ['string'], required: true, max: 200 },
+          { key: 'singer', types: ['string'], required: true, max: 200 },
+          { key: 'source', types: ['string'], required: true },
+          { key: 'songmid', types: ['string', 'number'], max: 64, required: true },
+          { key: 'img', types: ['string'], max: 1024 },
+          { key: 'albumId', types: ['string', 'number'], max: 64 },
+          { key: 'interval', types: ['string'], max: 64 },
+          { key: 'albumName', types: ['string'], max: 200 },
+          { key: 'types', types: ['object'], required: true },
+        ], musicInfo)
+        break
+      case 'kg':
+        musicInfo = dataVerify([
+          { key: 'name', types: ['string'], required: true, max: 200 },
+          { key: 'singer', types: ['string'], required: true, max: 200 },
+          { key: 'source', types: ['string'], required: true },
+          { key: 'songmid', types: ['string', 'number'], max: 64, required: true },
+          { key: 'img', types: ['string'], max: 1024 },
+          { key: 'albumId', types: ['string', 'number'], max: 64 },
+          { key: 'interval', types: ['string'], max: 64 },
+          { key: '_interval', types: ['number'], max: 64 },
+          { key: 'albumName', types: ['string'], max: 200 },
+          { key: 'types', types: ['object'], required: true },
+
+          { key: 'hash', types: ['string'], required: true, max: 64 },
+        ], musicInfo)
+        break
+      case 'tx':
+        musicInfo = dataVerify([
+          { key: 'name', types: ['string'], required: true, max: 200 },
+          { key: 'singer', types: ['string'], required: true, max: 200 },
+          { key: 'source', types: ['string'], required: true },
+          { key: 'songmid', types: ['string', 'number'], max: 64, required: true },
+          { key: 'img', types: ['string'], max: 1024 },
+          { key: 'albumId', types: ['string', 'number'], max: 64 },
+          { key: 'interval', types: ['string'], max: 64 },
+          { key: 'albumName', types: ['string'], max: 200 },
+          { key: 'types', types: ['object'], required: true },
+
+          { key: 'strMediaMid', types: ['string'], required: true, max: 64 },
+          { key: 'albumMid', types: ['string'], max: 64 },
+        ], musicInfo)
+        break
+      case 'wy':
+        musicInfo = dataVerify([
+          { key: 'name', types: ['string'], required: true, max: 200 },
+          { key: 'singer', types: ['string'], required: true, max: 200 },
+          { key: 'source', types: ['string'], required: true },
+          { key: 'songmid', types: ['string', 'number'], max: 64, required: true },
+          { key: 'img', types: ['string'], max: 1024 },
+          { key: 'albumId', types: ['string', 'number'], max: 64 },
+          { key: 'interval', types: ['string'], max: 64 },
+          { key: 'albumName', types: ['string'], max: 200 },
+          { key: 'types', types: ['object'], required: true },
+        ], musicInfo)
+        break
+      case 'mg':
+        musicInfo = dataVerify([
+          { key: 'name', types: ['string'], required: true, max: 200 },
+          { key: 'singer', types: ['string'], required: true, max: 200 },
+          { key: 'source', types: ['string'], required: true },
+          { key: 'songmid', types: ['string', 'number'], max: 64, required: true },
+          { key: 'img', types: ['string'], max: 1024 },
+          { key: 'albumId', types: ['string', 'number'], max: 64 },
+          { key: 'interval', types: ['string'], max: 64 },
+          { key: 'albumName', types: ['string'], max: 200 },
+          { key: 'types', types: ['object'], required: true },
+
+          { key: 'copyrightId', types: ['string', 'number'], required: true, max: 64 },
+          { key: 'lrcUrl', types: ['string'], max: 1024 },
+          { key: 'trcUrl', types: ['string'], max: 1024 },
+          { key: 'mrcUrl', types: ['string'], max: 1024 },
+        ], musicInfo)
+        break
+      default: throw new Error('Unknown source: ' + musicInfo.source)
+    }
+    musicInfo.types = qualityFilter(musicInfo.source, musicInfo.types)
+    return musicInfo
+  }
+
+  return ({ data: _musicInfo }) => {
+    _musicInfo = filterInfoByPlayMusic(_musicInfo)
+
+    let musicInfo = {
+      ..._musicInfo,
+      singer: decodeName(_musicInfo.singer),
+      name: decodeName(_musicInfo.name),
+      albumName: decodeName(_musicInfo.albumName),
+      otherSource: null,
+      _types: {},
+      typeUrl: {},
+    }
+    for (const type of musicInfo.types) {
+      musicInfo._types[type.type] = { size: type.size }
+    }
+    musicInfo = toNewMusicInfo(musicInfo)
+    markRaw(musicInfo)
+    const isPlaying = !!playMusicInfo.musicInfo
+    addTempPlayList([{ listId: LIST_IDS.PLAY_LATER, musicInfo, isTop: true }])
+    if (isPlaying) playNext()
+  }
+}
+
+
+const useSearchPlayMusic = () => {
+  const verifyInfo = (info) => {
+    return dataVerify([
+      { key: 'name', types: ['string'], required: true, max: 200 },
+      { key: 'singer', types: ['string'], max: 200 },
+      { key: 'albumName', types: ['string'], max: 200 },
+      { key: 'interval', types: ['string'], max: 64 },
+      { key: 'playLater', types: ['boolean'] },
+    ], info)
+  }
+
+  const searchMusic = async(name, singer, albumName, interval) => {
+    return getOtherSource({
+      name,
+      singer,
+      interval,
+      meta: {
+        albumName,
+      },
+      source: 'local',
+      id: `sp_${name}_s${singer}_a${albumName}_i${interval ?? ''}`,
+    })
+  }
+  return async({ paths, data }) => {
+    // console.log(paths, data)
+    let info
+    if (paths.length) {
+      let name = paths[0].trim()
+      let singer = ''
+      if (name.includes('-')) [name, singer] = name.split('-').map(val => val.trim())
+      info = {
+        name,
+        singer,
+      }
+    } else info = data
+    info = verifyInfo(info)
+    if (!info.name) return
+    const musicList = await searchMusic(info.name, info.singer || '', info.albumName || '', info.interval || null)
+    if (musicList.length) {
+      console.log('find music:', musicList)
+      const musicInfo = musicList[0]
+      markRaw(musicInfo)
+      const isPlaying = !!playMusicInfo.musicInfo
+      if (info.playLater) {
+        addTempPlayList([{ listId: LIST_IDS.PLAY_LATER, musicInfo }])
+      } else {
+        addTempPlayList([{ listId: LIST_IDS.PLAY_LATER, musicInfo, isTop: true }])
+        if (isPlaying) playNext()
+      }
+    } else {
+      console.log('msuic not found:', info)
+    }
+  }
+}
+
+export default () => {
+  const handleSearchMusic = useSearchMusic()
+  const handlePlayMusic = usePlayMusic()
+  const handleSearchPlayMusic = useSearchPlayMusic()
+
+
+  return async(action, info) => {
+    switch (action) {
+      case 'search':
+        handleSearchMusic(info)
+        break
+      case 'play':
+        handlePlayMusic(info)
+        break
+      case 'searchPlay':
+        await handleSearchPlayMusic(info)
+        break
+      default: throw new Error('Unknown action: ' + action)
+    }
+  }
+}
+
+
+######## renderer.js.map :: src/renderer/core/useApp/useDeeplink/useSonglistAction.js (3233 chars)
+import { useRouter, useRoute } from '@common/utils/vueRouter'
+import { isShowPlayerDetail } from '@renderer/store/player/state'
+import { setShowPlayerDetail } from '@renderer/store/player/action'
+import usePlaySonglist from '../compositions/usePlaySonglist'
+import { focusWindow } from '@renderer/utils/ipc'
+
+import { dataVerify, sourceVerify } from './utils'
+
+const useOpenSonglist = () => {
+  const router = useRouter()
+  const route = useRoute()
+
+  const handleOpenSonglist = params => {
+    if (params.id) {
+      router[route.path == '/songList/detail' ? 'replace' : 'push']({
+        path: '/songList/detail',
+        query: {
+          source: params.source,
+          id: params.id,
+        },
+      })
+    } else if (params.url) {
+      router[route.path == '/songList/detail' ? 'replace' : 'push']({
+        path: '/songList/detail',
+        query: {
+          source: params.source,
+          id: params.url,
+        },
+      })
+    }
+  }
+
+  return ({ paths, data }) => {
+    let songlistInfo = {
+      source: null,
+      id: null,
+      url: null,
+    }
+    if (data) {
+      songlistInfo = data
+    } else {
+      songlistInfo.source = paths[0]
+      songlistInfo.url = paths[1]
+    }
+
+    sourceVerify(songlistInfo.source)
+
+    songlistInfo = dataVerify([
+      { key: 'source', types: ['string'] },
+      { key: 'id', types: ['string', 'number'], max: 64 },
+      { key: 'url', types: ['string'], max: 500 },
+    ], songlistInfo)
+
+    if (!songlistInfo.id && !songlistInfo.url) throw new Error('id or url missing')
+    if (isShowPlayerDetail.value) setShowPlayerDetail(false)
+    handleOpenSonglist(songlistInfo)
+    focusWindow()
+  }
+}
+const usePlaySonglistDetail = () => {
+  const playSongListDetail = usePlaySonglist()
+
+  return async({ paths, data }) => {
+    let songlistInfo = {
+      source: null,
+      id: null,
+      url: null,
+      index: null,
+    }
+    if (data) {
+      songlistInfo = data
+    } else {
+      songlistInfo.source = paths[0]
+      songlistInfo.url = paths[1]
+      songlistInfo.index = paths[2]
+      if (songlistInfo.index != null) {
+        songlistInfo.index = parseInt(songlistInfo.index)
+        if (Number.isNaN(songlistInfo.index)) delete songlistInfo.index
+      }
+    }
+
+    sourceVerify(songlistInfo.source)
+
+    songlistInfo = dataVerify([
+      { key: 'source', types: ['string'] },
+      { key: 'id', types: ['string', 'number'], max: 64 },
+      { key: 'url', types: ['string'], max: 500 },
+      { key: 'index', types: ['number'], max: 1000000 },
+    ], songlistInfo)
+
+    if (!songlistInfo.id && !songlistInfo.url) throw new Error('id or url missing')
+
+    await playSongListDetail(songlistInfo.source, songlistInfo.id ?? songlistInfo.url, songlistInfo.index)
+  }
+}
+
+export default () => {
+  const handleOpenSonglist = useOpenSonglist()
+  const handlePlaySonglist = usePlaySonglistDetail()
+
+
+  return async(action, info) => {
+    switch (action) {
+      case 'open':
+        handleOpenSonglist(info)
+        break
+      case 'play':
+        await handlePlaySonglist(info)
+        break
+      default: throw new Error('Unknown action: ' + action)
+    }
+  }
+}
+
+
+######## renderer.js.map :: src/renderer/core/useApp/useDeeplink/usePlayerAction.ts (947 chars)
+import { collectMusic, dislikeMusic, pause, play, playNext, playPrev, togglePlay, uncollectMusic } from '@renderer/core/player';
+export default () => {
+    return async (action) => {
+        switch (action) {
+            case 'play':
+                play();
+                break;
+            case 'pause':
+                pause();
+                break;
+            case 'skipNext':
+                playNext();
+                break;
+            case 'skipPrev':
+                playPrev();
+                break;
+            case 'togglePlay':
+                togglePlay();
+                break;
+            case 'collect':
+                collectMusic();
+                break;
+            case 'uncollect':
+                uncollectMusic();
+                break;
+            case 'dislike':
+                dislikeMusic();
+                break;
+            default: throw new Error('Unknown action: ' + (action ?? ''));
+        }
+    };
+};
+
+
+######## renderer.js.map :: src/renderer/core/useApp/useHandleEnvParams.ts (2874 chars)
+import { useRouter } from '@common/utils/vueRouter';
+import { parseUrlParams } from '@common/utils/common';
+import { defaultList, loveList, userLists } from '@renderer/store/list/state';
+import { getListMusics } from '@renderer/store/list/action';
+import usePlaySonglist from './compositions/usePlaySonglist';
+import { playList } from '@renderer/core/player';
+const getListPlayIndex = (list, indexStr) => {
+    let index;
+    if (indexStr == null) {
+        index = 1;
+    }
+    else {
+        index = parseInt(indexStr);
+        if (Number.isNaN(index)) {
+            index = 1;
+        }
+        else {
+            if (index < 1)
+                index = 1;
+            else if (index > list.length)
+                index = list.length;
+        }
+    }
+    return index - 1;
+};
+const useInitEnvParamSearch = () => {
+    const router = useRouter();
+    return (search) => {
+        if (search == null)
+            return;
+        setTimeout(() => {
+            void router.replace({
+                path: '/search',
+                query: {
+                    text: search,
+                },
+            });
+        }, 1000);
+    };
+};
+const useInitEnvParamPlay = () => {
+    // const setPlayList = useCommit('player', 'setList')
+    const playSongListDetail = usePlaySonglist();
+    return async (playStr) => {
+        if (playStr == null || typeof playStr != 'string')
+            return;
+        // -play="source=kw&link=链接、ID"
+        // -play="source=myList&name=名字"
+        // -play="source=myList&name=名字&index=位置"
+        const params = parseUrlParams(playStr);
+        if (params.type != 'songList')
+            return;
+        switch (params.source) {
+            case 'myList':
+                if (params.name != null) {
+                    let targetList;
+                    const lists = [defaultList, loveList, ...userLists];
+                    for (const list of lists) {
+                        if (list.name === params.name) {
+                            targetList = list;
+                            break;
+                        }
+                    }
+                    if (!targetList)
+                        return;
+                    playList(targetList.id, getListPlayIndex(await getListMusics(targetList.id), params.index));
+                }
+                break;
+            case 'kw':
+            case 'kg':
+            case 'tx':
+            case 'mg':
+            case 'wy':
+                void playSongListDetail(params.source, params.link, parseInt(params.index));
+                break;
+        }
+    };
+};
+export default () => {
+    // 处理启动参数 search
+    const initEnvParamSearch = useInitEnvParamSearch();
+    // 处理启动参数 play
+    const initEnvParamPlay = useInitEnvParamPlay();
+    return (envParams) => {
+        initEnvParamSearch(envParams.cmdParams.search);
+        void initEnvParamPlay(envParams.cmdParams.play);
+    };
+};
+
+
+######## renderer.js.map :: src/renderer/core/useApp/useEventListener.ts (5274 chars)
+import { getFontSizeWithScreen } from '@renderer/utils';
+import { minWindow, onFocus, onSettingChanged, onThemeChange, openDevTools, quitApp, setFullScreen, showHideWindowToggle, } from '@renderer/utils/ipc';
+import { isFullscreen, themeId, themeShouldUseDarkColors, } from '@renderer/store';
+import { appSetting, isShowAnimation, mergeSetting, } from '@renderer/store/setting';
+import { onBeforeUnmount, watch, } from '@common/utils/vueTools';
+// import { isLinux, isProd } from '@common/utils'
+import { openUrl } from '@common/utils/electron';
+import { HOTKEY_COMMON } from '@common/hotKey';
+import { applyTheme, getThemes } from '@renderer/store/utils';
+import { clearDownKeys } from '@renderer/event';
+const handle_key_down = ({ event, type, key }) => {
+    // console.log(key)
+    if (key != 'escape' || !event || event.repeat || type == 'up' || window.lx.isEditingHotKey || event.target?.classList.contains('ignore-esc') || event.lx_handled)
+        return;
+    if (event.target.tagName != 'INPUT') {
+        if (isFullscreen.value) {
+            event.lx_handled = true;
+            void setFullScreen(false).then(fullscreen => {
+                isFullscreen.value = fullscreen;
+            });
+        }
+        return;
+    }
+    event.target.value = '';
+    event.target.blur();
+    event.lx_handled = true;
+};
+const handleBodyClick = (event) => {
+    if (event?.target?.tagName != 'A')
+        return;
+    if ((event?.target).host == window.location.host)
+        return;
+    event.preventDefault();
+    if (/^https?:\/\//.test((event?.target).href))
+        void openUrl((event?.target).href);
+};
+const handle_open_devtools = () => {
+    openDevTools();
+};
+const handle_fullscreen = (event) => {
+    let fullscreen = !isFullscreen.value;
+    if (typeof event == 'boolean') {
+        fullscreen = event;
+    }
+    else if (event.event?.repeat)
+        return;
+    void setFullScreen(fullscreen).then(fullscreen => {
+        isFullscreen.value = fullscreen;
+    });
+};
+const handle_selection = (event) => {
+    event.event?.preventDefault();
+};
+export default () => {
+    watch(isFullscreen, val => {
+        if (val) {
+            document.documentElement.classList.remove(window.dt ? 'disableTransparent' : 'transparent');
+            document.documentElement.classList.add('fullscreen');
+            document.documentElement.style.fontSize = `${getFontSizeWithScreen(window.screen.width)}px`;
+        }
+        else {
+            document.documentElement.classList.remove('fullscreen');
+            document.documentElement.classList.add(window.dt ? 'disableTransparent' : 'transparent');
+            document.documentElement.style.fontSize = `${appSetting['common.fontSize']}px`;
+        }
+    }, {
+        immediate: true,
+    });
+    watch(isShowAnimation, val => {
+        if (val) {
+            if (document.documentElement.classList.contains('disableAnimation')) {
+                document.documentElement.classList.remove('disableAnimation');
+            }
+        }
+        else {
+            if (!document.documentElement.classList.contains('disableAnimation')) {
+                document.documentElement.classList.add('disableAnimation');
+            }
+        }
+    }, {
+        immediate: true,
+    });
+    const rSetConfig = onSettingChanged(({ params: setting }) => {
+        // console.log(config)
+        mergeSetting(setting);
+        window.app_event.configUpdate(setting);
+    });
+    const rFocus = onFocus(() => {
+        clearDownKeys();
+    });
+    const rThemeChange = onThemeChange(({ params: setting }) => {
+        // console.log(setting)
+        if (themeShouldUseDarkColors.value == setting.shouldUseDarkColors) {
+            if (themeId.value == setting.theme.id)
+                return;
+            themeId.value = setting.theme.id;
+        }
+        else {
+            themeShouldUseDarkColors.value = setting.shouldUseDarkColors;
+            if (themeId.value != 'auto')
+                return;
+        }
+        getThemes(({ dataPath }) => {
+            applyTheme('auto', appSetting['theme.lightId'], appSetting['theme.darkId'], dataPath);
+        });
+    });
+    window.key_event.on(HOTKEY_COMMON.min.action, minWindow);
+    window.key_event.on(HOTKEY_COMMON.hide_toggle.action, showHideWindowToggle);
+    window.key_event.on(HOTKEY_COMMON.close.action, quitApp);
+    window.app_event.on('keyDown', handle_key_down);
+    window.key_event.on('key_mod+f12_down', handle_open_devtools);
+    window.key_event.on('key_f11_down', handle_fullscreen);
+    window.key_event.on('key_mod+a_down', handle_selection);
+    document.body.addEventListener('click', handleBodyClick, true);
+    onBeforeUnmount(() => {
+        window.key_event.off(HOTKEY_COMMON.min.action, minWindow);
+        window.key_event.off(HOTKEY_COMMON.hide_toggle.action, showHideWindowToggle);
+        window.key_event.off(HOTKEY_COMMON.close.action, quitApp);
+        window.app_event.off('keyDown', handle_key_down);
+        window.key_event.off('key_mod+f12_down', handle_open_devtools);
+        window.key_event.off('key_f11_down', handle_fullscreen);
+        window.key_event.off('key_mod+a_down', handle_selection);
+        document.body.removeEventListener('click', handleBodyClick);
+        rSetConfig();
+        rFocus();
+        rThemeChange();
+    });
+};
+
+
+######## renderer.js.map :: src/common/utils/electron.ts (789 chars)
+import { shell, clipboard } from 'electron';
+/**
+ * 在资源管理器中打开目录
+ * @param {string} dir
+ */
+export const openDirInExplorer = (dir) => {
+    shell.showItemInFolder(dir);
+};
+/**
+ * 在浏览器打开URL
+ * @param {*} url
+ */
+export const openUrl = async (url) => {
+    if (!/^https?:\/\//.test(url))
+        return;
+    await shell.openExternal(url);
+};
+/**
+ * 复制文本到剪贴板
+ * @param str
+ */
+export const clipboardWriteText = (str) => {
+    clipboard.writeText(str);
+};
+/**
+ * 从剪贴板读取文本
+ * @returns
+ */
+export const clipboardReadText = () => {
+    return clipboard.readText();
+};
+export const encodePath = (path) => {
+    // https://github.com/lyswhut/lx-music-desktop/issues/963
+    // https://github.com/lyswhut/lx-music-desktop/issues/1461
+    return path.replaceAll('%', '%25').replaceAll('#', '%23');
+};

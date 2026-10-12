@@ -1,0 +1,403 @@
+######## renderer.js.map :: src/renderer/views/Setting/index.vue (540 chars)
+import { render } from "./index.vue?vue&type=template&id=1a56c31b"
+import script from "./index.vue?vue&type=script&lang=js"
+export * from "./index.vue?vue&type=script&lang=js"
+
+const cssModules = {}
+import style0 from "./index.vue?vue&type=style&index=0&id=1a56c31b&lang=less&module=true"
+cssModules["$style"] = style0
+
+import exportComponent from "../../../../node_modules/vue-loader/dist/exportHelper.js"
+const __exports__ = /*#__PURE__*/exportComponent(script, [['render',render],['__cssModules',cssModules]])
+
+export default __exports__
+
+######## renderer.js.map :: src/renderer/views/Setting/components/SettingBasic.vue (580 chars)
+import { render } from "./SettingBasic.vue?vue&type=template&id=29ea1186&lang=pug"
+import script from "./SettingBasic.vue?vue&type=script&lang=js"
+export * from "./SettingBasic.vue?vue&type=script&lang=js"
+
+const cssModules = {}
+import style0 from "./SettingBasic.vue?vue&type=style&index=0&id=29ea1186&lang=less&module=true"
+cssModules["$style"] = style0
+
+import exportComponent from "../../../../../node_modules/vue-loader/dist/exportHelper.js"
+const __exports__ = /*#__PURE__*/exportComponent(script, [['render',render],['__cssModules',cssModules]])
+
+export default __exports__
+
+######## renderer.js.map :: src/renderer/views/Setting/components/SettingPlay.vue (399 chars)
+import { render } from "./SettingPlay.vue?vue&type=template&id=3ce8dd83&lang=pug"
+import script from "./SettingPlay.vue?vue&type=script&lang=js"
+export * from "./SettingPlay.vue?vue&type=script&lang=js"
+
+import exportComponent from "../../../../../node_modules/vue-loader/dist/exportHelper.js"
+const __exports__ = /*#__PURE__*/exportComponent(script, [['render',render]])
+
+export default __exports__
+
+######## renderer.js.map :: src/renderer/views/Setting/components/SettingSearch.vue (405 chars)
+import { render } from "./SettingSearch.vue?vue&type=template&id=46242740&lang=pug"
+import script from "./SettingSearch.vue?vue&type=script&lang=js"
+export * from "./SettingSearch.vue?vue&type=script&lang=js"
+
+import exportComponent from "../../../../../node_modules/vue-loader/dist/exportHelper.js"
+const __exports__ = /*#__PURE__*/exportComponent(script, [['render',render]])
+
+export default __exports__
+
+######## renderer.js.map :: src/renderer/views/Setting/components/SettingList.vue (399 chars)
+import { render } from "./SettingList.vue?vue&type=template&id=4e4fe7eb&lang=pug"
+import script from "./SettingList.vue?vue&type=script&lang=js"
+export * from "./SettingList.vue?vue&type=script&lang=js"
+
+import exportComponent from "../../../../../node_modules/vue-loader/dist/exportHelper.js"
+const __exports__ = /*#__PURE__*/exportComponent(script, [['render',render]])
+
+export default __exports__
+
+######## renderer.js.map :: src/renderer/views/Setting/components/SettingDownload.vue (592 chars)
+import { render } from "./SettingDownload.vue?vue&type=template&id=7bc82d72&lang=pug"
+import script from "./SettingDownload.vue?vue&type=script&lang=js"
+export * from "./SettingDownload.vue?vue&type=script&lang=js"
+
+const cssModules = {}
+import style0 from "./SettingDownload.vue?vue&type=style&index=0&id=7bc82d72&lang=less&module=true"
+cssModules["$style"] = style0
+
+import exportComponent from "../../../../../node_modules/vue-loader/dist/exportHelper.js"
+const __exports__ = /*#__PURE__*/exportComponent(script, [['render',render],['__cssModules',cssModules]])
+
+export default __exports__
+
+######## renderer.js.map :: src/renderer/views/Setting/components/SettingNetwork.vue (408 chars)
+import { render } from "./SettingNetwork.vue?vue&type=template&id=70092e16&lang=pug"
+import script from "./SettingNetwork.vue?vue&type=script&lang=js"
+export * from "./SettingNetwork.vue?vue&type=script&lang=js"
+
+import exportComponent from "../../../../../node_modules/vue-loader/dist/exportHelper.js"
+const __exports__ = /*#__PURE__*/exportComponent(script, [['render',render]])
+
+export default __exports__
+
+######## renderer.js.map :: src/renderer/views/Setting/components/SettingOdc.vue (396 chars)
+import { render } from "./SettingOdc.vue?vue&type=template&id=947f1cbe&lang=pug"
+import script from "./SettingOdc.vue?vue&type=script&lang=js"
+export * from "./SettingOdc.vue?vue&type=script&lang=js"
+
+import exportComponent from "../../../../../node_modules/vue-loader/dist/exportHelper.js"
+const __exports__ = /*#__PURE__*/exportComponent(script, [['render',render]])
+
+export default __exports__
+
+######## renderer.js.map :: src/renderer/views/Setting/components/SettingOpenAPI.vue (588 chars)
+import { render } from "./SettingOpenAPI.vue?vue&type=template&id=2c742e89&lang=pug"
+import script from "./SettingOpenAPI.vue?vue&type=script&lang=js"
+export * from "./SettingOpenAPI.vue?vue&type=script&lang=js"
+
+const cssModules = {}
+import style0 from "./SettingOpenAPI.vue?vue&type=style&index=0&id=2c742e89&lang=less&module=true"
+cssModules["$style"] = style0
+
+import exportComponent from "../../../../../node_modules/vue-loader/dist/exportHelper.js"
+const __exports__ = /*#__PURE__*/exportComponent(script, [['render',render],['__cssModules',cssModules]])
+
+export default __exports__
+
+######## renderer.js.map :: src/renderer/views/Setting/components/SettingHotKey.vue (584 chars)
+import { render } from "./SettingHotKey.vue?vue&type=template&id=5a278a17&lang=pug"
+import script from "./SettingHotKey.vue?vue&type=script&lang=js"
+export * from "./SettingHotKey.vue?vue&type=script&lang=js"
+
+const cssModules = {}
+import style0 from "./SettingHotKey.vue?vue&type=style&index=0&id=5a278a17&lang=less&module=true"
+cssModules["$style"] = style0
+
+import exportComponent from "../../../../../node_modules/vue-loader/dist/exportHelper.js"
+const __exports__ = /*#__PURE__*/exportComponent(script, [['render',render],['__cssModules',cssModules]])
+
+export default __exports__
+
+######## renderer.js.map :: src/renderer/views/Setting/components/SettingDesktopLyric.vue (608 chars)
+import { render } from "./SettingDesktopLyric.vue?vue&type=template&id=1be2dc2a&lang=pug"
+import script from "./SettingDesktopLyric.vue?vue&type=script&lang=js"
+export * from "./SettingDesktopLyric.vue?vue&type=script&lang=js"
+
+const cssModules = {}
+import style0 from "./SettingDesktopLyric.vue?vue&type=style&index=0&id=1be2dc2a&lang=less&module=true"
+cssModules["$style"] = style0
+
+import exportComponent from "../../../../../node_modules/vue-loader/dist/exportHelper.js"
+const __exports__ = /*#__PURE__*/exportComponent(script, [['render',render],['__cssModules',cssModules]])
+
+export default __exports__
+
+######## renderer.js.map :: src/renderer/views/Setting/components/SettingBackup.vue (584 chars)
+import { render } from "./SettingBackup.vue?vue&type=template&id=06349c5c&lang=pug"
+import script from "./SettingBackup.vue?vue&type=script&lang=js"
+export * from "./SettingBackup.vue?vue&type=script&lang=js"
+
+const cssModules = {}
+import style0 from "./SettingBackup.vue?vue&type=style&index=0&id=06349c5c&lang=less&module=true"
+cssModules["$style"] = style0
+
+import exportComponent from "../../../../../node_modules/vue-loader/dist/exportHelper.js"
+const __exports__ = /*#__PURE__*/exportComponent(script, [['render',render],['__cssModules',cssModules]])
+
+export default __exports__
+
+######## renderer.js.map :: src/renderer/views/Setting/components/SettingUpdate.vue (584 chars)
+import { render } from "./SettingUpdate.vue?vue&type=template&id=3504d0e8&lang=pug"
+import script from "./SettingUpdate.vue?vue&type=script&lang=js"
+export * from "./SettingUpdate.vue?vue&type=script&lang=js"
+
+const cssModules = {}
+import style0 from "./SettingUpdate.vue?vue&type=style&index=0&id=3504d0e8&lang=less&module=true"
+cssModules["$style"] = style0
+
+import exportComponent from "../../../../../node_modules/vue-loader/dist/exportHelper.js"
+const __exports__ = /*#__PURE__*/exportComponent(script, [['render',render],['__cssModules',cssModules]])
+
+export default __exports__
+
+######## renderer.js.map :: src/renderer/views/Setting/components/SettingAbout.vue (402 chars)
+import { render } from "./SettingAbout.vue?vue&type=template&id=24fc88df&lang=pug"
+import script from "./SettingAbout.vue?vue&type=script&lang=js"
+export * from "./SettingAbout.vue?vue&type=script&lang=js"
+
+import exportComponent from "../../../../../node_modules/vue-loader/dist/exportHelper.js"
+const __exports__ = /*#__PURE__*/exportComponent(script, [['render',render]])
+
+export default __exports__
+
+######## renderer.js.map :: src/renderer/views/Setting/components/SettingSync/SyncClient.vue (575 chars)
+import { render } from "./SyncClient.vue?vue&type=template&id=0851727c&lang=pug"
+import script from "./SyncClient.vue?vue&type=script&lang=js"
+export * from "./SyncClient.vue?vue&type=script&lang=js"
+
+const cssModules = {}
+import style0 from "./SyncClient.vue?vue&type=style&index=0&id=0851727c&lang=less&module=true"
+cssModules["$style"] = style0
+
+import exportComponent from "../../../../../../node_modules/vue-loader/dist/exportHelper.js"
+const __exports__ = /*#__PURE__*/exportComponent(script, [['render',render],['__cssModules',cssModules]])
+
+export default __exports__
+
+######## renderer.js.map :: src/renderer/views/Setting/components/SettingSync/SyncServer.vue (575 chars)
+import { render } from "./SyncServer.vue?vue&type=template&id=c1af63e8&lang=pug"
+import script from "./SyncServer.vue?vue&type=script&lang=js"
+export * from "./SyncServer.vue?vue&type=script&lang=js"
+
+const cssModules = {}
+import style0 from "./SyncServer.vue?vue&type=style&index=0&id=c1af63e8&lang=less&module=true"
+cssModules["$style"] = style0
+
+import exportComponent from "../../../../../../node_modules/vue-loader/dist/exportHelper.js"
+const __exports__ = /*#__PURE__*/exportComponent(script, [['render',render],['__cssModules',cssModules]])
+
+export default __exports__
+
+######## renderer.js.map :: src/renderer/views/Setting/components/SettingSync/ServerDeviceListModal.vue (619 chars)
+import { render } from "./ServerDeviceListModal.vue?vue&type=template&id=9a614888&lang=pug"
+import script from "./ServerDeviceListModal.vue?vue&type=script&lang=js"
+export * from "./ServerDeviceListModal.vue?vue&type=script&lang=js"
+
+const cssModules = {}
+import style0 from "./ServerDeviceListModal.vue?vue&type=style&index=0&id=9a614888&lang=less&module=true"
+cssModules["$style"] = style0
+
+import exportComponent from "../../../../../../node_modules/vue-loader/dist/exportHelper.js"
+const __exports__ = /*#__PURE__*/exportComponent(script, [['render',render],['__cssModules',cssModules]])
+
+export default __exports__
+
+######## renderer.js.map :: src/renderer/views/Setting/components/DislikeListModal.vue (596 chars)
+import { render } from "./DislikeListModal.vue?vue&type=template&id=464c4067&lang=pug"
+import script from "./DislikeListModal.vue?vue&type=script&lang=js"
+export * from "./DislikeListModal.vue?vue&type=script&lang=js"
+
+const cssModules = {}
+import style0 from "./DislikeListModal.vue?vue&type=style&index=0&id=464c4067&lang=less&module=true"
+cssModules["$style"] = style0
+
+import exportComponent from "../../../../../node_modules/vue-loader/dist/exportHelper.js"
+const __exports__ = /*#__PURE__*/exportComponent(script, [['render',render],['__cssModules',cssModules]])
+
+export default __exports__
+
+######## renderer.js.map :: src/renderer/views/Setting/components/PlayTimeoutModal.vue (596 chars)
+import { render } from "./PlayTimeoutModal.vue?vue&type=template&id=7425bfb1&lang=pug"
+import script from "./PlayTimeoutModal.vue?vue&type=script&lang=js"
+export * from "./PlayTimeoutModal.vue?vue&type=script&lang=js"
+
+const cssModules = {}
+import style0 from "./PlayTimeoutModal.vue?vue&type=style&index=0&id=7425bfb1&lang=less&module=true"
+cssModules["$style"] = style0
+
+import exportComponent from "../../../../../node_modules/vue-loader/dist/exportHelper.js"
+const __exports__ = /*#__PURE__*/exportComponent(script, [['render',render],['__cssModules',cssModules]])
+
+export default __exports__
+
+######## renderer.js.map :: src/renderer/views/Setting/components/UserApiModal.vue (580 chars)
+import { render } from "./UserApiModal.vue?vue&type=template&id=e7d141ba&lang=pug"
+import script from "./UserApiModal.vue?vue&type=script&lang=js"
+export * from "./UserApiModal.vue?vue&type=script&lang=js"
+
+const cssModules = {}
+import style0 from "./UserApiModal.vue?vue&type=style&index=0&id=e7d141ba&lang=less&module=true"
+cssModules["$style"] = style0
+
+import exportComponent from "../../../../../node_modules/vue-loader/dist/exportHelper.js"
+const __exports__ = /*#__PURE__*/exportComponent(script, [['render',render],['__cssModules',cssModules]])
+
+export default __exports__
+
+######## renderer.js.map :: src/renderer/views/Setting/components/UserApiOnlineImportModal.vue (619 chars)
+import { render } from "./UserApiOnlineImportModal.vue?vue&type=template&id=d469d748"
+import script from "./UserApiOnlineImportModal.vue?vue&type=script&lang=js"
+export * from "./UserApiOnlineImportModal.vue?vue&type=script&lang=js"
+
+const cssModules = {}
+import style0 from "./UserApiOnlineImportModal.vue?vue&type=style&index=0&id=d469d748&lang=less&module=true"
+cssModules["$style"] = style0
+
+import exportComponent from "../../../../../node_modules/vue-loader/dist/exportHelper.js"
+const __exports__ = /*#__PURE__*/exportComponent(script, [['render',render],['__cssModules',cssModules]])
+
+export default __exports__
+
+######## renderer.js.map :: src/renderer/views/Setting/components/ThemeSelectorModal.vue (595 chars)
+import { render } from "./ThemeSelectorModal.vue?vue&type=template&id=7a14598c"
+import script from "./ThemeSelectorModal.vue?vue&type=script&lang=js"
+export * from "./ThemeSelectorModal.vue?vue&type=script&lang=js"
+
+const cssModules = {}
+import style0 from "./ThemeSelectorModal.vue?vue&type=style&index=0&id=7a14598c&lang=less&module=true"
+cssModules["$style"] = style0
+
+import exportComponent from "../../../../../node_modules/vue-loader/dist/exportHelper.js"
+const __exports__ = /*#__PURE__*/exportComponent(script, [['render',render],['__cssModules',cssModules]])
+
+export default __exports__
+
+######## renderer.js.map :: src/renderer/views/Setting/components/ThemeEditModal/index.vue (546 chars)
+import { render } from "./index.vue?vue&type=template&id=be0fd350"
+import script from "./index.vue?vue&type=script&lang=js"
+export * from "./index.vue?vue&type=script&lang=js"
+
+const cssModules = {}
+import style0 from "./index.vue?vue&type=style&index=0&id=be0fd350&lang=less&module=true"
+cssModules["$style"] = style0
+
+import exportComponent from "../../../../../../node_modules/vue-loader/dist/exportHelper.js"
+const __exports__ = /*#__PURE__*/exportComponent(script, [['render',render],['__cssModules',cssModules]])
+
+export default __exports__
+
+######## renderer.js.map :: src/renderer/store/setting.ts (2510 chars)
+import { reactive, computed } from '@common/utils/vueTools';
+import defaultSetting from '@common/defaultSetting';
+import { updateSetting as saveSetting } from '@renderer/utils/ipc';
+export const appSetting = window.lxData.appSetting = reactive({ ...defaultSetting });
+export const isShowAnimation = computed(() => {
+    return appSetting['common.isShowAnimation'];
+});
+export const initSetting = (newSetting) => {
+    mergeSetting(newSetting);
+};
+export const mergeSetting = (newSetting) => {
+    for (const [key, value] of Object.entries(newSetting)) {
+        // @ts-expect-error
+        appSetting[key] = value;
+    }
+};
+export const updateSetting = window.lxData.updateSetting = (setting) => {
+    // console.warn(setting)
+    void saveSetting(setting);
+};
+/**
+ * 保存是否同意协议
+ * @param isAgreePact 是否同意协议
+ */
+export const saveAgreePact = (isAgreePact) => {
+    updateSetting({ 'common.isAgreePact': isAgreePact });
+};
+/**
+ * 保存音频输出id
+ * @param id 媒体驱动id
+ */
+export const saveMediaDeviceId = (id) => {
+    updateSetting({ 'player.mediaDeviceId': id });
+};
+/**
+ * 保存音量大小
+ * @param volume 音量
+ */
+export const saveVolume = (volume) => {
+    updateSetting({ 'player.volume': volume });
+};
+/**
+ * 设置是否静音
+ * @param isMute 是否静音
+ */
+export const saveVolumeIsMute = (isMute) => {
+    updateSetting({ 'player.isMute': isMute });
+};
+/**
+ * 设置播放速率
+ * @param rate 播放速率
+ */
+export const savePlaybackRate = (rate) => {
+    updateSetting({ 'player.playbackRate': rate });
+};
+/**
+ * 设置是否开启桌面歌词
+ * @param enabled
+ */
+export const setVisibleDesktopLyric = (enabled) => {
+    updateSetting({ 'desktopLyric.enable': enabled });
+};
+/**
+ * 设置是否锁定桌面歌词
+ * @param isLock
+ */
+export const setLockDesktopLyric = (isLock) => {
+    updateSetting({ 'desktopLyric.isLock': isLock });
+};
+/**
+ * 设置切歌模式
+ * @param mode
+ */
+export const setTogglePlayMode = (mode) => {
+    updateSetting({ 'player.togglePlayMethod': mode });
+};
+/**
+ * 设置API id
+ * @param sourceId
+ */
+export const setApiSource = (sourceId) => {
+    updateSetting({ 'common.apiSource': sourceId });
+};
+/**
+ * 设置播放详情页歌词字体大小
+ * @param size 字体大小
+ */
+export const setPlayDetailLyricFont = (size) => {
+    updateSetting({ 'playDetail.style.fontSize': size });
+};
+/**
+ * 设置播放详情页歌词对齐方式
+ * @param align 对齐方式
+ */
+export const setPlayDetailLyricAlign = (align) => {
+    updateSetting({ 'playDetail.style.align': align });
+};
+/**
+ * 设置播放详情页音频可视化
+ * @param enable 是否启用
+ */
+export const setEnableAudioVisualization = (enable) => {
+    updateSetting({ 'player.audioVisualization': enable });
+};

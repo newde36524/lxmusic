@@ -1,0 +1,1085 @@
+######## renderer.js.map :: src/renderer/utils/compositions/useKeyDown.ts (1011 chars)
+import { onMounted, onBeforeUnmount, ref } from '@common/utils/vueTools';
+export default (name) => {
+    const keyDown = ref(false);
+    const down = `key_${name}_down`;
+    const up = `key_${name}_up`;
+    const handle_key_down = (event) => {
+        if (!keyDown.value) {
+            // console.log(event)
+            switch ((event.event?.target).tagName) {
+                case 'INPUT':
+                case 'SELECT':
+                case 'TEXTAREA':
+                    return;
+                default: if ((event.event?.target).isContentEditable)
+                    return;
+            }
+            keyDown.value = true;
+        }
+    };
+    const handle_key_up = () => {
+        keyDown.value &&= false;
+    };
+    onMounted(() => {
+        window.key_event.on(down, handle_key_down);
+        window.key_event.on(up, handle_key_up);
+    });
+    onBeforeUnmount(() => {
+        window.key_event.off(down, handle_key_down);
+        window.key_event.off(up, handle_key_up);
+    });
+    return keyDown;
+};
+
+
+######## renderer.js.map :: src/renderer/utils/compositions/useNextTogglePlay.ts (1208 chars)
+import { appSetting, setTogglePlayMode } from '@renderer/store/setting';
+import { computed, } from '@common/utils/vueTools';
+import { useI18n } from '@renderer/plugins/i18n';
+// const playNextModes = [
+//   'listLoop',
+//   'random',
+//   'list',
+//   'singleLoop',
+//   'none',
+// ] as const
+export default () => {
+    const t = useI18n();
+    const nextTogglePlayName = computed(() => {
+        switch (appSetting['player.togglePlayMethod']) {
+            case 'listLoop': return t('player__play_toggle_mode_list_loop');
+            case 'random': return t('player__play_toggle_mode_random');
+            case 'singleLoop': return t('player__play_toggle_mode_single_loop');
+            case 'list': return t('player__play_toggle_mode_list');
+            default: return t('player__play_toggle_mode_off');
+        }
+    });
+    const toggleNextPlayMode = (mode) => {
+        if (mode == appSetting['player.togglePlayMethod'])
+            return;
+        // let index = playNextModes.indexOf(appSetting['player.togglePlayMethod'])
+        // if (++index >= playNextModes.length) index = 0
+        setTogglePlayMode(mode);
+    };
+    return {
+        nextTogglePlayName,
+        toggleNextPlayMode,
+    };
+};
+
+
+######## renderer.download.worker.js.map :: src/common/constants.ts (1723 chars)
+export const URL_SCHEME_RXP = /^lxmusic:\/\//;
+export const SPLIT_CHAR = {
+    DISLIKE_NAME: '@',
+    DISLIKE_NAME_ALIAS: '#',
+};
+export const STORE_NAMES = {
+    APP_SETTINGS: 'config_v2',
+    DATA: 'data',
+    SYNC: 'sync',
+    HOTKEY: 'hot_key',
+    USER_API: 'user_api',
+    LRC_RAW: 'lyrics',
+    LRC_EDITED: 'lyrics_edited',
+    THEME: 'theme',
+    SOUND_EFFECT: 'sound_effect',
+};
+export const APP_EVENT_NAMES = {
+    winMainName: 'win_main',
+    winLyricName: 'win_lyric',
+    trayName: 'tray',
+};
+export const LIST_IDS = {
+    DEFAULT: 'default',
+    LOVE: 'love',
+    TEMP: 'temp',
+    DOWNLOAD: 'download',
+    PLAY_LATER: null,
+};
+export const DATA_KEYS = {
+    viewPrevState: 'viewPrevState',
+    playInfo: 'playInfo',
+    searchHistoryList: 'searchHistoryList',
+    listScrollPosition: 'listScrollPosition',
+    listPrevSelectId: 'listPrevSelectId',
+    listUpdateInfo: 'listUpdateInfo',
+    ignoreVersion: 'ignoreVersion',
+    leaderboardSetting: 'leaderboardSetting',
+    songListSetting: 'songListSetting',
+    searchSetting: 'searchSetting',
+    lastStartInfo: 'lastStartInfo',
+};
+export const DEFAULT_SETTING = {
+    leaderboard: {
+        source: 'kw',
+        boardId: 'kw__16',
+    },
+    songList: {
+        source: 'kw',
+        sortId: 'new',
+        tagId: '',
+    },
+    search: {
+        temp_source: 'kw',
+        source: 'all',
+        type: 'music',
+    },
+    viewPrevState: {
+        url: '/search',
+        query: {},
+    },
+};
+export const DOWNLOAD_STATUS = {
+    RUN: 'run',
+    WAITING: 'waiting',
+    PAUSE: 'pause',
+    ERROR: 'error',
+    COMPLETED: 'completed',
+};
+export const QUALITYS = ['flac24bit', 'flac', 'wav', 'ape', '320k', '192k', '128k'];
+export const TRAY_AUTO_ID = -1;
+
+
+######## renderer.js.map :: src/common/constants.ts (1723 chars)
+export const URL_SCHEME_RXP = /^lxmusic:\/\//;
+export const SPLIT_CHAR = {
+    DISLIKE_NAME: '@',
+    DISLIKE_NAME_ALIAS: '#',
+};
+export const STORE_NAMES = {
+    APP_SETTINGS: 'config_v2',
+    DATA: 'data',
+    SYNC: 'sync',
+    HOTKEY: 'hot_key',
+    USER_API: 'user_api',
+    LRC_RAW: 'lyrics',
+    LRC_EDITED: 'lyrics_edited',
+    THEME: 'theme',
+    SOUND_EFFECT: 'sound_effect',
+};
+export const APP_EVENT_NAMES = {
+    winMainName: 'win_main',
+    winLyricName: 'win_lyric',
+    trayName: 'tray',
+};
+export const LIST_IDS = {
+    DEFAULT: 'default',
+    LOVE: 'love',
+    TEMP: 'temp',
+    DOWNLOAD: 'download',
+    PLAY_LATER: null,
+};
+export const DATA_KEYS = {
+    viewPrevState: 'viewPrevState',
+    playInfo: 'playInfo',
+    searchHistoryList: 'searchHistoryList',
+    listScrollPosition: 'listScrollPosition',
+    listPrevSelectId: 'listPrevSelectId',
+    listUpdateInfo: 'listUpdateInfo',
+    ignoreVersion: 'ignoreVersion',
+    leaderboardSetting: 'leaderboardSetting',
+    songListSetting: 'songListSetting',
+    searchSetting: 'searchSetting',
+    lastStartInfo: 'lastStartInfo',
+};
+export const DEFAULT_SETTING = {
+    leaderboard: {
+        source: 'kw',
+        boardId: 'kw__16',
+    },
+    songList: {
+        source: 'kw',
+        sortId: 'new',
+        tagId: '',
+    },
+    search: {
+        temp_source: 'kw',
+        source: 'all',
+        type: 'music',
+    },
+    viewPrevState: {
+        url: '/search',
+        query: {},
+    },
+};
+export const DOWNLOAD_STATUS = {
+    RUN: 'run',
+    WAITING: 'waiting',
+    PAUSE: 'pause',
+    ERROR: 'error',
+    COMPLETED: 'completed',
+};
+export const QUALITYS = ['flac24bit', 'flac', 'wav', 'ape', '320k', '192k', '128k'];
+export const TRAY_AUTO_ID = -1;
+
+
+######## renderer.main.worker.js.map :: src/common/constants.ts (1723 chars)
+export const URL_SCHEME_RXP = /^lxmusic:\/\//;
+export const SPLIT_CHAR = {
+    DISLIKE_NAME: '@',
+    DISLIKE_NAME_ALIAS: '#',
+};
+export const STORE_NAMES = {
+    APP_SETTINGS: 'config_v2',
+    DATA: 'data',
+    SYNC: 'sync',
+    HOTKEY: 'hot_key',
+    USER_API: 'user_api',
+    LRC_RAW: 'lyrics',
+    LRC_EDITED: 'lyrics_edited',
+    THEME: 'theme',
+    SOUND_EFFECT: 'sound_effect',
+};
+export const APP_EVENT_NAMES = {
+    winMainName: 'win_main',
+    winLyricName: 'win_lyric',
+    trayName: 'tray',
+};
+export const LIST_IDS = {
+    DEFAULT: 'default',
+    LOVE: 'love',
+    TEMP: 'temp',
+    DOWNLOAD: 'download',
+    PLAY_LATER: null,
+};
+export const DATA_KEYS = {
+    viewPrevState: 'viewPrevState',
+    playInfo: 'playInfo',
+    searchHistoryList: 'searchHistoryList',
+    listScrollPosition: 'listScrollPosition',
+    listPrevSelectId: 'listPrevSelectId',
+    listUpdateInfo: 'listUpdateInfo',
+    ignoreVersion: 'ignoreVersion',
+    leaderboardSetting: 'leaderboardSetting',
+    songListSetting: 'songListSetting',
+    searchSetting: 'searchSetting',
+    lastStartInfo: 'lastStartInfo',
+};
+export const DEFAULT_SETTING = {
+    leaderboard: {
+        source: 'kw',
+        boardId: 'kw__16',
+    },
+    songList: {
+        source: 'kw',
+        sortId: 'new',
+        tagId: '',
+    },
+    search: {
+        temp_source: 'kw',
+        source: 'all',
+        type: 'music',
+    },
+    viewPrevState: {
+        url: '/search',
+        query: {},
+    },
+};
+export const DOWNLOAD_STATUS = {
+    RUN: 'run',
+    WAITING: 'waiting',
+    PAUSE: 'pause',
+    ERROR: 'error',
+    COMPLETED: 'completed',
+};
+export const QUALITYS = ['flac24bit', 'flac', 'wav', 'ape', '320k', '192k', '128k'];
+export const TRAY_AUTO_ID = -1;
+
+
+######## renderer.js.map :: src/renderer/core/globalData.ts (860 chars)
+// import defaultSetting from '@common/defaultSetting'
+import createWorkers from '@renderer/worker';
+window.lx = {
+    // appSetting: defaultSetting,
+    isEditingHotKey: false,
+    isPlayedStop: false,
+    appHotKeyConfig: {
+        local: {
+            enable: false,
+            keys: {},
+        },
+        global: {
+            enable: false,
+            keys: {},
+        },
+    },
+    songListInfo: {
+        fromName: '',
+        searchKey: '',
+        searchPosition: 0,
+        songlistKey: '',
+        songlistPosition: 0,
+    },
+    restorePlayInfo: null,
+    worker: createWorkers(),
+    isProd: process.env.NODE_ENV == 'production',
+    rootOffset: window.dt ? 0 : 8,
+    apiInitPromise: [Promise.resolve(false), true, () => { }],
+};
+window.lxData = {};
+window.ELECTRON_DISABLE_SECURITY_WARNINGS = process.env.ELECTRON_DISABLE_SECURITY_WARNINGS;
+
+
+######## renderer.js.map :: src/renderer/core/useApp/useDataInit.ts (2093 chars)
+import { getPlayInfo } from '@renderer/utils/ipc';
+import music from '@renderer/utils/musicSdk';
+import { log } from '@common/utils';
+import { getListMusics, getUserLists, registerAction } from '@renderer/store/list/action';
+import useInitUserApi from './useInitUserApi';
+import { play, playList } from '@renderer/core/player';
+import { onBeforeUnmount } from '@common/utils/vueTools';
+import { appSetting } from '@renderer/store/setting';
+import { playMusicInfo } from '@renderer/store/player/state';
+import { initDislikeInfo, registerRemoteDislikeAction } from '@renderer/core/dislikeList';
+const initPrevPlayInfo = async () => {
+    const info = await getPlayInfo();
+    window.lx.restorePlayInfo = null;
+    if (!info?.listId || info.index < 0)
+        return;
+    const list = await getListMusics(info.listId);
+    if (!list[info.index])
+        return;
+    window.lx.restorePlayInfo = info;
+    playList(info.listId, info.index);
+    if (appSetting['player.startupAutoPlay']) {
+        const musicInfo = playMusicInfo.musicInfo;
+        if (!musicInfo)
+            return;
+        setTimeout(() => {
+            if (musicInfo.id == playMusicInfo.musicInfo?.id)
+                play();
+        });
+    }
+};
+export default () => {
+    const initUserApi = useInitUserApi();
+    let unregister = null;
+    let unregisterDislikeEvent = null;
+    onBeforeUnmount(() => {
+        if (unregister)
+            unregister();
+        if (unregisterDislikeEvent)
+            unregisterDislikeEvent();
+    });
+    return async () => {
+        await Promise.all([
+            initUserApi(), // 自定义API
+        ]).catch(err => {
+            log.error(err);
+        });
+        void music.init(); // 初始化音乐sdk
+        unregister = registerAction((ids) => {
+            window.app_event.myListUpdate(ids);
+        });
+        window.lxData.userLists = await getUserLists(); // 获取用户列表
+        unregisterDislikeEvent = registerRemoteDislikeAction();
+        await initDislikeInfo(); // 获取不喜欢列表
+        await initPrevPlayInfo().catch(err => {
+            log.error(err);
+        }); // 初始化上次的歌曲播放信息
+    };
+};
+
+
+######## renderer.js.map :: src/renderer/core/useApp/useUpdate.ts (7720 chars)
+import { nextTick, onBeforeUnmount, watch } from '@common/utils/vueTools';
+import { onUpdateAvailable, onUpdateDownloaded, onUpdateError, onUpdateNotAvailable, onUpdateProgress, getIgnoreVersion, getLastStartInfo, saveLastStartInfo, } from '@renderer/utils/ipc';
+import { compareVer, isWin } from '@common/utils';
+import { isShowChangeLog, versionInfo } from '@renderer/store';
+import { getVersionInfo } from '@renderer/utils/update';
+import { dialog } from '@renderer/plugins/Dialog';
+import { appSetting } from '@renderer/store/setting';
+export default () => {
+    let isShowedChangeLog = false;
+    // 更新超时定时器
+    let updateTimeout = null;
+    const startUpdateTimeout = () => {
+        if (window.lx.isProd && !(isWin && process.arch.includes('arm'))) {
+            updateTimeout = window.setTimeout(() => {
+                updateTimeout = null;
+                void nextTick(() => {
+                    showUpdateModal();
+                    setTimeout(() => {
+                        void dialog({
+                            message: window.i18n.t('update__timeout_top'),
+                            confirmButtonText: window.i18n.t('alert_button_text'),
+                        });
+                    }, 500);
+                });
+            }, 60 * 60 * 1000);
+        }
+    };
+    const clearUpdateTimeout = () => {
+        if (!updateTimeout)
+            return;
+        clearTimeout(updateTimeout);
+        updateTimeout = null;
+    };
+    const handleShowChangeLog = () => {
+        isShowedChangeLog = true;
+        void getLastStartInfo().then((version) => {
+            if (version == process.versions.app)
+                return;
+            saveLastStartInfo(process.versions.app);
+            if (!appSetting['common.showChangeLog'])
+                return;
+            if (version) {
+                if (compareVer(process.versions.app, version) < 0) {
+                    void dialog({
+                        message: window.i18n.t('update__downgrade_tip', { ver: `${version} → ${process.versions.app}` }),
+                        confirmButtonText: window.i18n.t('update__ignore_confirm_tip_confirm'),
+                    });
+                    return;
+                }
+                if (compareVer(version, versionInfo.newVersion.version) >= 0)
+                    return;
+            }
+            else if (
+            // 如果当前版本不在已发布的版本中，则不需要显示更新日志
+            ![{ version: versionInfo.newVersion.version, desc: '' }, ...(versionInfo.newVersion.history ?? [])]
+                .some(i => i.version == process.versions.app))
+                return;
+            isShowChangeLog.value = true;
+        });
+    };
+    const handleGetVersionInfo = async () => {
+        return (versionInfo.newVersion?.history && !versionInfo.reCheck
+            ? Promise.resolve(versionInfo.newVersion)
+            : getVersionInfo().then((body) => {
+                versionInfo.newVersion = body;
+                return body;
+            })).catch(() => {
+            if (versionInfo.newVersion)
+                return versionInfo.newVersion;
+            let result = {
+                version: '0.0.0',
+                desc: '',
+            };
+            versionInfo.newVersion = result;
+            return result;
+        });
+    };
+    let versionInfoPromise = null;
+    const showUpdateModal = (status) => {
+        if (versionInfoPromise) {
+            if (
+            // @ts-expect-error
+            versionInfoPromise.resolved &&
+                versionInfo.reCheck) {
+                versionInfoPromise = handleGetVersionInfo();
+            }
+        }
+        else
+            versionInfoPromise = handleGetVersionInfo();
+        // eslint-disable-next-line @typescript-eslint/promise-function-async
+        void versionInfoPromise.then((result) => {
+            versionInfo.reCheck = false;
+            if (result.version == '0.0.0') {
+                versionInfo.isUnknown = true;
+                versionInfo.status = 'error';
+                let ignoreFailTipTime = parseInt(localStorage.getItem('update__check_failed_tip') ?? '0');
+                if (Date.now() - ignoreFailTipTime > 7 * 86400000) {
+                    versionInfo.showModal = true;
+                }
+                return;
+            }
+            versionInfo.isUnknown = false;
+            if (compareVer(versionInfo.version, result.version) != -1) {
+                versionInfo.status = 'idle';
+                versionInfo.isLatest = true;
+                handleShowChangeLog();
+                return;
+            }
+            return getIgnoreVersion().then((ignoreVersion) => {
+                versionInfo.isLatest = false;
+                let preStatus = versionInfo.status;
+                if (status)
+                    versionInfo.status = status;
+                if (result.version === ignoreVersion)
+                    return;
+                void nextTick(() => {
+                    versionInfo.showModal = true;
+                    if (status == 'error' && preStatus == 'downloading' && !localStorage.getItem('update__download_failed_tip')) {
+                        setTimeout(() => {
+                            void dialog({
+                                message: window.i18n.t('update__error_top'),
+                                confirmButtonText: window.i18n.t('alert_button_text'),
+                            }).finally(() => {
+                                localStorage.setItem('update__download_failed_tip', '1');
+                            });
+                        }, 500);
+                    }
+                });
+            });
+        }).finally(() => {
+            // @ts-expect-error
+            versionInfoPromise.resolved = true;
+        });
+    };
+    const rUpdateAvailable = onUpdateAvailable(({ params: info }) => {
+        // versionInfo.isDownloading = true
+        // console.log(info)
+        versionInfo.newVersion = {
+            version: info.version,
+            desc: info.releaseNotes,
+        };
+        versionInfo.isLatest = false;
+        if (appSetting['common.tryAutoUpdate']) {
+            versionInfo.status = 'downloading';
+            startUpdateTimeout();
+        }
+        void nextTick(() => {
+            showUpdateModal();
+        });
+    });
+    const rUpdateNotAvailable = onUpdateNotAvailable(({ params: info }) => {
+        clearUpdateTimeout();
+        // versionInfo.newVersion = {
+        //   version: info.version,
+        //   desc: info.releaseNotes as string,
+        // }
+        void handleGetVersionInfo().finally(() => {
+            versionInfo.isLatest = true;
+            versionInfo.isUnknown = false;
+            versionInfo.status = 'idle';
+            handleShowChangeLog();
+        });
+    });
+    const rUpdateError = onUpdateError((params) => {
+        clearUpdateTimeout();
+        // versionInfo.status = 'error'
+        void nextTick(() => {
+            showUpdateModal('error');
+        });
+    });
+    const rUpdateProgress = onUpdateProgress(({ params: progress }) => {
+        versionInfo.downloadProgress = progress;
+    });
+    const rUpdateDownloaded = onUpdateDownloaded(({ params: info }) => {
+        clearUpdateTimeout();
+        // versionInfo.status = 'downloaded'
+        void nextTick(() => {
+            showUpdateModal('downloaded');
+        });
+    });
+    watch(() => versionInfo.showModal, (visible) => {
+        if (visible || isShowedChangeLog || versionInfo.status == 'downloaded')
+            return;
+        setTimeout(() => {
+            handleShowChangeLog();
+        }, 1000);
+    });
+    onBeforeUnmount(() => {
+        clearUpdateTimeout();
+        rUpdateAvailable();
+        rUpdateNotAvailable();
+        rUpdateError();
+        rUpdateProgress();
+        rUpdateDownloaded();
+    });
+};
+
+
+######## renderer.js.map :: src/renderer/core/useApp/useSettingSync.ts (3621 chars)
+import { watch } from '@common/utils/vueTools';
+import { isFullscreen, proxy, sync, windowSizeList } from '@renderer/store';
+import { appSetting } from '@renderer/store/setting';
+import { sendSyncAction, setWindowSize } from '@renderer/utils/ipc';
+import { setLanguage } from '@root/lang';
+import { setUserApi } from '../apiSource';
+// import { applyTheme, getThemes } from '@renderer/store/utils'
+export default () => {
+    watch(() => appSetting['common.windowSizeId'], (index) => {
+        const info = index == null ? windowSizeList[2] : windowSizeList[index];
+        setWindowSize(info.width, info.height);
+    });
+    watch(() => appSetting['common.fontSize'], (fontSize) => {
+        if (isFullscreen.value)
+            return;
+        document.documentElement.style.fontSize = `${fontSize}px`;
+    });
+    watch(() => appSetting['common.langId'], (id) => {
+        if (!id)
+            return;
+        setLanguage(id);
+        window.setLang(id);
+    });
+    watch(() => appSetting['common.apiSource'], apiSource => {
+        void setUserApi(apiSource);
+    });
+    watch(() => appSetting['common.font'], (val) => {
+        document.documentElement.style.fontFamily = val;
+    }, {
+        immediate: true,
+    });
+    watch(() => appSetting['sync.mode'], (mode) => {
+        sync.mode = mode;
+    });
+    watch(() => appSetting['sync.enable'], enable => {
+        switch (appSetting['sync.mode']) {
+            case 'server':
+                if (appSetting['sync.server.port']) {
+                    void sendSyncAction({
+                        action: 'enable_server',
+                        data: {
+                            enable: appSetting['sync.enable'],
+                            port: appSetting['sync.server.port'],
+                        },
+                    }).catch(err => {
+                        console.log(err);
+                    });
+                }
+                break;
+            case 'client':
+                if (appSetting['sync.client.host']) {
+                    void sendSyncAction({
+                        action: 'enable_client',
+                        data: {
+                            enable: appSetting['sync.enable'],
+                            host: appSetting['sync.client.host'],
+                        },
+                    }).catch(err => {
+                        console.log(err);
+                    });
+                }
+                break;
+            default:
+                break;
+        }
+        sync.enable = enable;
+    });
+    watch(() => appSetting['sync.server.port'], port => {
+        if (appSetting['sync.mode'] == 'server') {
+            void sendSyncAction({
+                action: 'enable_server',
+                data: {
+                    enable: appSetting['sync.enable'],
+                    port: appSetting['sync.server.port'],
+                },
+            });
+        }
+        sync.server.port = port;
+    });
+    watch(() => appSetting['sync.client.host'], host => {
+        if (appSetting['sync.mode'] == 'client') {
+            void sendSyncAction({
+                action: 'enable_client',
+                data: {
+                    enable: appSetting['sync.enable'],
+                    host: appSetting['sync.client.host'],
+                },
+            });
+        }
+        sync.client.host = host;
+    });
+    watch(() => appSetting['network.proxy.enable'], enable => {
+        proxy.enable = enable;
+    });
+    watch(() => appSetting['network.proxy.host'], host => {
+        proxy.host = host;
+    });
+    watch(() => appSetting['network.proxy.port'], port => {
+        proxy.port = port;
+    });
+};
+
+
+######## renderer.js.map :: src/renderer/core/useApp/index.ts (2832 chars)
+import { checkUpdate, getEnvParams, getViewPrevState, sendInited } from '@renderer/utils/ipc';
+import { proxy, isFullscreen, themeId } from '@renderer/store';
+import { appSetting } from '@renderer/store/setting';
+import useSync from './useSync';
+import useOpenAPI from './useOpenAPI';
+import useStatusbarLyric from './useStatusbarLyric';
+import useUpdate from './useUpdate';
+import useDataInit from './useDataInit';
+import useHandleEnvParams from './useHandleEnvParams';
+import useEventListener from './useEventListener';
+import useDeeplink from './useDeeplink';
+import usePlayer from './usePlayer';
+import useSettingSync from './useSettingSync';
+import { useRouter } from '@common/utils/vueRouter';
+import handleListAutoUpdate from './listAutoUpdate';
+export default () => {
+    // apiSource.value = appSetting['common.apiSource']
+    proxy.enable = appSetting['network.proxy.enable'];
+    proxy.host = appSetting['network.proxy.host'];
+    proxy.port = appSetting['network.proxy.port'];
+    isFullscreen.value = appSetting['common.startInFullscreen'];
+    themeId.value = appSetting['theme.id'];
+    const router = useRouter();
+    const initSyncService = useSync();
+    const initOpenAPI = useOpenAPI();
+    const initStatusbarLyric = useStatusbarLyric();
+    useEventListener();
+    const initPlayer = usePlayer();
+    const handleEnvParams = useHandleEnvParams();
+    const initData = useDataInit();
+    const initDeeplink = useDeeplink();
+    // const handleListAutoUpdate = useListAutoUpdate()
+    useUpdate();
+    useSettingSync();
+    void getEnvParams().then(envParams => {
+        // 移除代理相关的环境变量设置，防止请求库自动应用它们
+        // eslint-disable-next-line no-undef
+        // const processEnv = ENVIRONMENT
+        // for (const key of Object.keys(processEnv)) {
+        //   // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
+        //   if (/^(?:http_proxy|https_proxy|NO_PROXY)$/i.test(key)) delete processEnv[key]
+        // }
+        const envProxy = envParams.cmdParams['proxy-server'];
+        if (envProxy && typeof envProxy == 'string') {
+            const [host, port = ''] = envProxy.split(':');
+            proxy.envProxy = {
+                host,
+                port,
+            };
+        }
+        void getViewPrevState().then(state => {
+            void router.push({ path: state.url, query: state.query });
+        });
+        // 初始化我的列表、下载列表等数据
+        void initData().then(() => {
+            initPlayer();
+            handleEnvParams(envParams); // 处理传入的启动参数
+            void initDeeplink(envParams);
+            void initSyncService();
+            void initOpenAPI();
+            void initStatusbarLyric();
+            sendInited();
+            handleListAutoUpdate();
+            if (window.lx.isProd && appSetting['common.isAgreePact'])
+                checkUpdate();
+        });
+    });
+};
+
+
+######## renderer.js.map :: src/renderer/core/apiSource.ts (1919 chars)
+import { apiSource, qualityList, userApi } from '@renderer/store';
+import { appSetting, setApiSource } from '@renderer/store/setting';
+import { setUserApi as setUserApiAction } from '@renderer/utils/ipc';
+import musicSdk from '@renderer/utils/musicSdk';
+import apiSourceInfo from '@renderer/utils/musicSdk/api-source-info';
+let prevId = '';
+export const setUserApi = async (apiId) => {
+    if (prevId == apiId)
+        return;
+    prevId = apiId;
+    if (window.lx.apiInitPromise[1]) {
+        window.lx.apiInitPromise[0] = new Promise(resolve => {
+            window.lx.apiInitPromise[1] = false;
+            window.lx.apiInitPromise[2] = (result) => {
+                window.lx.apiInitPromise[1] = true;
+                resolve(result);
+            };
+        });
+    }
+    if (/^user_api/.test(apiId)) {
+        qualityList.value = {};
+        userApi.status = false;
+        userApi.message = 'initing';
+        await setUserApiAction(apiId).then(() => {
+            if (prevId != apiId)
+                return;
+            apiSource.value = apiId;
+        }).catch(err => {
+            if (prevId != apiId)
+                return;
+            if (!window.lx.apiInitPromise[1])
+                window.lx.apiInitPromise[2](false);
+            console.log(err);
+            let api = apiSourceInfo.find(api => !api.disabled);
+            if (!api)
+                return;
+            apiSource.value = api.id;
+            if (api.id != appSetting['common.apiSource'])
+                setApiSource(api.id);
+        });
+    }
+    else {
+        // @ts-expect-error
+        qualityList.value = musicSdk.supportQuality[apiId] ?? {};
+        apiSource.value = apiId;
+        void setUserApiAction(apiId);
+        if (!window.lx.apiInitPromise[1])
+            window.lx.apiInitPromise[2](true);
+    }
+    if (prevId != apiId)
+        return;
+    if (apiId != appSetting['common.apiSource'])
+        setApiSource(apiId);
+};
+
+
+######## renderer.js.map :: src/renderer/core/useApp/useOpenAPI.ts (1660 chars)
+import { watch } from '@common/utils/vueTools';
+import { appSetting } from '@renderer/store/setting';
+import { sendOpenAPIAction } from '@renderer/utils/ipc';
+import { openAPI } from '@renderer/store';
+import { setDisableAutoPauseBySource } from '@renderer/core/lyric';
+export default () => {
+    const handleEnable = async (enable, port, bindLan) => {
+        await sendOpenAPIAction({
+            action: 'enable',
+            data: {
+                enable,
+                port,
+                bindLan,
+            },
+        }).then((status) => {
+            openAPI.address = status.address;
+            openAPI.message = status.message;
+        }).catch((error) => {
+            openAPI.address = '';
+            openAPI.message = error.message;
+        }).finally(() => {
+            setDisableAutoPauseBySource(!!openAPI.address, 'openAPI');
+        });
+    };
+    watch(() => appSetting['openAPI.enable'], enable => {
+        void handleEnable(enable, appSetting['openAPI.port'], appSetting['openAPI.bindLan']);
+    });
+    watch(() => appSetting['openAPI.port'], port => {
+        if (!appSetting['openAPI.enable'])
+            return;
+        void handleEnable(appSetting['openAPI.enable'], port, appSetting['openAPI.bindLan']);
+    });
+    watch(() => appSetting['openAPI.bindLan'], bindLan => {
+        if (!appSetting['openAPI.enable'])
+            return;
+        void handleEnable(appSetting['openAPI.enable'], appSetting['openAPI.port'], bindLan);
+    });
+    return async () => {
+        if (appSetting['openAPI.enable']) {
+            void handleEnable(true, appSetting['openAPI.port'], appSetting['openAPI.bindLan']);
+        }
+    };
+};
+
+
+######## renderer.js.map :: src/renderer/core/useApp/useSync.ts (3408 chars)
+import { markRaw, onBeforeUnmount } from '@common/utils/vueTools';
+import { onSyncAction, sendSyncAction } from '@renderer/utils/ipc';
+import { sync } from '@renderer/store';
+import { appSetting } from '@renderer/store/setting';
+import { SYNC_CODE } from '@common/constants_sync';
+export default () => {
+    const handleSyncList = (event) => {
+        // console.log(event)
+        switch (event.action) {
+            case 'select_mode':
+                sync.deviceName = event.data.deviceName;
+                sync.type = event.data.type;
+                sync.isShowSyncMode = true;
+                break;
+            case 'close_select_mode':
+                sync.isShowSyncMode = false;
+                break;
+            case 'server_status':
+                sync.server.status.status = event.data.status;
+                sync.server.status.message = event.data.message;
+                sync.server.status.address = markRaw(event.data.address);
+                sync.server.status.code = event.data.code;
+                sync.server.status.devices = markRaw(event.data.devices);
+                break;
+            case 'client_status':
+                sync.client.status.status = event.data.status;
+                sync.client.status.message = event.data.message;
+                sync.client.status.address = markRaw(event.data.address);
+                if (event.data.message == SYNC_CODE.missingAuthCode || event.data.message == SYNC_CODE.authFailed) {
+                    if (!sync.isShowAuthCodeModal)
+                        sync.isShowAuthCodeModal = true;
+                }
+                else if (sync.isShowAuthCodeModal)
+                    sync.isShowAuthCodeModal = false;
+                break;
+        }
+    };
+    const rSyncAction = onSyncAction(({ params }) => {
+        handleSyncList(params);
+    });
+    onBeforeUnmount(() => {
+        rSyncAction();
+    });
+    return async () => {
+        sync.enable = appSetting['sync.enable'];
+        sync.mode = appSetting['sync.mode'];
+        sync.server.port = appSetting['sync.server.port'];
+        sync.client.host = appSetting['sync.client.host'];
+        if (appSetting['sync.enable']) {
+            switch (appSetting['sync.mode']) {
+                case 'server':
+                    if (appSetting['sync.server.port']) {
+                        void sendSyncAction({
+                            action: 'enable_server',
+                            data: {
+                                enable: appSetting['sync.enable'],
+                                port: appSetting['sync.server.port'],
+                            },
+                        }).catch(err => {
+                            console.log(err);
+                        });
+                    }
+                    break;
+                case 'client':
+                    if (appSetting['sync.client.host']) {
+                        void sendSyncAction({
+                            action: 'enable_client',
+                            data: {
+                                enable: appSetting['sync.enable'],
+                                host: appSetting['sync.client.host'],
+                            },
+                        }).catch(err => {
+                            console.log(err);
+                        });
+                    }
+                    break;
+                default:
+                    break;
+            }
+        }
+    };
+};
+
+
+######## renderer.js.map :: src/renderer/main.ts (2302 chars)
+import '@common/error';
+import { createApp } from 'vue';
+import './core/globalData';
+import '@renderer/event';
+// Components
+import mountComponents from './components';
+// Plugins
+import initPlugins from './plugins';
+import { i18nPlugin } from './plugins/i18n';
+import App from './App.vue';
+import router from './router';
+// import store from './store'
+import { getSetting, updateSetting } from './utils/ipc';
+import { langList } from '@root/lang';
+import { initSetting } from './store/setting';
+// import { bubbleCursor } from './utils/cursor-effects/bubbleCursor'
+import './worker';
+import { saveViewPrevState } from './utils/data';
+// sync(store, router)
+router.afterEach((to) => {
+    if (to.path != '/songList/detail') {
+        saveViewPrevState({
+            url: to.path,
+            query: { ...to.query },
+        });
+    }
+});
+void getSetting().then(setting => {
+    // window.lx.appSetting = setting
+    // Set language automatically
+    if (!setting['common.langId'] || !window.i18n.availableLocales.includes(setting['common.langId'])) {
+        let langId = null;
+        const locale = window.navigator.language.toLocaleLowerCase();
+        if (window.i18n.availableLocales.includes(locale)) {
+            langId = locale;
+        }
+        else {
+            for (const lang of langList) {
+                if (lang.alternate == locale) {
+                    langId = lang.locale;
+                    break;
+                }
+            }
+            langId ??= 'en-us';
+        }
+        setting['common.langId'] = langId;
+        void updateSetting({ 'common.langId': langId });
+        console.log('Set lang', setting['common.langId']);
+    }
+    window.setLang(setting['common.langId']);
+    window.i18n.setLanguage(setting['common.langId']);
+    if (!setting['common.startInFullscreen'] && (document.body.clientHeight > window.screen.availHeight || document.body.clientWidth > window.screen.availWidth) && setting['common.windowSizeId'] > 1) {
+        void updateSetting({ 'common.windowSizeId': 1 });
+    }
+    // store.commit('setSetting', setting)
+    initSetting(setting);
+    const app = createApp(App);
+    app
+        .use(router)
+        // .use(store)
+        .use(i18nPlugin);
+    initPlugins(app);
+    mountComponents(app);
+    app.mount('#root');
+});
+// bubbleCursor()
+
+
+######## renderer.js.map :: src/renderer/router.ts (1964 chars)
+/* eslint-disable @typescript-eslint/no-var-requires */
+// import Vue from 'vue'
+import { createRouter, createWebHashHistory } from 'vue-router';
+const router = createRouter({
+    history: createWebHashHistory(),
+    routes: [
+        {
+            path: '/search',
+            name: 'Search',
+            component: require('./views/Search/index.vue').default,
+            meta: {
+                name: 'Search',
+            },
+        },
+        {
+            path: '/songList/list',
+            name: 'SongList',
+            component: require('./views/songList/List/index.vue').default,
+            meta: {
+                name: 'SongList',
+            },
+        },
+        {
+            path: '/songList/detail',
+            name: 'SongListDetail',
+            component: require('./views/songList/Detail/index.vue').default,
+            meta: {
+                name: 'SongList',
+            },
+        },
+        {
+            path: '/leaderboard',
+            name: 'Leaderboard',
+            component: require('./views/Leaderboard/index.vue').default,
+            meta: {
+                name: 'Leaderboard',
+            },
+        },
+        {
+            path: '/list',
+            name: 'List',
+            component: require('./views/List/index.vue').default,
+            meta: {
+                name: 'List',
+            },
+        },
+        {
+            path: '/download',
+            name: 'Download',
+            component: require('./views/Download/index.vue').default,
+            meta: {
+                name: 'Download',
+            },
+        },
+        {
+            path: '/setting',
+            name: 'Setting',
+            component: require('./views/Setting/index.vue').default,
+            meta: {
+                name: 'Setting',
+            },
+        },
+        { path: '/:pathMatch(.*)*', redirect: '/search' },
+    ],
+    linkActiveClass: 'active-link',
+    linkExactActiveClass: 'exact-active-link',
+});
+export default router;

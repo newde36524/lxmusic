@@ -1,0 +1,353 @@
+######## renderer.js.map :: src/renderer/utils/musicSdk/options.js (152 chars)
+export const bHh = '624868746c'
+
+export const headers = {
+  'User-Agent': 'lx-music request',
+  [bHh]: [bHh],
+}
+
+
+export const timeout = 15000
+
+
+######## renderer.js.map :: src/renderer/utils/musicSdk/api-source-info.ts (437 chars)
+// Support qualitys: 128k 320k flac wav
+const sources = [
+// {
+//   id: 'test',
+//   name: '测试接口',
+//   disabled: false,
+//   supportQualitys: {
+//     kw: ['128k'],
+//     kg: ['128k'],
+//     tx: ['128k'],
+//     wy: ['128k'],
+//     mg: ['128k'],
+//     // bd: ['128k'],
+//   },
+// },
+// {
+//   id: 'temp',
+//   name: '临时接口',
+//   disabled: false,
+//   supportQualitys: {
+//     kw: ['128k'],
+//   },
+// },
+];
+export default sources;
+
+
+######## renderer.js.map :: src/renderer/utils/musicSdk/api-source.js (1207 chars)
+import apiSourceInfo from './api-source-info'
+import { apiSource, userApi } from '@renderer/store'
+// import api_temp_kw from './kw/api-temp'
+// // import api_test_bd from './bd/api-test'
+// import api_test_tx from './tx/api-test'
+// import api_test_kg from './kg/api-test'
+// import api_test_kw from './kw/api-test'
+// import api_test_mg from './mg/api-test'
+// import api_test_wy from './wy/api-test'
+
+const allApi = {
+  // temp_kw: api_temp_kw,
+  // // test_bd: api_test_bd,
+  // test_tx: api_test_tx,
+  // test_kg: api_test_kg,
+  // test_kw: api_test_kw,
+  // test_mg: api_test_mg,
+  // test_wy: api_test_wy,
+}
+
+const apiList = {}
+const supportQuality = {}
+
+for (const api of apiSourceInfo) {
+  supportQuality[api.id] = api.supportQualitys
+  for (const source of Object.keys(api.supportQualitys)) {
+    apiList[`${api.id}_api_${source}`] = allApi[`${api.id}_${source}`]
+  }
+}
+
+const getAPI = source => apiList[`${apiSource.value}_api_${source}`]
+
+const apis = source => {
+  if (/^user_api/.test(apiSource.value)) return userApi.apis[source]
+  let api = getAPI(source)
+  if (api) return api
+  throw new Error('Api is not found')
+}
+
+export { apis, supportQuality }
+
+
+######## renderer.js.map :: src/renderer/utils/musicSdk/index.js (6344 chars)
+import kw from './kw/index'
+import kg from './kg/index'
+import tx from './tx/index'
+import wy from './wy/index'
+import mg from './mg/index'
+import bd from './bd/index'
+import xm from './xm'
+import { supportQuality } from './api-source'
+import { versionChars } from './versionChars'
+
+
+const sources = {
+  sources: [
+    {
+      name: '酷我音乐',
+      id: 'kw',
+    },
+    {
+      name: '酷狗音乐',
+      id: 'kg',
+    },
+    {
+      name: 'QQ音乐',
+      id: 'tx',
+    },
+    {
+      name: '网易音乐',
+      id: 'wy',
+    },
+    {
+      name: '咪咕音乐',
+      id: 'mg',
+    },
+    {
+      name: '虾米音乐',
+      id: 'xm',
+    },
+    // {
+    //   name: '百度音乐',
+    //   id: 'bd',
+    // },
+  ],
+  kw,
+  kg,
+  tx,
+  wy,
+  mg,
+  bd,
+  xm,
+}
+export default {
+  ...sources,
+  init() {
+    const tasks = []
+    for (let source of sources.sources) {
+      let sm = sources[source.id]
+      sm && sm.init && tasks.push(sm.init())
+    }
+    return Promise.all(tasks)
+  },
+  supportQuality,
+
+  async searchMusic({ name, singer, source: s, limit = 25 }) {
+    const trimStr = str => typeof str == 'string' ? str.trim() : str
+    const musicName = trimStr(name)
+    const tasks = []
+    const excludeSource = ['xm']
+    for (const source of sources.sources) {
+      if (!sources[source.id].musicSearch || source.id == s || excludeSource.includes(source.id)) continue
+      tasks.push(sources[source.id].musicSearch.search(`${musicName} ${singer || ''}`.trim(), 1, limit).catch(_ => null))
+    }
+    return (await Promise.all(tasks)).filter(s => s)
+  },
+
+  async findMusic({ name, singer, albumName, interval, source: s }) {
+    const lists = await this.searchMusic({ name, singer, source: s, limit: 25 })
+    // console.log(lists)
+    // console.log({ name, singer, albumName, interval, source: s })
+
+    const singersRxp = /、|&|;|；|\/|,|，|\|/
+    const sortSingle = singer => singersRxp.test(singer)
+      ? singer.split(singersRxp).sort((a, b) => a.localeCompare(b)).join('、')
+      : (singer || '')
+    const sortMusic = (arr, callback) => {
+      const tempResult = []
+      for (let i = arr.length - 1; i > -1; i--) {
+        const item = arr[i]
+        if (callback(item)) {
+          delete item.fSinger
+          delete item.fMusicName
+          delete item.fAlbumName
+          delete item.fInterval
+          tempResult.push(item)
+          arr.splice(i, 1)
+        }
+      }
+      tempResult.reverse()
+      return tempResult
+    }
+    const getIntv = (interval) => {
+      if (!interval) return 0
+      // if (musicInfo._interval) return musicInfo._interval
+      let intvArr = interval.split(':')
+      let intv = 0
+      let unit = 1
+      while (intvArr.length) {
+        intv += parseInt(intvArr.pop()) * unit
+        unit *= 60
+      }
+      return intv
+    }
+    const trimStr = str => typeof str == 'string' ? str.trim() : (str || '')
+    const filterStr = str => typeof str == 'string' ? str.replace(/\s|'|\.|,|，|&|"|、|\(|\)|（|）|`|~|-|<|>|\||\/|\]|\[|!|！/g, '') : String(str || '')
+    const fMusicName = filterStr(name).toLowerCase()
+    const fSinger = filterStr(sortSingle(singer)).toLowerCase()
+    const fAlbumName = filterStr(albumName).toLowerCase()
+    const fInterval = getIntv(interval)
+    const isEqualsInterval = (intv) => Math.abs((fInterval || intv) - (intv || fInterval)) <= 5
+    const isEqualsVersionMusicNameChar = (name) => {
+      for (const char of versionChars) {
+        if (name.includes(char) != fMusicName.includes(char)) return false
+      }
+      return true
+    }
+    const isIncludesName = (name) => (fMusicName.includes(name) || name.includes(fMusicName)) && isEqualsVersionMusicNameChar(name)
+    const isIncludesSinger = (singer) => fSinger ? (fSinger.includes(singer) || singer.includes(fSinger)) : true
+    const isEqualsAlbum = (album) => fAlbumName ? fAlbumName == album : true
+
+    const result = lists.map(source => {
+      for (const item of source.list) {
+        item.name = trimStr(item.name)
+        item.singer = trimStr(item.singer)
+        item.fSinger = filterStr(sortSingle(item.singer).toLowerCase())
+        item.fMusicName = filterStr(String(item.name ?? '').toLowerCase())
+        item.fAlbumName = filterStr(String(item.albumName ?? '').toLowerCase())
+        item.fInterval = getIntv(item.interval)
+        // console.log(fMusicName, item.fMusicName, item.source)
+        if (!isEqualsInterval(item.fInterval)) {
+          item.name = null
+          continue
+        }
+        if (item.fMusicName == fMusicName && isIncludesSinger(item.fSinger)) return item
+      }
+      for (const item of source.list) {
+        if (item.name == null) continue
+        if (item.fSinger == fSinger && isIncludesName(item.fMusicName)) return item
+      }
+      for (const item of source.list) {
+        if (item.name == null) continue
+        if (isEqualsAlbum(item.fAlbumName) && isIncludesSinger(item.fSinger) && isIncludesName(item.fMusicName)) return item
+      }
+      return null
+    }).filter(s => s)
+    const newResult = []
+    if (result.length) {
+      newResult.push(...sortMusic(result, item => item.fSinger == fSinger && item.fMusicName == fMusicName && item.interval == interval))
+      newResult.push(...sortMusic(result, item => item.fMusicName == fMusicName && item.fSinger == fSinger && item.fAlbumName == fAlbumName))
+      newResult.push(...sortMusic(result, item => item.fSinger == fSinger && item.fMusicName == fMusicName))
+      newResult.push(...sortMusic(result, item => item.fMusicName == fMusicName && item.interval == interval))
+      newResult.push(...sortMusic(result, item => item.fSinger == fSinger && item.interval == interval))
+      newResult.push(...sortMusic(result, item => item.interval == interval))
+      newResult.push(...sortMusic(result, item => item.fMusicName == fMusicName))
+      newResult.push(...sortMusic(result, item => item.fSinger == fSinger))
+      newResult.push(...sortMusic(result, item => item.fAlbumName == fAlbumName))
+      for (const item of result) {
+        delete item.fSinger
+        delete item.fMusicName
+        delete item.fAlbumName
+        delete item.fInterval
+      }
+      newResult.push(...result)
+    }
+    // console.log(newResult)
+    return newResult
+  },
+}
+
+
+######## renderer.js.map :: src/renderer/utils/musicSdk/xm.js (1495 chars)
+// import { apis } from '../api-source'
+// import leaderboard from './leaderboard'
+// import songList from './songList'
+// import musicSearch from './musicSearch'
+// import pic from './pic'
+// import lyric from './lyric'
+// import hotSearch from './hotSearch'
+// import comment from './comment'
+// import musicInfo from './musicInfo'
+// import { closeVerifyModal } from './util'
+
+const xm = {
+  // songList,
+  // musicSearch,
+  // leaderboard,
+  // hotSearch,
+  // closeVerifyModal,
+  comment: {
+    getComment() {
+      return Promise.reject(new Error('fail'))
+    },
+    getHotComment() {
+      return Promise.reject(new Error('fail'))
+    },
+  },
+  getMusicUrl(songInfo, type) {
+    return {
+      promise: Promise.reject(new Error('fail')),
+    }
+    // return apis('xm').getMusicUrl(songInfo, type)
+  },
+  getLyric(songInfo) {
+    return {
+      promise: Promise.reject(new Error('fail')),
+    }
+    // return lyric.getLyric(songInfo)
+  },
+  getPic(songInfo) {
+    return Promise.reject(new Error('fail'))
+    // return pic.getPic(songInfo)
+  },
+  // getMusicDetailPageUrl(songInfo) {
+  //   if (songInfo.songStringId) return `https://www.xiami.com/song/${songInfo.songStringId}`
+
+  //   musicInfo.getMusicInfo(songInfo).then(({ data }) => {
+  //     songInfo.songStringId = data.songStringId
+  //   })
+  //   return `https://www.xiami.com/song/${songInfo.songmid}`
+  // },
+  // init() {
+  //   getToken()
+  // },
+}
+
+export default xm
+
+
+######## renderer.js.map :: src/renderer/utils/musicSdk/kw/tipSearch.js (1156 chars)
+// import { decodeName } from '../../index'
+// import { tokenRequest } from './util'
+import { httpFetch } from '../../request'
+
+export default {
+  regExps: {
+    relWord: /RELWORD=(.+)/,
+  },
+  requestObj: null,
+  async tipSearchBySong(str) {
+    // 报错403，加了referer还是有问题（直接换一个
+    // this.requestObj = await tokenRequest(`http://www.kuwo.cn/api/www/search/searchKey?key=${encodeURIComponent(str)}`)
+
+    this.cancelTipSearch()
+    this.requestObj = httpFetch(`https://tips.kuwo.cn/t.s?corp=kuwo&newver=3&p2p=1&notrace=0&c=mbox&w=${encodeURIComponent(str)}&encoding=utf8&rformat=json`, {
+      Referer: 'http://www.kuwo.cn/',
+    })
+    return this.requestObj.promise.then(({ body, statusCode }) => {
+      if (statusCode != 200 || !body.WORDITEMS) return Promise.reject(new Error('请求失败'))
+      return body.WORDITEMS
+    })
+  },
+  handleResult(rawData) {
+    return rawData.map(item => item.RELWORD)
+  },
+  cancelTipSearch() {
+    if (this.requestObj && this.requestObj.cancelHttp) this.requestObj.cancelHttp()
+  },
+  async search(str) {
+    return this.tipSearchBySong(str).then(result => this.handleResult(result))
+  },
+}

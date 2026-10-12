@@ -348,8 +348,12 @@ func normalizeNeteaseLRC(s string) string {
 	return strings.TrimSpace(neteaseTagThree.ReplaceAllString(s, "[$1.$2]"))
 }
 
-// MusicURL asks the cheetah endpoint, which serves anonymous playback URLs for
-// most non-VIP songs.
+// MusicURL asks the cheetah endpoint. It no longer serves anonymous audio: as
+// of 2026-10-12 it replies with an empty data list for 晴天 (347230), a free
+// non-VIP song, so this is a dead path and the audio comes from a user source.
+// The request is kept because the failure is an answer about the song rather
+// than a network error, and so that a reply that starts working again is still
+// picked up instead of silently ignored.
 func (n *Netease) MusicURL(ctx context.Context, s *Song, quality Quality) (*PlayerURL, error) {
 	br := 128000
 	switch quality.Type {
@@ -382,7 +386,8 @@ func (n *Netease) MusicURL(ctx context.Context, s *Song, quality Quality) (*Play
 		return nil, err
 	}
 	if resp.Code != 200 || len(resp.Data) == 0 || string(resp.Data[0].URL) == "" {
-		return nil, fmt.Errorf("wy: no url for %s (cheetah returns nothing for VIP/pay songs; the desktop app resolves these via its User API plugin)", s.KeyString())
+		return nil, fmt.Errorf("wy: cheetah gives no anonymous audio url for %s (code=%d) - it answers with an empty data list. add a user source that serves wy audio, e.g. lxmusic source add --name hyw --url <script.js>",
+			s.KeyString(), resp.Code)
 	}
 	ext := ".mp3"
 	if quality.Type == QFlac || quality.Type == QFlac24 {

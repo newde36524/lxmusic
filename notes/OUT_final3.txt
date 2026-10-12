@@ -1,0 +1,1526 @@
+######## renderer.js.map :: src/renderer/views/Setting/components/DislikeListModal.vue (596 chars)
+import { render } from "./DislikeListModal.vue?vue&type=template&id=464c4067&lang=pug"
+import script from "./DislikeListModal.vue?vue&type=script&lang=js"
+export * from "./DislikeListModal.vue?vue&type=script&lang=js"
+
+const cssModules = {}
+import style0 from "./DislikeListModal.vue?vue&type=style&index=0&id=464c4067&lang=less&module=true"
+cssModules["$style"] = style0
+
+import exportComponent from "../../../../../node_modules/vue-loader/dist/exportHelper.js"
+const __exports__ = /*#__PURE__*/exportComponent(script, [['render',render],['__cssModules',cssModules]])
+
+export default __exports__
+
+######## renderer.js.map :: src/renderer/views/Search/MusicList/useList.ts (1756 chars)
+import { LIST_IDS } from '@common/constants';
+import { ref } from '@common/utils/vueTools';
+import { playList } from '@renderer/core/player/action';
+import { getListMusics, addListMusics } from '@renderer/store/list/action';
+import { addHistoryWord } from '@renderer/store/search/action';
+// import { useI18n } from '@renderer/plugins/i18n'
+// import { } from '@renderer/store/search/state'
+import { search as searchMusic, listInfos } from '@renderer/store/search/music';
+import { assertApiSupport } from '@renderer/store/utils';
+export default () => {
+    const listRef = ref(null);
+    const listInfo = ref({
+        page: 1,
+        maxPage: 0,
+        limit: 30,
+        total: 0,
+        list: [],
+        key: null,
+        noItemLabel: '',
+    });
+    const search = (text, source, page) => {
+        listInfo.value = listInfos[source];
+        if (text.length)
+            void addHistoryWord(text);
+        void searchMusic(text, page, source).then((list) => {
+            if (list.length) {
+                setTimeout(() => {
+                    if (listRef.value)
+                        listRef.value.scrollToTop();
+                });
+            }
+        });
+    };
+    const handlePlayList = async (index) => {
+        let targetSong = listInfo.value.list[index];
+        if (!assertApiSupport(targetSong.source))
+            return;
+        const defaultListMusics = await getListMusics(LIST_IDS.DEFAULT);
+        await addListMusics(LIST_IDS.DEFAULT, [targetSong]);
+        let targetIndex = defaultListMusics.findIndex(s => s.id === targetSong.id);
+        if (targetIndex > -1)
+            playList(LIST_IDS.DEFAULT, targetIndex);
+    };
+    return {
+        listRef,
+        listInfo,
+        search,
+        handlePlayList,
+    };
+};
+
+
+######## renderer.js.map :: src/renderer/views/Search/SongListList/useList.ts (1611 chars)
+import { onBeforeRouteLeave } from '@common/utils/vueRouter';
+import { ref, nextTick } from '@common/utils/vueTools';
+import { addHistoryWord } from '@renderer/store/search/action';
+import { search as searchSongList, listInfos } from '@renderer/store/search/songlist';
+export default () => {
+    const listRef = ref(null);
+    const listInfo = ref({
+        page: 1,
+        limit: 30,
+        total: 0,
+        list: [],
+        key: null,
+        noItemLabel: '',
+        tagId: '',
+        sortId: '',
+    });
+    const search = (text, source, page) => {
+        // console.log(text, source, page)
+        listInfo.value = listInfos[source];
+        if (text.length)
+            void addHistoryWord(text);
+        void searchSongList(text, page, source).then((list) => {
+            // console.log(list)
+            if (listInfo.value.key == window.lx.songListInfo.searchKey && window.lx.songListInfo.searchPosition) {
+                void nextTick(() => {
+                    listRef.value?.scrollTo(window.lx.songListInfo.searchPosition);
+                });
+            }
+            else if (list.length && listRef.value) {
+                window.lx.songListInfo.searchKey = null;
+                void nextTick(() => {
+                    listRef.value.scrollTo(0);
+                });
+            }
+        });
+    };
+    onBeforeRouteLeave(() => {
+        window.lx.songListInfo.searchKey = listInfo.value.key;
+        if (listRef.value)
+            window.lx.songListInfo.searchPosition = listRef.value.getScrollTop();
+    });
+    return {
+        listRef,
+        listInfo,
+        search,
+    };
+};
+
+
+######## renderer.js.map :: src/renderer/views/Search/index.vue (540 chars)
+import { render } from "./index.vue?vue&type=template&id=6a4f63d6"
+import script from "./index.vue?vue&type=script&lang=js"
+export * from "./index.vue?vue&type=script&lang=js"
+
+const cssModules = {}
+import style0 from "./index.vue?vue&type=style&index=0&id=6a4f63d6&lang=less&module=true"
+cssModules["$style"] = style0
+
+import exportComponent from "../../../../node_modules/vue-loader/dist/exportHelper.js"
+const __exports__ = /*#__PURE__*/exportComponent(script, [['render',render],['__cssModules',cssModules]])
+
+export default __exports__
+
+######## renderer.js.map :: src/renderer/views/Search/components/BlankView.vue (492 chars)
+import script from "./BlankView.vue?vue&type=script&setup=true&lang=js"
+export * from "./BlankView.vue?vue&type=script&setup=true&lang=js"
+
+const cssModules = {}
+import style0 from "./BlankView.vue?vue&type=style&index=0&id=cfef0260&lang=less&module=true"
+cssModules["$style"] = style0
+
+import exportComponent from "../../../../../node_modules/vue-loader/dist/exportHelper.js"
+const __exports__ = /*#__PURE__*/exportComponent(script, [['__cssModules',cssModules]])
+
+export default __exports__
+
+######## renderer.js.map :: src/renderer/views/Search/MusicList/index.vue (480 chars)
+import script from "./index.vue?vue&type=script&setup=true&lang=ts"
+export * from "./index.vue?vue&type=script&setup=true&lang=ts"
+
+const cssModules = {}
+import style0 from "./index.vue?vue&type=style&index=0&id=0633d551&lang=less&module=true"
+cssModules["$style"] = style0
+
+import exportComponent from "../../../../../node_modules/vue-loader/dist/exportHelper.js"
+const __exports__ = /*#__PURE__*/exportComponent(script, [['__cssModules',cssModules]])
+
+export default __exports__
+
+######## renderer.js.map :: src/renderer/views/Search/SongListList/index.vue (480 chars)
+import script from "./index.vue?vue&type=script&setup=true&lang=ts"
+export * from "./index.vue?vue&type=script&setup=true&lang=ts"
+
+const cssModules = {}
+import style0 from "./index.vue?vue&type=style&index=0&id=a2b1bc28&lang=less&module=true"
+cssModules["$style"] = style0
+
+import exportComponent from "../../../../../node_modules/vue-loader/dist/exportHelper.js"
+const __exports__ = /*#__PURE__*/exportComponent(script, [['__cssModules',cssModules]])
+
+export default __exports__
+
+######## renderer.js.map :: src/renderer/views/Setting/components/SettingSearch.vue (405 chars)
+import { render } from "./SettingSearch.vue?vue&type=template&id=46242740&lang=pug"
+import script from "./SettingSearch.vue?vue&type=script&lang=js"
+export * from "./SettingSearch.vue?vue&type=script&lang=js"
+
+import exportComponent from "../../../../../node_modules/vue-loader/dist/exportHelper.js"
+const __exports__ = /*#__PURE__*/exportComponent(script, [['render',render]])
+
+export default __exports__
+
+######## renderer.js.map :: src/renderer/components/layout/Toolbar/SearchInput.vue (390 chars)
+import { render } from "./SearchInput.vue?vue&type=template&id=aa9f4242"
+import script from "./SearchInput.vue?vue&type=script&lang=js"
+export * from "./SearchInput.vue?vue&type=script&lang=js"
+
+import exportComponent from "../../../../../node_modules/vue-loader/dist/exportHelper.js"
+const __exports__ = /*#__PURE__*/exportComponent(script, [['render',render]])
+
+export default __exports__
+
+######## renderer.js.map :: src/renderer/views/List/MusicList/useSearch.js (1006 chars)
+import { ref, onBeforeUnmount } from '@common/utils/vueTools'
+
+export default ({ setSelectedIndex, handlePlayMusic, listRef }) => {
+  const isShowSearchBar = ref(false)
+  const searchList = ref([])
+
+  const handleShowSearchBar = () => {
+    isShowSearchBar.value = true
+  }
+
+  const handleMusicSearchAction = ({ action, data: { index, isPlay } = {} }) => {
+    isShowSearchBar.value = false
+    switch (action) {
+      case 'listClick':
+        if (index < 0) return
+        listRef.value.scrollToIndex(index, -150, true, () => {
+          setSelectedIndex(index)
+          setTimeout(() => {
+            setSelectedIndex(-1)
+            if (isPlay) handlePlayMusic(index)
+          }, 600)
+        })
+        break
+    }
+  }
+
+  window.key_event.on('key_mod+f_down', handleShowSearchBar)
+
+  onBeforeUnmount(() => {
+    window.key_event.off('key_mod+f_down', handleShowSearchBar)
+  })
+
+  return {
+    isShowSearchBar,
+    searchList,
+    handleMusicSearchAction,
+  }
+}
+
+
+######## renderer.js.map :: src/renderer/utils/musicSdk/kw/tipSearch.js (1156 chars)
+// import { decodeName } from '../../index'
+// import { tokenRequest } from './util'
+import { httpFetch } from '../../request'
+
+export default {
+  regExps: {
+    relWord: /RELWORD=(.+)/,
+  },
+  requestObj: null,
+  async tipSearchBySong(str) {
+    // 报错403，加了referer还是有问题（直接换一个
+    // this.requestObj = await tokenRequest(`http://www.kuwo.cn/api/www/search/searchKey?key=${encodeURIComponent(str)}`)
+
+    this.cancelTipSearch()
+    this.requestObj = httpFetch(`https://tips.kuwo.cn/t.s?corp=kuwo&newver=3&p2p=1&notrace=0&c=mbox&w=${encodeURIComponent(str)}&encoding=utf8&rformat=json`, {
+      Referer: 'http://www.kuwo.cn/',
+    })
+    return this.requestObj.promise.then(({ body, statusCode }) => {
+      if (statusCode != 200 || !body.WORDITEMS) return Promise.reject(new Error('请求失败'))
+      return body.WORDITEMS
+    })
+  },
+  handleResult(rawData) {
+    return rawData.map(item => item.RELWORD)
+  },
+  cancelTipSearch() {
+    if (this.requestObj && this.requestObj.cancelHttp) this.requestObj.cancelHttp()
+  },
+  async search(str) {
+    return this.tipSearchBySong(str).then(result => this.handleResult(result))
+  },
+}
+
+
+######## renderer.js.map :: src/renderer/utils/musicSdk/bd/songList.js (7641 chars)
+import { httpFetch } from '../../request'
+import { formatPlayTime, toMD5 } from '../../index'
+import CryptoJS from 'crypto-js'
+
+export default {
+  _requestObj_tags: null,
+  _requestObj_list: null,
+  _requestObj_listRecommend: null,
+  limit_list: 30,
+  limit_song: 10000,
+  successCode: 22000,
+  sortList: [
+    {
+      name: '最热',
+      id: '1',
+    },
+    {
+      name: '最新',
+      id: '0',
+    },
+  ],
+  regExps: {
+    // http://music.taihe.com/songlist/566347741
+    listDetailLink: /^.+\/songlist\/(\d+)(?:\?.*|&.*$|#.*$|$)/,
+  },
+  aesPassEncod(jsonData) {
+    let timestamp = Math.floor(Date.now() / 1000)
+    let privateKey = toMD5('baidu_taihe_music_secret_key' + timestamp).substr(8, 16)
+    let key = CryptoJS.enc.Utf8.parse(privateKey)
+    let iv = CryptoJS.enc.Utf8.parse(privateKey)
+    let arrData = []
+    let strData = ''
+    for (let key in jsonData) arrData.push(key)
+    arrData.sort()
+    for (let i = 0; i < arrData.length; i++) {
+      let key = arrData[i]
+      strData +=
+        (i === 0 ? '' : '&') + key + '=' + encodeURIComponent(jsonData[key])
+    }
+    let JsonFormatter = {
+      stringify(cipherParams) {
+        let jsonObj = {
+          ct: cipherParams.ciphertext.toString(CryptoJS.enc.Base64),
+        }
+        if (cipherParams.iv) {
+          jsonObj.iv = cipherParams.iv.toString()
+        }
+        if (cipherParams.salt) {
+          jsonObj.s = cipherParams.salt.toString()
+        }
+        return jsonObj
+      },
+      parse(jsonStr) {
+        let jsonObj = JSON.parse(jsonStr)
+        let cipherParams = CryptoJS.lib.CipherParams.create({
+          ciphertext: CryptoJS.enc.Base64.parse(jsonObj.ct),
+        })
+        if (jsonObj.iv) {
+          cipherParams.iv = CryptoJS.enc.Hex.parse(jsonObj.iv)
+        }
+        if (jsonObj.s) {
+          cipherParams.salt = CryptoJS.enc.Hex.parse(jsonObj.s)
+        }
+        return cipherParams
+      },
+    }
+    let encrypted = CryptoJS.AES.encrypt(strData, key, {
+      iv,
+      blockSize: 16,
+      mode: CryptoJS.mode.CBC,
+      format: JsonFormatter,
+    })
+    let ciphertext = encrypted.toString().ct
+    let sign = toMD5('baidu_taihe_music' + ciphertext + timestamp)
+    let jsonRet = {
+      timestamp,
+      param: ciphertext,
+      sign,
+    }
+    return jsonRet
+  },
+  createUrl(param, method) {
+    let data = this.aesPassEncod(param)
+    return `http://musicmini.qianqian.com/v1/restserver/ting?method=${method}&time=${Date.now()}&timestamp=${data.timestamp}&param=${data.param}&sign=${data.sign}`
+  },
+  getTagsUrl() {
+    return this.createUrl({
+      from: 'qianqianmini',
+      type: 'diy',
+      version: '10.1.8',
+    }, 'baidu.ting.ugcdiy.getChannels')
+  },
+  getListUrl(sortType, tagName, page) {
+    return this.createUrl({
+      channelname: tagName || '全部',
+      from: 'qianqianmini',
+      offset: (page - 1) * this.limit_list,
+      order_type: sortType,
+      size: this.limit_list,
+      version: '10.1.8',
+    }, 'baidu.ting.ugcdiy.getChanneldiy')
+  },
+  getListDetailUrl(list_id, page) {
+    return this.createUrl({
+      list_id,
+      offset: (page - 1) * this.limit_song,
+      size: this.limit_song,
+      withcount: '1',
+      withsong: '1',
+    }, 'baidu.ting.ugcdiy.getBaseInfo')
+  },
+
+  // 获取标签
+  getTags(tryNum = 0) {
+    if (this._requestObj_tags) this._requestObj_tags.cancelHttp()
+    if (tryNum > 2) return Promise.reject(new Error('try max num'))
+    this._requestObj_tags = httpFetch(this.getTagsUrl())
+    return this._requestObj_tags.promise.then(({ body }) => {
+      if (body.error_code !== this.successCode) return this.getTags(++tryNum)
+      return {
+        hotTag: this.filterInfoHotTag(body.result.hot),
+        tags: this.filterTagInfo(body.result.tags),
+        source: 'bd',
+      }
+    })
+  },
+  filterInfoHotTag(rawList) {
+    return rawList.map(item => ({
+      name: item,
+      id: item,
+      source: 'bd',
+    }))
+  },
+  filterTagInfo(rawList) {
+    return rawList.map(type => ({
+      name: type.first,
+      list: type.second.map(item => ({
+        parent_id: type.first,
+        parent_name: type.first,
+        id: item,
+        name: item,
+        source: 'bd',
+      })),
+    }))
+  },
+
+  // 获取列表数据
+  getList(sortId, tagId, page, tryNum = 0) {
+    if (this._requestObj_list) this._requestObj_list.cancelHttp()
+    if (tryNum > 2) return Promise.reject(new Error('try max num'))
+    this._requestObj_list = httpFetch(this.getListUrl(sortId, tagId, page))
+    return this._requestObj_list.promise.then(({ body }) => {
+      if (body.error_code !== this.successCode) return this.getList(sortId, tagId, page, ++tryNum)
+      return {
+        list: this.filterList(body.diyInfo),
+        total: body.nums,
+        page,
+        limit: this.limit_list,
+        source: 'bd',
+      }
+    })
+  },
+
+
+  /**
+   * 格式化播放数量
+   * @param {*} num
+   */
+  formatPlayCount(num) {
+    if (num > 100000000) return parseInt(num / 10000000) / 10 + '亿'
+    if (num > 10000) return parseInt(num / 1000) / 10 + '万'
+    return num
+  },
+  filterList(rawData) {
+    return rawData.map(item => ({
+      play_count: this.formatPlayCount(item.listen_num),
+      id: String(item.list_id),
+      author: item.username,
+      name: item.title,
+      // time: item.publish_time,
+      img: item.list_pic_large || item.list_pic,
+      grade: item.grade,
+      desc: item.desc || item.tag,
+      source: 'bd',
+    }))
+  },
+
+  // 获取歌曲列表内的音乐
+  getListDetail(id, page, tryNum = 0) {
+    if (tryNum > 2) return Promise.reject(new Error('try max num'))
+
+    if ((/[?&:/]/.test(id))) id = id.replace(this.regExps.listDetailLink, '$1')
+
+    const requestObj_listDetail = httpFetch(this.getListDetailUrl(id, page))
+    return requestObj_listDetail.promise.then(({ body }) => {
+      if (body.error_code !== this.successCode) return this.getListDetail(id, page, ++tryNum)
+      let listData = this.filterData(body.result.songlist)
+      return {
+        list: listData,
+        page,
+        limit: this.limit_song,
+        total: body.result.song_num,
+        source: 'bd',
+        info: {
+          name: body.result.info.list_title,
+          img: body.result.info.list_pic,
+          desc: body.result.info.list_desc,
+          author: body.result.info.userinfo.username,
+          play_count: this.formatPlayCount(body.result.listen_num),
+        },
+      }
+    })
+  },
+  filterData(rawList) {
+    // console.log(rawList)
+    return rawList.map(item => {
+      const types = []
+      const _types = {}
+      let size = null
+      let itemTypes = item.all_rate.split(',')
+      if (itemTypes.includes('128')) {
+        types.push({ type: '128k', size })
+        _types['128k'] = {
+          size,
+        }
+      }
+      if (itemTypes.includes('320')) {
+        types.push({ type: '320k', size })
+        _types['320k'] = {
+          size,
+        }
+      }
+      if (itemTypes.includes('flac')) {
+        types.push({ type: 'flac', size })
+        _types.flac = {
+          size,
+        }
+      }
+      // types.reverse()
+
+      return {
+        singer: item.author.replace(',', '、'),
+        name: item.title,
+        albumName: item.album_title,
+        albumId: item.album_id,
+        source: 'bd',
+        interval: formatPlayTime(parseInt(item.file_duration)),
+        songmid: item.song_id,
+        img: item.pic_s500,
+        lrc: null,
+        types,
+        _types,
+        typeUrl: {},
+      }
+    })
+  },
+
+}
+
+// getList
+// getTags
+// getListDetail
+
+
+######## renderer.js.map :: src/renderer/utils/musicSdk/bd/musicSearch.js (2649 chars)
+// import '../../polyfill/array.find'
+
+import { httpFetch } from '../../request'
+import { formatPlayTime } from '../../index'
+// import { debug } from '../../utils/env'
+// import { formatSinger } from './util'
+
+export default {
+  limit: 30,
+  total: 0,
+  page: 0,
+  allPage: 1,
+  musicSearch(str, page, limit) {
+    const searchRequest = httpFetch(`http://tingapi.ting.baidu.com/v1/restserver/ting?from=android&version=5.6.5.6&method=baidu.ting.search.merge&format=json&query=${encodeURIComponent(str)}&page_no=${page}&page_size=${limit}&type=0&data_source=0&use_cluster=1`)
+    return searchRequest.promise.then(({ body }) => body)
+  },
+  handleResult(rawData) {
+    let ids = new Set()
+    const list = []
+    if (!rawData) return list
+    rawData.forEach(item => {
+      if (ids.has(item.song_id)) return
+      ids.add(item.song_id)
+      const types = []
+      const _types = {}
+      let size = null
+      let itemTypes = item.all_rate.split(',')
+      if (itemTypes.includes('128')) {
+        types.push({ type: '128k', size })
+        _types['128k'] = {
+          size,
+        }
+      }
+      if (itemTypes.includes('320')) {
+        types.push({ type: '320k', size })
+        _types['320k'] = {
+          size,
+        }
+      }
+      if (itemTypes.includes('flac')) {
+        types.push({ type: 'flac', size })
+        _types.flac = {
+          size,
+        }
+      }
+      // types.reverse()
+
+      list.push({
+        singer: item.author.replace(',', '、'),
+        name: item.title,
+        albumName: item.album_title,
+        albumId: item.album_id,
+        source: 'bd',
+        interval: formatPlayTime(parseInt(item.file_duration)),
+        songmid: item.song_id,
+        img: null,
+        lrc: null,
+        types,
+        _types,
+        typeUrl: {},
+      })
+    })
+    return list
+  },
+  search(str, page = 1, limit, retryNum = 0) {
+    if (++retryNum > 3) return Promise.reject(new Error('try max num'))
+    if (limit == null) limit = this.limit
+
+    return this.musicSearch(str, page, limit).then(result => {
+      if (!result || result.error_code !== 22000) return this.search(str, page, limit, retryNum)
+      let list = this.handleResult(result.result.song_info.song_list)
+
+      if (list == null) return this.search(str, page, limit, retryNum)
+
+      this.total = result.result.song_info.total
+      this.page = page
+      this.allPage = Math.ceil(this.total / limit)
+
+      return Promise.resolve({
+        list,
+        allPage: this.allPage,
+        limit,
+        total: this.total,
+        source: 'bd',
+      })
+    })
+  },
+}
+
+
+######## renderer.js.map :: src/renderer/utils/musicSdk/bd/hotSearch.js (860 chars)
+import { httpFetch } from '../../request'
+
+export default {
+  _requestObj: null,
+  async getList(retryNum = 0) {
+    if (this._requestObj) this._requestObj.cancelHttp()
+    if (retryNum > 2) return Promise.reject(new Error('try max num'))
+
+    const _requestObj = httpFetch('http://musicapi.qianqian.com/v1/restserver/ting?from=android&version=7.0.2.0&channel=ppzs&operator=0&method=baidu.ting.search.hot', {
+      method: 'get',
+      headers: {
+        'User-Agent': 'android_7.0.2.0;baiduyinyue',
+      },
+    })
+    const { body, statusCode } = await _requestObj.promise
+    if (statusCode != 200 || body.error_code !== 22000) throw new Error('获取热搜词失败')
+    // console.log(body, statusCode)
+    return { source: 'bd', list: this.filterList(body.result) }
+  },
+  filterList(rawList) {
+    return rawList.map(item => item.word)
+  },
+}
+
+
+######## renderer.js.map :: src/renderer/utils/musicSdk/bd/index.js (1198 chars)
+import leaderboard from './leaderboard'
+import { apis } from '../api-source'
+import musicInfo from './musicInfo'
+import songList from './songList'
+import { httpFetch } from '../../request'
+import musicSearch from './musicSearch'
+import hotSearch from './hotSearch'
+
+const bd = {
+  leaderboard,
+  songList,
+  musicSearch,
+  hotSearch,
+  getMusicUrl(songInfo, type) {
+    return apis('bd').getMusicUrl(songInfo, type)
+  },
+  getPic(songInfo) {
+    const requestObj = this.getMusicInfo(songInfo)
+    return requestObj.promise.then(info => info.pic_premium)
+  },
+  getLyric(songInfo) {
+    const requestObj = this.getMusicInfo(songInfo)
+    requestObj.promise = requestObj.promise.then(info => httpFetch(info.lrclink).promise.then(resp => ({ lyric: resp.body, tlyric: '' })))
+    return requestObj
+  },
+  // getLyric(songInfo) {
+  //   return apis('bd').getLyric(songInfo)
+  // },
+  // getPic(songInfo) {
+  //   return apis('bd').getPic(songInfo)
+  // },
+  getMusicInfo(songInfo) {
+    return musicInfo.getMusicInfo(songInfo.songmid)
+  },
+  getMusicDetailPageUrl(songInfo) {
+    return `http://music.taihe.com/song/${songInfo.songmid}`
+  },
+}
+
+export default bd
+
+
+######## renderer.js.map :: src/renderer/utils/musicSdk/xm.js (1495 chars)
+// import { apis } from '../api-source'
+// import leaderboard from './leaderboard'
+// import songList from './songList'
+// import musicSearch from './musicSearch'
+// import pic from './pic'
+// import lyric from './lyric'
+// import hotSearch from './hotSearch'
+// import comment from './comment'
+// import musicInfo from './musicInfo'
+// import { closeVerifyModal } from './util'
+
+const xm = {
+  // songList,
+  // musicSearch,
+  // leaderboard,
+  // hotSearch,
+  // closeVerifyModal,
+  comment: {
+    getComment() {
+      return Promise.reject(new Error('fail'))
+    },
+    getHotComment() {
+      return Promise.reject(new Error('fail'))
+    },
+  },
+  getMusicUrl(songInfo, type) {
+    return {
+      promise: Promise.reject(new Error('fail')),
+    }
+    // return apis('xm').getMusicUrl(songInfo, type)
+  },
+  getLyric(songInfo) {
+    return {
+      promise: Promise.reject(new Error('fail')),
+    }
+    // return lyric.getLyric(songInfo)
+  },
+  getPic(songInfo) {
+    return Promise.reject(new Error('fail'))
+    // return pic.getPic(songInfo)
+  },
+  // getMusicDetailPageUrl(songInfo) {
+  //   if (songInfo.songStringId) return `https://www.xiami.com/song/${songInfo.songStringId}`
+
+  //   musicInfo.getMusicInfo(songInfo).then(({ data }) => {
+  //     songInfo.songStringId = data.songStringId
+  //   })
+  //   return `https://www.xiami.com/song/${songInfo.songmid}`
+  // },
+  // init() {
+  //   getToken()
+  // },
+}
+
+export default xm
+
+
+######## renderer.js.map :: src/renderer/utils/musicSdk/kw/util.js (7320 chars)
+import { createCipheriv, createDecipheriv } from 'crypto'
+import { toMD5 } from '../utils'
+import { inflate } from 'zlib'
+
+
+const handleInflate = async(data) => {
+  return new Promise((resolve, reject) => {
+    inflate(data, (err, result) => {
+      if (err) {
+        reject(err)
+        return
+      }
+      resolve(result)
+    })
+  })
+}
+
+const buf_key = Buffer.from('yeelion')
+const buf_key_len = buf_key.length
+
+export const decodeLyric = async(rawData, isGetLyricx) => {
+  const buf = Buffer.isBuffer(rawData) ? rawData : Buffer.from(rawData)
+  if (buf.toString('utf8', 0, 10).toLowerCase() !== 'tp=content') return ''
+  const lrcData = await handleInflate(buf.subarray(buf.indexOf('\r\n\r\n') + 4))
+  if (!isGetLyricx) return lrcData.toString('utf8')
+  const buf_str = Buffer.from(lrcData.toString(), 'base64')
+  const buf_str_len = buf_str.length
+  const output = new Uint8Array(buf_str_len)
+  let i = 0
+  while (i < buf_str_len) {
+    let j = 0
+    while (j < buf_key_len && i < buf_str_len) {
+      output[i] = buf_str[i] ^ buf_key[j]
+      i++
+      j++
+    }
+  }
+
+  return Buffer.from(output).toString('utf8')
+}
+
+export const objStr2JSON = str => {
+  return JSON.parse(str.replace(/('(?=(,\s*')))|('(?=:))|((?<=([:,]\s*))')|((?<={)')|('(?=}))/g, '"'))
+}
+
+
+export const formatSinger = rawData => rawData.replace(/&/g, '、')
+
+// export const matchToken = headers => {
+//   try {
+//     return headers['set-cookie'][0].match(/kw_token=(\w+)/)[1]
+//   } catch (err) {
+//     return null
+//   }
+// }
+
+// const wait = time => new Promise(resolve => setTimeout(() => resolve(), time))
+
+
+// export const getToken = (retryNum = 0) => new Promise((resolve, reject) => {
+//   if (retryNum > 2) return Promise.reject(new Error('try max num'))
+
+//   if (kw_token.isGetingToken) return wait(1000).then(() => getToken(retryNum).then(token => resolve(token)))
+//   if (kw_token.token) return resolve(kw_token.token)
+//   kw_token.isGetingToken = true
+//   httpGet('http://www.kuwo.cn/', (err, resp) => {
+//     kw_token.isGetingToken = false
+//     if (err) return getToken(++retryNum)
+//     if (resp.statusCode != 200) return reject(new Error('获取失败'))
+//     const token = kw_token.token = matchToken(resp.headers)
+//     resolve(token)
+//   })
+// })
+
+// export const tokenRequest = async(url, options = {}) => {
+//   let token = kw_token.token
+//   if (!token) token = await getToken()
+//   if (!options.headers) {
+//     options.headers = {
+//       Referer: 'http://www.kuwo.cn/',
+//       csrf: token,
+//       cookie: 'kw_token=' + token,
+//     }
+//   }
+//   const requestObj = httpFetch(url, options)
+//   requestObj.promise = requestObj.promise.then(resp => {
+//     // console.log(resp)
+//     if (resp.statusCode == 200) {
+//       kw_token.token = matchToken(resp.headers)
+//     }
+//     return resp
+//   })
+//   return requestObj
+// }
+
+export const lrcTools = {
+  rxps: {
+    wordLine: /^(\[\d{1,2}:.*\d{1,4}])\s*(\S+(?:\s+\S+)*)?\s*/,
+    tagLine: /\[(ver|ti|ar|al|offset|by|kuwo):\s*(\S+(?:\s+\S+)*)\s*]/,
+    wordTimeAll: /<(-?\d+),(-?\d+)(?:,-?\d+)?>/g,
+    wordTime: /<(-?\d+),(-?\d+)(?:,-?\d+)?>/,
+  },
+  offset: 1,
+  offset2: 1,
+  isOK: false,
+  lines: [],
+  tags: [],
+  getWordInfo(str, str2, prevWord) {
+    const offset = parseInt(str)
+    const offset2 = parseInt(str2)
+    let startTime = Math.trunc(Math.abs((offset + offset2) / (this.offset * 2)))
+    let endTime = Math.trunc(Math.abs((offset - offset2) / (this.offset2 * 2)) + startTime)
+    if (prevWord) {
+      if (startTime < prevWord.endTime) {
+        prevWord.endTime = startTime
+        if (prevWord.startTime > prevWord.endTime) {
+          prevWord.startTime = prevWord.endTime
+        }
+
+        prevWord.newTimeStr = `<${prevWord.startTime},${Math.trunc(prevWord.endTime - prevWord.startTime)}>`
+        // console.log(prevWord)
+      }
+    }
+    return {
+      startTime,
+      endTime,
+      timeStr: `<${startTime},${Math.trunc(endTime - startTime)}>`,
+    }
+  },
+  parseLine(line) {
+    if (line.length < 6) return
+    let result = this.rxps.wordLine.exec(line)
+    if (result) {
+      const time = result[1]
+      let words = result[2]
+      if (words == null) {
+        words = ''
+      }
+      const wordTimes = words.match(this.rxps.wordTimeAll)
+      if (!wordTimes) return
+      // console.log(wordTimes)
+      let preTimeInfo
+      for (const timeStr of wordTimes) {
+        const result = this.rxps.wordTime.exec(timeStr)
+        const wordInfo = this.getWordInfo(result[1], result[2], preTimeInfo)
+        words = words.replace(timeStr, wordInfo.timeStr)
+        if (preTimeInfo?.newTimeStr) words = words.replace(preTimeInfo.timeStr, preTimeInfo.newTimeStr)
+        preTimeInfo = wordInfo
+      }
+      this.lines.push(time + words)
+      return
+    }
+    result = this.rxps.tagLine.exec(line)
+    if (!result) return
+    if (result[1] == 'kuwo') {
+      let content = result[2]
+      if (content != null && content.includes('][')) {
+        content = content.substring(0, content.indexOf(']['))
+      }
+      const valueOf = parseInt(content, 8)
+      this.offset = Math.trunc(valueOf / 10)
+      this.offset2 = Math.trunc(valueOf % 10)
+      if (this.offset == 0 || Number.isNaN(this.offset) || this.offset2 == 0 || Number.isNaN(this.offset2)) {
+        this.isOK = false
+      }
+    } else {
+      this.tags.push(line)
+    }
+  },
+  parse(lrc) {
+    // console.log(lrc)
+    const lines = lrc.split(/\r\n|\r|\n/)
+    const tools = Object.create(this)
+    tools.isOK = true
+    tools.offset = 1
+    tools.offset2 = 1
+    tools.lines = []
+    tools.tags = []
+
+    for (const line of lines) {
+      if (!tools.isOK) throw new Error('failed')
+      tools.parseLine(line)
+    }
+    if (!tools.lines.length) return ''
+    let lrcs = tools.lines.join('\n')
+    if (tools.tags.length) lrcs = `${tools.tags.join('\n')}\n${lrcs}`
+    // console.log(lrcs)
+    return lrcs
+  },
+}
+
+
+const createAesEncrypt = (buffer, mode, key, iv) => {
+  const cipher = createCipheriv(mode, key, iv)
+  return Buffer.concat([cipher.update(buffer), cipher.final()])
+}
+
+const createAesDecrypt = (buffer, mode, key, iv) => {
+  const cipher = createDecipheriv(mode, key, iv)
+  return Buffer.concat([cipher.update(buffer), cipher.final()])
+}
+
+export const wbdCrypto = {
+  aesMode: 'aes-128-ecb',
+  aesKey: Buffer.from([112, 87, 39, 61, 199, 250, 41, 191, 57, 68, 45, 114, 221, 94, 140, 228], 'binary'),
+  aesIv: '',
+  appId: 'y67sprxhhpws',
+  decodeData(base64Result) {
+    const data = Buffer.from(decodeURIComponent(base64Result), 'base64')
+    return JSON.parse(createAesDecrypt(data, this.aesMode, this.aesKey, this.aesIv).toString())
+  },
+  createSign(data, time) {
+    const str = `${this.appId}${data}${time}`
+    return toMD5(str).toUpperCase()
+  },
+  buildParam(jsonData) {
+    const data = Buffer.from(JSON.stringify(jsonData))
+    const time = Date.now()
+
+    const encodeData = createAesEncrypt(data, this.aesMode, this.aesKey, this.aesIv).toString('base64')
+    const sign = this.createSign(encodeData, time)
+
+    return `data=${encodeURIComponent(encodeData)}&time=${time}&appId=${this.appId}&sign=${sign}`
+  },
+}
+
+
+######## renderer.js.map :: src/renderer/utils/musicSdk/kg/util.js (1367 chars)
+import { toMD5 } from '../utils'
+import { httpFetch } from '../../request'
+
+// s.content[0].lyricContent.forEach(([str]) => {
+//   console.log(str)
+// })
+
+/**
+ * 签名
+ * @param {*} params
+ * @param {*} apiver
+ */
+export const signatureParams = (params, platform = 'android', body = '') => {
+  let keyparam = 'OIlwieks28dk2k092lksi2UIkp'
+  if (platform === 'web') keyparam = 'NVPh5oo715z5DIWAeQlhMDsWXXQV4hwt'
+  let param_list = params.split('&')
+  param_list.sort()
+  let sign_params = `${keyparam}${param_list.join('')}${body}${keyparam}`
+  return toMD5(sign_params)
+}
+
+/**
+ * 创建一个适用于KG的Http请求
+ * @param {*} url
+ * @param {*} options
+ * @param {*} retryNum
+ */
+export const createHttpFetch = async(url, options, retryNum = 0) => {
+  if (retryNum > 2) throw new Error('try max num')
+  let result
+  try {
+    result = await httpFetch(url, options).promise
+  } catch (err) {
+    console.log(err)
+    return createHttpFetch(url, options, ++retryNum)
+  }
+  // console.log(result.statusCode, result.body)
+  if (result.statusCode !== 200 ||
+    (
+      result.body.error_code ??
+      result.body.errcode ??
+      result.body.err_code) != 0
+  ) return createHttpFetch(url, options, ++retryNum)
+  if (result.body.data) return result.body.data
+  if (Array.isArray(result.body.info)) return result.body
+  return result.body.info
+}
+
+
+######## renderer.js.map :: src/renderer/utils/musicSdk/wy/utils/index.js (1223 chars)
+import { httpFetch } from '../../../request'
+import { eapi } from './crypto'
+
+export const eapiRequest = (url, data) => {
+  return httpFetch('http://interface.music.163.com/eapi/batch', {
+    method: 'post',
+    headers: {
+      'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/60.0.3112.90 Safari/537.36',
+      origin: 'https://music.163.com',
+      // cookie: 'os=pc; deviceId=A9C064BB4584D038B1565B58CB05F95290998EE8B025AA2D07AE; osver=Microsoft-Windows-10-Home-China-build-19043-64bit; appver=2.5.2.197409; channel=netease; MUSIC_A=37a11f2eb9de9930cad479b2ad495b0e4c982367fb6f909d9a3f18f876c6b49faddb3081250c4980dd7e19d4bd9bf384e004602712cf2b2b8efaafaab164268a00b47359f85f22705cc95cb6180f3aee40f5be1ebf3148d888aa2d90636647d0c3061cd18d77b7a0; __csrf=05b50d54082694f945d7de75c210ef94; mode=Z7M-KP5(7)GZ; NMTID=00OZLp2VVgq9QdwokUgq3XNfOddQyIAAAF_6i8eJg; ntes_kaola_ad=1',
+    },
+    form: eapi(url, data),
+  })
+  // requestObj.promise = requestObj.promise.then(({ body }) => {
+  //   // console.log(raw)
+  //   console.log(body)
+  //   // console.log(eapiDecrypt(raw))
+  //   // return eapiDecrypt(raw)
+  //   return body
+  // })
+  // return requestObj
+}
+
+
+######## renderer.js.map :: src/renderer/utils/musicSdk/mg/utils/index.js (818 chars)
+import { httpFetch } from '../../../request'
+
+/**
+ * 创建一个适用于MG的Http请求
+ * @param {*} url
+ * @param {*} options
+ * @param {*} retryNum
+ */
+export const createHttpFetch = async(url, options, retryNum = 0) => {
+  if (retryNum > 2) throw new Error('try max num')
+  let result
+  try {
+    result = await httpFetch(url, options).promise
+  } catch (err) {
+    console.log(err)
+    return createHttpFetch(url, options, ++retryNum)
+  }
+  if (result.statusCode !== 200 ||
+    (
+      (result.body.code !== undefined
+        ? result.body.code
+        : result.body.returnCode !== undefined
+          ? result.body.returnCode
+          : result.body.code
+      ) !== '000000')
+  ) return createHttpFetch(url, options, ++retryNum)
+  if (result.body.data) return result.body.data
+  return result.body
+}
+
+
+######## renderer.js.map :: src/renderer/utils/musicSdk/tx/utils/index.js (447 chars)
+
+import { httpFetch } from '../../../request'
+import { zzcSign } from './crypto'
+
+export const signRequest = async(data) => {
+  // console.log(data)
+  const sign = await zzcSign(JSON.stringify(data))
+  // console.log('sign', sign)
+  return httpFetch(`https://u.y.qq.com/cgi-bin/musics.fcg?sign=${sign}`, {
+    method: 'post',
+    headers: {
+      'User-Agent': 'QQMusic 14090508(android 12)',
+    },
+    body: data,
+  }).promise
+}
+
+
+######## renderer.js.map :: src/renderer/utils/musicSdk/utils.js (1312 chars)
+import crypto from 'crypto'
+import dns from 'dns'
+import { decodeName } from '@renderer/utils'
+
+export const toMD5 = str => crypto.createHash('md5').update(str).digest('hex')
+
+
+const ipMap = new Map()
+export const getHostIp = hostname => {
+  const result = ipMap.get(hostname)
+  if (typeof result === 'object') return result
+  if (result === true) return
+  ipMap.set(hostname, true)
+  // console.log(hostname)
+  dns.lookup(hostname, {
+    // family: 4,
+    all: false,
+  }, (err, address, family) => {
+    if (err) return console.log(err)
+    // console.log(address, family)
+    ipMap.set(hostname, { address, family })
+  })
+}
+
+export const dnsLookup = (hostname, options, callback) => {
+  const result = getHostIp(hostname)
+  if (result) return callback(null, result.address, result.family)
+
+  dns.lookup(hostname, options, callback)
+}
+
+
+/**
+ * 格式化歌手
+ * @param singers 歌手数组
+ * @param nameKey 歌手名键值
+ * @param join 歌手分割字符
+ */
+export const formatSingerName = (singers, nameKey = 'name', join = '、') => {
+  if (Array.isArray(singers)) {
+    const singer = []
+    singers.forEach(item => {
+      let name = item[nameKey]
+      if (!name) return
+      singer.push(name)
+    })
+    return decodeName(singer.join(join))
+  }
+  return decodeName(String(singers ?? ''))
+}
+
+
+######## renderer.download.worker.js.map :: src/common/constants.ts (1723 chars)
+export const URL_SCHEME_RXP = /^lxmusic:\/\//;
+export const SPLIT_CHAR = {
+    DISLIKE_NAME: '@',
+    DISLIKE_NAME_ALIAS: '#',
+};
+export const STORE_NAMES = {
+    APP_SETTINGS: 'config_v2',
+    DATA: 'data',
+    SYNC: 'sync',
+    HOTKEY: 'hot_key',
+    USER_API: 'user_api',
+    LRC_RAW: 'lyrics',
+    LRC_EDITED: 'lyrics_edited',
+    THEME: 'theme',
+    SOUND_EFFECT: 'sound_effect',
+};
+export const APP_EVENT_NAMES = {
+    winMainName: 'win_main',
+    winLyricName: 'win_lyric',
+    trayName: 'tray',
+};
+export const LIST_IDS = {
+    DEFAULT: 'default',
+    LOVE: 'love',
+    TEMP: 'temp',
+    DOWNLOAD: 'download',
+    PLAY_LATER: null,
+};
+export const DATA_KEYS = {
+    viewPrevState: 'viewPrevState',
+    playInfo: 'playInfo',
+    searchHistoryList: 'searchHistoryList',
+    listScrollPosition: 'listScrollPosition',
+    listPrevSelectId: 'listPrevSelectId',
+    listUpdateInfo: 'listUpdateInfo',
+    ignoreVersion: 'ignoreVersion',
+    leaderboardSetting: 'leaderboardSetting',
+    songListSetting: 'songListSetting',
+    searchSetting: 'searchSetting',
+    lastStartInfo: 'lastStartInfo',
+};
+export const DEFAULT_SETTING = {
+    leaderboard: {
+        source: 'kw',
+        boardId: 'kw__16',
+    },
+    songList: {
+        source: 'kw',
+        sortId: 'new',
+        tagId: '',
+    },
+    search: {
+        temp_source: 'kw',
+        source: 'all',
+        type: 'music',
+    },
+    viewPrevState: {
+        url: '/search',
+        query: {},
+    },
+};
+export const DOWNLOAD_STATUS = {
+    RUN: 'run',
+    WAITING: 'waiting',
+    PAUSE: 'pause',
+    ERROR: 'error',
+    COMPLETED: 'completed',
+};
+export const QUALITYS = ['flac24bit', 'flac', 'wav', 'ape', '320k', '192k', '128k'];
+export const TRAY_AUTO_ID = -1;
+
+
+######## renderer.js.map :: src/common/constants.ts (1723 chars)
+export const URL_SCHEME_RXP = /^lxmusic:\/\//;
+export const SPLIT_CHAR = {
+    DISLIKE_NAME: '@',
+    DISLIKE_NAME_ALIAS: '#',
+};
+export const STORE_NAMES = {
+    APP_SETTINGS: 'config_v2',
+    DATA: 'data',
+    SYNC: 'sync',
+    HOTKEY: 'hot_key',
+    USER_API: 'user_api',
+    LRC_RAW: 'lyrics',
+    LRC_EDITED: 'lyrics_edited',
+    THEME: 'theme',
+    SOUND_EFFECT: 'sound_effect',
+};
+export const APP_EVENT_NAMES = {
+    winMainName: 'win_main',
+    winLyricName: 'win_lyric',
+    trayName: 'tray',
+};
+export const LIST_IDS = {
+    DEFAULT: 'default',
+    LOVE: 'love',
+    TEMP: 'temp',
+    DOWNLOAD: 'download',
+    PLAY_LATER: null,
+};
+export const DATA_KEYS = {
+    viewPrevState: 'viewPrevState',
+    playInfo: 'playInfo',
+    searchHistoryList: 'searchHistoryList',
+    listScrollPosition: 'listScrollPosition',
+    listPrevSelectId: 'listPrevSelectId',
+    listUpdateInfo: 'listUpdateInfo',
+    ignoreVersion: 'ignoreVersion',
+    leaderboardSetting: 'leaderboardSetting',
+    songListSetting: 'songListSetting',
+    searchSetting: 'searchSetting',
+    lastStartInfo: 'lastStartInfo',
+};
+export const DEFAULT_SETTING = {
+    leaderboard: {
+        source: 'kw',
+        boardId: 'kw__16',
+    },
+    songList: {
+        source: 'kw',
+        sortId: 'new',
+        tagId: '',
+    },
+    search: {
+        temp_source: 'kw',
+        source: 'all',
+        type: 'music',
+    },
+    viewPrevState: {
+        url: '/search',
+        query: {},
+    },
+};
+export const DOWNLOAD_STATUS = {
+    RUN: 'run',
+    WAITING: 'waiting',
+    PAUSE: 'pause',
+    ERROR: 'error',
+    COMPLETED: 'completed',
+};
+export const QUALITYS = ['flac24bit', 'flac', 'wav', 'ape', '320k', '192k', '128k'];
+export const TRAY_AUTO_ID = -1;
+
+
+######## renderer.main.worker.js.map :: src/common/constants.ts (1723 chars)
+export const URL_SCHEME_RXP = /^lxmusic:\/\//;
+export const SPLIT_CHAR = {
+    DISLIKE_NAME: '@',
+    DISLIKE_NAME_ALIAS: '#',
+};
+export const STORE_NAMES = {
+    APP_SETTINGS: 'config_v2',
+    DATA: 'data',
+    SYNC: 'sync',
+    HOTKEY: 'hot_key',
+    USER_API: 'user_api',
+    LRC_RAW: 'lyrics',
+    LRC_EDITED: 'lyrics_edited',
+    THEME: 'theme',
+    SOUND_EFFECT: 'sound_effect',
+};
+export const APP_EVENT_NAMES = {
+    winMainName: 'win_main',
+    winLyricName: 'win_lyric',
+    trayName: 'tray',
+};
+export const LIST_IDS = {
+    DEFAULT: 'default',
+    LOVE: 'love',
+    TEMP: 'temp',
+    DOWNLOAD: 'download',
+    PLAY_LATER: null,
+};
+export const DATA_KEYS = {
+    viewPrevState: 'viewPrevState',
+    playInfo: 'playInfo',
+    searchHistoryList: 'searchHistoryList',
+    listScrollPosition: 'listScrollPosition',
+    listPrevSelectId: 'listPrevSelectId',
+    listUpdateInfo: 'listUpdateInfo',
+    ignoreVersion: 'ignoreVersion',
+    leaderboardSetting: 'leaderboardSetting',
+    songListSetting: 'songListSetting',
+    searchSetting: 'searchSetting',
+    lastStartInfo: 'lastStartInfo',
+};
+export const DEFAULT_SETTING = {
+    leaderboard: {
+        source: 'kw',
+        boardId: 'kw__16',
+    },
+    songList: {
+        source: 'kw',
+        sortId: 'new',
+        tagId: '',
+    },
+    search: {
+        temp_source: 'kw',
+        source: 'all',
+        type: 'music',
+    },
+    viewPrevState: {
+        url: '/search',
+        query: {},
+    },
+};
+export const DOWNLOAD_STATUS = {
+    RUN: 'run',
+    WAITING: 'waiting',
+    PAUSE: 'pause',
+    ERROR: 'error',
+    COMPLETED: 'completed',
+};
+export const QUALITYS = ['flac24bit', 'flac', 'wav', 'ape', '320k', '192k', '128k'];
+export const TRAY_AUTO_ID = -1;
+
+
+######## renderer.js.map :: src/common/defaultSetting.ts (5758 chars)
+import path from 'node:path';
+import os from 'node:os';
+const isMac = process.platform == 'darwin';
+const isWin = process.platform == 'win32';
+const defaultSetting = {
+    version: '2.1.0',
+    'common.windowSizeId': 3,
+    'common.fontSize': 16,
+    'common.startInFullscreen': false,
+    'common.langId': null,
+    'common.apiSource': 'temp',
+    'common.sourceNameType': 'alias',
+    'common.font': '',
+    'common.isShowAnimation': true,
+    'common.randomAnimate': true,
+    'common.isAgreePact': false,
+    'common.controlBtnPosition': isMac ? 'left' : 'right',
+    'common.playBarProgressStyle': 'mini',
+    'common.transparentWindow': !isMac,
+    'common.tryAutoUpdate': true,
+    'common.showChangeLog': true,
+    'player.startupAutoPlay': false,
+    'player.togglePlayMethod': 'listLoop',
+    'player.playQuality': '128k',
+    'player.isShowTaskProgess': true,
+    'player.isShowStatusBarLyric': false,
+    'player.volume': 1,
+    'player.powerSaveBlocker': true,
+    'player.isMute': false,
+    'player.playbackRate': 1,
+    'player.preservesPitch': true,
+    'player.isMaxOutputChannelCount': false,
+    'player.mediaDeviceId': 'default',
+    'player.isMediaDeviceRemovedStopPlay': false,
+    'player.isShowLyricTranslation': false,
+    'player.isShowLyricRoma': false,
+    'player.isSwapLyricTranslationAndRoma': false,
+    'player.isS2t': false,
+    'player.isPlayLxlrc': !isMac,
+    'player.isSavePlayTime': false,
+    'player.audioVisualization': false,
+    'player.waitPlayEndStop': true,
+    'player.waitPlayEndStopTime': '',
+    'player.autoSkipOnError': true,
+    'player.isAutoCleanPlayedList': false,
+    'player.soundEffect.convolution.fileName': '',
+    'player.soundEffect.convolution.mainGain': 10,
+    'player.soundEffect.convolution.sendGain': 0,
+    'player.soundEffect.biquadFilter.hz31': 0,
+    'player.soundEffect.biquadFilter.hz62': 0,
+    'player.soundEffect.biquadFilter.hz125': 0,
+    'player.soundEffect.biquadFilter.hz250': 0,
+    'player.soundEffect.biquadFilter.hz500': 0,
+    'player.soundEffect.biquadFilter.hz1000': 0,
+    'player.soundEffect.biquadFilter.hz2000': 0,
+    'player.soundEffect.biquadFilter.hz4000': 0,
+    'player.soundEffect.biquadFilter.hz8000': 0,
+    'player.soundEffect.biquadFilter.hz16000': 0,
+    'player.soundEffect.panner.enable': false,
+    'player.soundEffect.panner.soundR': 5,
+    'player.soundEffect.panner.speed': 25,
+    'player.soundEffect.pitchShifter.playbackRate': 1,
+    'playDetail.isZoomActiveLrc': false,
+    'playDetail.isShowLyricProgressSetting': false,
+    'playDetail.style.fontSize': 140,
+    'playDetail.style.align': 'center',
+    'playDetail.isDelayScroll': true,
+    'desktopLyric.enable': false,
+    'desktopLyric.isLock': false,
+    'desktopLyric.isAlwaysOnTop': false,
+    'desktopLyric.isAlwaysOnTopLoop': false,
+    'desktopLyric.isShowTaskbar': false,
+    'desktopLyric.audioVisualization': false,
+    'desktopLyric.fullscreenHide': true,
+    'desktopLyric.pauseHide': true,
+    'desktopLyric.width': 450,
+    'desktopLyric.height': 300,
+    'desktopLyric.x': null,
+    'desktopLyric.y': null,
+    'desktopLyric.isLockScreen': isWin,
+    'desktopLyric.isDelayScroll': true,
+    'desktopLyric.scrollAlign': 'center',
+    'desktopLyric.isHoverHide': false,
+    'desktopLyric.direction': 'horizontal',
+    'desktopLyric.style.align': 'center',
+    'desktopLyric.style.font': '',
+    'desktopLyric.style.fontSize': 20,
+    'desktopLyric.style.lineGap': 15,
+    'desktopLyric.style.lyricUnplayColor': 'rgba(255, 255, 255, 1)',
+    'desktopLyric.style.lyricPlayedColor': 'rgba(7, 197, 86, 1)',
+    'desktopLyric.style.lyricShadowColor': 'rgba(0, 0, 0, 0.18)',
+    // 'desktopLyric.style.fontWeight': false,
+    'desktopLyric.style.opacity': 95,
+    'desktopLyric.style.ellipsis': false,
+    'desktopLyric.style.isZoomActiveLrc': false,
+    'desktopLyric.style.isFontWeightFont': true,
+    'desktopLyric.style.isFontWeightLine': true,
+    'desktopLyric.style.isFontWeightExtended': true,
+    'list.isClickPlayList': false,
+    'list.isShowSource': true,
+    'list.isSaveScrollLocation': true,
+    'list.addMusicLocationType': 'top',
+    'list.actionButtonsVisible': false,
+    'download.enable': false,
+    'download.isSavePathGroupByListName': false,
+    'download.savePath': path.join(os.homedir(), 'Desktop'),
+    'download.fileName': '歌名 - 歌手',
+    'download.maxDownloadNum': 3,
+    'download.skipExistFile': true,
+    'download.isDownloadLrc': false,
+    'download.isDownloadLxLrc': true,
+    'download.isDownloadTLrc': false,
+    'download.isDownloadRLrc': false,
+    'download.lrcFormat': 'utf8',
+    'download.isEmbedPic': true,
+    'download.isEmbedLyric': false,
+    'download.isEmbedLyricLx': true,
+    'download.isEmbedLyricT': false,
+    'download.isEmbedLyricR': false,
+    'download.isUseOtherSource': false,
+    'search.isShowHotSearch': false,
+    'search.isShowHistorySearch': false,
+    'search.isFocusSearchBox': false,
+    'network.proxy.enable': false,
+    'network.proxy.host': '',
+    'network.proxy.port': '',
+    'tray.enable': false,
+    // 'tray.isToTray': false,
+    'tray.themeId': 0,
+    'sync.mode': 'server',
+    'sync.enable': false,
+    'sync.server.port': '23332',
+    'sync.server.maxSsnapshotNum': 5,
+    'sync.client.host': '',
+    'openAPI.enable': false,
+    'openAPI.port': '23330',
+    'openAPI.bindLan': false,
+    // 'theme.id': 'blue_plus',
+    'theme.id': 'green',
+    'theme.lightId': 'green',
+    'theme.darkId': 'black',
+    'odc.isAutoClearSearchInput': false,
+    'odc.isAutoClearSearchList': false,
+};
+// 使用新年皮肤
+if (new Date().getMonth() < 2) {
+    defaultSetting['theme.id'] = 'happy_new_year';
+    defaultSetting['desktopLyric.style.lyricPlayedColor'] = 'rgba(255, 57, 71, 1)';
+}
+export default defaultSetting;

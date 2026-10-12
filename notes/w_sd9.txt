@@ -1,0 +1,60 @@
+﻿>>> setting_download_save_group_list_name
+g__update_unknown":"鏈煡","setting__update_unknown_tip":"鉂?鑾峰彇鏈€鏂扮増鏈俊鎭け璐ワ紝寤鸿鍘汇€屽叧浜庛€嶉〉闈㈡墦寮€椤圭洰鍙戝竷鍦板潃鏌ョ湅褰撳墠鐗堟湰鏄惁鏈€鏂?,"setting_download_save_group_list_name":"灏嗘枃浠朵繚瀛樺埌浠ュ搴斿垪琛ㄥ懡鍚嶇殑瀛愮洰褰曚腑","setting_sync_status_enabled":"宸茶繛鎺?,"song_list":"姝屽崟","songlist__import_input_btn_confirm":"鎵撳紑","songlist__import_input_show_btn":"鎵撳紑姝屽崟","songlist__import_input_tip":"杈撳叆姝屽崟閾炬帴鎴栨瓕鍗?ID","songlist__import_input_tip_1":"涓嶆敮鎸佽法婧愭墦寮€姝屽崟锛岃纭瑕佹墦寮€鐨勬瓕鍗曚笌褰撳墠閫夋嫨鐨勬瓕鍗曟潵婧愭槸鍚﹀搴?,"songlist__import_input_tip_2":"鑻ラ亣鍒版棤娉曟墦寮€鐨勬瓕鍗曢摼鎺ワ紝娆㈣繋鍙嶉
+---
+>>> setting_download_save_group_list_name
+g__update_unknown":"鏈煡","setting__update_unknown_tip":"鉂?鐛插彇鏈€鏂扮増鏈硣瑷婂け鏁楋紝寤鸿鍦ㄣ€岄棞鏂笺€嶉爜闈㈤枊鍟熼爡鐩櫦甯冧綅鍧€鏌ョ湅鐩墠鐗堟湰鏄惁鏈€鏂?,"setting_download_save_group_list_name":"灏囨獢妗堝劜瀛樺埌浠ュ皪鎳夋竻鍠懡鍚嶇殑瀛愮洰閷勪腑","setting_sync_status_enabled":"宸查€ｇ窔","song_list":"姝屽柈","songlist__import_input_btn_confirm":"闁嬪暉","songlist__import_input_show_btn":"闁嬪暉姝屽柈","songlist__import_input_tip":"杓稿叆姝屽柈閫ｇ祼鎴栨瓕鍠?ID","songlist__import_input_tip_1":"涓嶆敮鎻磋法骞冲彴闁嬪暉姝屽柈锛岃珛纰鸿獚瑕侀枊鍟熺殑姝屽柈鑸囩洰鍓嶆瓕鍠殑渚嗘簮骞冲彴鏄惁灏嶆噳","songlist__import_input_tip_2":"鑻ラ亣鍒扮劇娉曢枊鍟熺殑姝屽柈閫ｇ祼锛屾杩庡洖
+---
+>>> setting_download_save_group_list_name
+mended to go to the About page to open the project release address to check whether the current version is the latest","setting_download_save_group_list_name":"Save files to a subdirectory named after the corresponding list","setting_sync_status_enabled":"connected","song_list":"Playlists","songlist__import_input_btn_confirm":"Open","songlist__import_input_show_btn":"Open Playlist","songlist__import_input_tip":"Enter a playlist link/ID","songlist__import_input_tip_1":"Cross-service playlists are not supported. Plea
+---
+>>> setting_download_save_group_list_name
+te_unknown_tip":"鉂?斓滌嫚 氩勳爠 鞝曤炒毳?臧€鞝胳槫歆€ 氇豁枅鞀惦媹雼? 鞝曤炒 韼橃澊歆€鞐愳劀 頂勲鞝濏姼 毽措Μ鞀?欤检唽毳?鞐挫柎 順勳灛 氩勳爠鞚?斓滌嫚鞚胳 頇曥澑頃橂姅 瓴冹潉 甓岇灔頃╇媹雼?,"setting_download_save_group_list_name":"頃措嫻 氇╇ 鞚措鞚?頃橃渼 韽措崝鞐?韺岇澕 鞝€鞛?,"setting_sync_status_enabled":"鞐瓣舶霅?,"song_list":"鞛儩氇╇","songlist__import_input_btn_confirm":"鞐搓赴","songlist__import_input_show_btn":"鞛儩氇╇ 鞐搓赴","songlist__import_input_tip":"鞛儩氇╇ 毵來伂/ID毳?鞛呺牓頃橃劯鞖?,"songlist__import_input_tip_1":"雼るジ 靹滊箘鞀?臧?鞛儩氇╇鞚€ 歆€鞗愲悩歆€ 鞎婌姷雼堧嫟. 鞐措牑電?鞛儩氇╇鞚?順勳灛 靹犿儩頃?靹滊箘鞀れ棎 頃措嫻頃橂姅歆€ 頇曥澑頃?欤检劯鞖?,"songlist_
+---
+>>> setting_download_save_group_list_name
+load.skipExistFile":e}))},null,8,["model-value","label"])]),(0,o.createElementVNode)("div",An,[(0,o.createVNode)(l,{id:"setting_download_save_group_list_name","model-value":i.appSetting["download.isSavePathGroupByListName"],label:e.$t("setting_download_save_group_list_name"),"onUpdate:modelValue":t[2]||(t[2]=e=>i.updateSetting({"download.isSavePathGroupByListName":e}))},null,8,["model-value","label"])])]),(0,o.createElementVNode)("dd",{"aria-label":e.$t("setting__download_path_title")},[(0,o.createElementVNode)("h3
+---
+>>> setting_download_save_group_list_name
+id:"setting_download_save_group_list_name","model-value":i.appSetting["download.isSavePathGroupByListName"],label:e.$t("setting_download_save_group_list_name"),"onUpdate:modelValue":t[2]||(t[2]=e=>i.updateSetting({"download.isSavePathGroupByListName":e}))},null,8,["model-value","label"])])]),(0,o.createElementVNode)("dd",{"aria-label":e.$t("setting__download_path_title")},[(0,o.createElementVNode)("h3",Sn,(0,o.toDisplayString)(e.$t("setting__download_path")),1),(0,o.createElementVNode)("div",null,[(0,o.createElemen
+---
+>>> setting_download_isUseOtherSource
+download_use_other_source_tip")},null,8,["aria-label"])]),(0,o.createElementVNode)("div",null,[(0,o.createVNode)(l,{id:"setting_download_isUseOtherSource","model-value":i.appSetting["download.isUseOtherSource"],label:e.$t("setting__is_enable"),"onUpdate:modelValue":t[4]||(t[4]=e=>i.updateSetting({"download.isUseOtherSource":e}))},null,8,["model-value","label"])]),Tn]),(0,o.createElementVNode)("dd",{"aria-label":e.$t("setting__download_name_title")},[(0,o.createElementVNode)("h3",Bn,(0,o.toDisplayString)(e.$t("setti
+---
+>>> setting_download_musicName_
+entBlock)(o.Fragment,null,(0,o.renderList)(i.musicNames,e=>((0,o.openBlock)(),(0,o.createBlock)(l,{class:"gap-left",id:`setting_download_musicName_${e.value}`,key:e.value,name:"setting_download_musicName",value:e.value,need:"","model-value":i.appSetting["download.fileName"],label:e.name,"onUpdate:modelValue":t[5]||(t[5]=e=>i.updateSetting({"download.fileName":e}))},null,8,["id","value","model-value","label"]))),128))])],8,In),(0,o.createElementVNode)("dd",null,[(0,o.createElementVNode)("h3",$n,(0,o.toDisplayString)
+---
+>>> setting_download_musicName
+=>((0,o.openBlock)(),(0,o.createBlock)(l,{class:"gap-left",id:`setting_download_musicName_${e.value}`,key:e.value,name:"setting_download_musicName",value:e.value,need:"","model-value":i.appSetting["download.fileName"],label:e.name,"onUpdate:modelValue":t[5]||(t[5]=e=>i.updateSetting({"download.fileName":e}))},null,8,["id","value","model-value","label"]))),128))])],8,In),(0,o.createElementVNode)("dd",null,[(0,o.createElementVNode)("h3",$n,(0,o.toDisplayString)(e.$t("setting__download_data_embed")),1),(0,o.createElem
+---
+>>> setting_download_isEmbedPic
+o.toDisplayString)(e.$t("setting__download_data_embed")),1),(0,o.createElementVNode)("div",Dn,[(0,o.createVNode)(l,{id:"setting_download_isEmbedPic","model-value":i.appSetting["download.isEmbedPic"],label:e.$t("setting__download_embed_pic"),"onUpdate:modelValue":t[6]||(t[6]=e=>i.updateSetting({"download.isEmbedPic":e}))},null,8,["model-value","label"])]),(0,o.createElementVNode)("div",Pn,[(0,o.createVNode)(l,{id:"setting_download_isEmbedLyric","model-value":i.appSetting["download.isEmbedLyric"],label:e.$t("setting_
+---
+>>> setting_download_isEmbedLyric
+ownload.isEmbedPic":e}))},null,8,["model-value","label"])]),(0,o.createElementVNode)("div",Pn,[(0,o.createVNode)(l,{id:"setting_download_isEmbedLyric","model-value":i.appSetting["download.isEmbedLyric"],label:e.$t("setting__download_embed_lyric"),"onUpdate:modelValue":t[7]||(t[7]=e=>i.updateSetting({"download.isEmbedLyric":e}))},null,8,["model-value","label"])]),(0,o.createElementVNode)("div",Mn,[(0,o.createVNode)(l,{id:"setting_download_isEmbedLyricT",disabled:!i.appSetting["download.isEmbedLyric"],"model-value":i
+---
+>>> setting_download_isEmbedLyricT
+nload.isEmbedLyric":e}))},null,8,["model-value","label"])]),(0,o.createElementVNode)("div",Mn,[(0,o.createVNode)(l,{id:"setting_download_isEmbedLyricT",disabled:!i.appSetting["download.isEmbedLyric"],"model-value":i.appSetting["download.isEmbedLyricT"],label:e.$t("setting__download_embed_tlyric"),"onUpdate:modelValue":t[8]||(t[8]=e=>i.updateSetting({"download.isEmbedLyricT":e}))},null,8,["disabled","model-value","label"])]),(0,o.createElementVNode)("div",zn,[(0,o.createVNode)(l,{id:"setting_download_isEmbedLyricR",
+---
+>>> setting_download_isEmbedLyricR
+dLyricT":e}))},null,8,["disabled","model-value","label"])]),(0,o.createElementVNode)("div",zn,[(0,o.createVNode)(l,{id:"setting_download_isEmbedLyricR",disabled:!i.appSetting["download.isEmbedLyric"],"model-value":i.appSetting["download.isEmbedLyricR"],label:e.$t("setting__download_embed_rlyric"),"onUpdate:modelValue":t[9]||(t[9]=e=>i.updateSetting({"download.isEmbedLyricR":e}))},null,8,["disabled","model-value","label"])]),(0,o.createElementVNode)("div",On,[(0,o.createVNode)(l,{id:"setting_download_isEmbedLyricLx"
+---
+>>> setting_download_isEmbedLyricLx
+dLyricR":e}))},null,8,["disabled","model-value","label"])]),(0,o.createElementVNode)("div",On,[(0,o.createVNode)(l,{id:"setting_download_isEmbedLyricLx",disabled:!i.appSetting["download.isEmbedLyric"],"model-value":i.appSetting["download.isEmbedLyricLx"],label:e.$t("setting__download_embed_lxlyric"),"onUpdate:modelValue":t[10]||(t[10]=e=>i.updateSetting({"download.isEmbedLyricLx":e}))},null,8,["disabled","model-value","label"])])]),(0,o.createElementVNode)("dd",{"aria-label":e.$t("setting__download_lyric_title")},[
+---
+>>> setting_download_isDownloadLrc
+n,(0,o.toDisplayString)(e.$t("setting__download_lyric")),1),(0,o.createElementVNode)("div",Un,[(0,o.createVNode)(l,{id:"setting_download_isDownloadLrc","model-value":i.appSetting["download.isDownloadLrc"],label:e.$t("setting__is_enable"),"onUpdate:modelValue":t[11]||(t[11]=e=>i.updateSetting({"download.isDownloadLrc":e}))},null,8,["model-value","label"])]),(0,o.createElementVNode)("div",jn,[(0,o.createVNode)(l,{id:"setting_download_isDownloadTLrc",disabled:!i.appSetting["download.isDownloadLrc"],"model-value":i.app
+---
+>>> setting_download_isDownloadTLrc
+load.isDownloadLrc":e}))},null,8,["model-value","label"])]),(0,o.createElementVNode)("div",jn,[(0,o.createVNode)(l,{id:"setting_download_isDownloadTLrc",disabled:!i.appSetting["download.isDownloadLrc"],"model-value":i.appSetting["download.isDownloadTLrc"],label:e.$t("setting__download_tlyric"),"onUpdate:modelValue":t[12]||(t[12]=e=>i.updateSetting({"download.isDownloadTLrc":e}))},null,8,["disabled","model-value","label"])]),(0,o.createElementVNode)("div",Fn,[(0,o.createVNode)(l,{id:"setting_download_isDownloadRLrc"
+---
+>>> setting_download_isDownloadRLrc
+oadTLrc":e}))},null,8,["disabled","model-value","label"])]),(0,o.createElementVNode)("div",Fn,[(0,o.createVNode)(l,{id:"setting_download_isDownloadRLrc",disabled:!i.appSetting["download.isDownloadLrc"],"model-value":i.appSetting["download.isDownloadRLrc"],label:e.$t("setting__download_rlyric"),"onUpdate:modelValue":t[13]||(t[13]=e=>i.updateSetting({"download.isDownloadRLrc":e}))},null,8,["disabled","model-value","label"])]),(0,o.createElementVNode)("div",Hn,[(0,o.createVNode)(l,{id:"setting_download_isDownloadLxLrc
+---
+>>> setting_download_isDownloadLxLrc
+oadRLrc":e}))},null,8,["disabled","model-value","label"])]),(0,o.createElementVNode)("div",Hn,[(0,o.createVNode)(l,{id:"setting_download_isDownloadLxLrc",disabled:!i.appSetting["download.isDownloadLrc"],"model-value":i.appSetting["download.isDownloadLxLrc"],label:e.$t("setting__download_lxlyric"),"onUpdate:modelValue":t[14]||(t[14]=e=>i.updateSetting({"download.isDownloadLxLrc":e}))},null,8,["disabled","model-value","label"])])],8,qn),(0,o.createElementVNode)("dd",null,[(0,o.createElementVNode)("h3",Kn,[(0,o.create
+---
+>>> setting_download_lrcFormat_
+Block)(o.Fragment,null,(0,o.renderList)(i.lrcFormatList,e=>((0,o.openBlock)(),(0,o.createBlock)(l,{class:"gap-left",id:`setting_download_lrcFormat_${e.id}`,key:e.id,name:"setting_download_lrcFormat",need:"","model-value":i.appSetting["download.lrcFormat"],value:e.id,label:e.name,"onUpdate:modelValue":t[15]||(t[15]=e=>i.updateSetting({"download.lrcFormat":e}))},null,8,["id","model-value","value","label"]))),128))])])],64)}],["__cssModules",Xn]]),Qn={id:"sync"},Jn=["aria-label"],eo={id:"sync_mode"};const to={class:"p
+---
+>>> setting_download_lrcFormat
+List,e=>((0,o.openBlock)(),(0,o.createBlock)(l,{class:"gap-left",id:`setting_download_lrcFormat_${e.id}`,key:e.id,name:"setting_download_lrcFormat",need:"","model-value":i.appSetting["download.lrcFormat"],value:e.id,label:e.name,"onUpdate:modelValue":t[15]||(t[15]=e=>i.updateSetting({"download.lrcFormat":e}))},null,8,["id","model-value","value","label"]))),128))])])],64)}],["__cssModules",Xn]]),Qn={id:"sync"},Jn=["aria-label"],eo={id:"sync_mode"};const to={class:"p small"},no={class:"p small"},oo={class:"p small"},
+---

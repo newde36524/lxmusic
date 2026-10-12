@@ -1,0 +1,209 @@
+######## renderer.download.worker.js.map :: src/renderer/worker/download/utils.ts (3287 chars)
+import { DOWNLOAD_STATUS, QUALITYS } from '@common/constants';
+import { filterFileName } from '@common/utils/common';
+import { buildLyrics } from './lrcTool';
+import fs from 'fs';
+import { clipFileNameLength, clipNameLength, formatMusicName } from '@common/utils/tools';
+/**
+ * 保存歌词文件
+ */
+export const saveLrc = async (lrcData, info) => {
+    const iconv = (await import('iconv-lite')).default;
+    const lrc = buildLyrics(lrcData, info.downloadLxlrc, info.downloadTlrc, info.downloadRlrc);
+    switch (info.format) {
+        case 'gbk':
+            fs.writeFile(info.filePath, iconv.encode(lrc, 'gbk', { addBOM: true }), err => {
+                if (err)
+                    console.log(err);
+            });
+            break;
+        case 'utf8':
+        default:
+            fs.writeFile(info.filePath, iconv.encode(lrc, 'utf8', { addBOM: true }), err => {
+                if (err)
+                    console.log(err);
+            });
+            break;
+    }
+};
+export const getExt = (type) => {
+    switch (type) {
+        case 'ape':
+            return 'ape';
+        case 'flac':
+        case 'flac24bit':
+            return 'flac';
+        case 'wav':
+            return 'wav';
+        case '128k':
+        case '192k':
+        case '320k':
+        default:
+            return 'mp3';
+    }
+};
+/**
+ * 获取音乐音质
+ * @param musicInfo
+ * @param type
+ * @param qualityList
+ */
+export const getMusicType = (musicInfo, type, qualityList) => {
+    let list = qualityList[musicInfo.source];
+    if (!list)
+        return '128k';
+    if (!list.includes(type))
+        type = list[list.length - 1];
+    const rangeType = QUALITYS.slice(QUALITYS.indexOf(type));
+    for (const type of rangeType) {
+        if (musicInfo.meta._qualitys[type])
+            return type;
+    }
+    return '128k';
+};
+// const checkExistList = (list: LX.Download.ListItem[], musicInfo: LX.Music.MusicInfo, type: LX.Quality, ext: string): boolean => {
+//   return list.some(s => s.id === musicInfo.id && (s.metadata.type === type || s.metadata.ext === ext))
+// }
+export const createDownloadInfo = (musicInfo, type, fileName, qualityList, listId) => {
+    type = getMusicType(musicInfo, type, qualityList);
+    let ext = getExt(type);
+    const key = `${musicInfo.id}_${type}_${ext}`;
+    // if (checkExistList(list, musicInfo, type, ext)) return null
+    const downloadInfo = {
+        id: key,
+        isComplate: false,
+        status: DOWNLOAD_STATUS.WAITING,
+        statusText: '待下载',
+        downloaded: 0,
+        total: 0,
+        progress: 0,
+        speed: '',
+        writeQueue: 0,
+        metadata: {
+            musicInfo,
+            url: null,
+            quality: type,
+            ext,
+            filePath: '',
+            listId,
+            fileName: filterFileName(`${clipFileNameLength(formatMusicName(fileName, musicInfo.name, clipNameLength(musicInfo.singer)))}.${ext}`),
+        },
+    };
+    // downloadInfo.metadata.filePath = joinPath(savePath, downloadInfo.metadata.fileName)
+    // commit('addTask', downloadInfo)
+    // 删除同路径下的同名文件
+    // TODO
+    // void removeFile(downloadInfo.metadata.filePath)
+    // .catch(err => {
+    //   if (err.code !== 'ENOENT') {
+    //     return commit('setStatusText', { downloadInfo, text: '文件删除失败' })
+    //   }
+    // })
+    return downloadInfo;
+};
+
+
+######## renderer.download.worker.js.map :: src/renderer/worker/download/common.ts (361 chars)
+import { setMeta } from '@common/utils/musicMeta';
+import { buildLyrics } from './lrcTool';
+export const writeMeta = ({ filePath, isEmbedLyricLx, isEmbedLyricT, isEmbedLyricR, ...meta }, lyric, proxy) => {
+    setMeta(filePath, { ...meta, lyrics: buildLyrics(lyric, isEmbedLyricLx, isEmbedLyricT, isEmbedLyricR) }, proxy);
+};
+export { saveLrc } from './utils';
+
+
+######## renderer.download.worker.js.map :: src/renderer/worker/download/lrcTool.ts (3334 chars)
+const timeFieldExp = /^(?:\[[\d:.]+\])+/g;
+const timeExp = /\d{1,3}(:\d{1,3}){0,2}(?:\.\d{1,3})/g;
+const t_rxp_1 = /^0+(\d+)/;
+const t_rxp_2 = /:0+(\d+)/g;
+const t_rxp_3 = /\.0+(\d+)/;
+const formatTimeLabel = (label) => {
+    return label.replace(t_rxp_1, '$1')
+        .replace(t_rxp_2, ':$1')
+        .replace(t_rxp_3, '.$1');
+};
+const filterExtendedLyricLabel = (lrcTimeLabels, extendedLyric) => {
+    const extendedLines = extendedLyric.split(/\r\n|\n|\r/);
+    const lines = [];
+    for (let i = 0; i < extendedLines.length; i++) {
+        let line = extendedLines[i].trim();
+        let result = timeFieldExp.exec(line);
+        if (!result)
+            continue;
+        const timeField = result[0];
+        const text = line.replace(timeFieldExp, '').trim();
+        if (!text)
+            continue;
+        let times = timeField.match(timeExp);
+        if (times == null)
+            continue;
+        const newTimes = times.filter(time => {
+            const timeStr = formatTimeLabel(time);
+            return lrcTimeLabels.has(timeStr);
+        });
+        if (newTimes.length != times.length) {
+            if (!newTimes.length)
+                continue;
+            line = `[${newTimes.join('][')}]${text}`;
+        }
+        lines.push(line);
+    }
+    return lines.join('\n');
+};
+const parseLrcTimeLabel = (lrc) => {
+    const lines = lrc.split(/\r\n|\n|\r/);
+    const linesSet = new Set();
+    const length = lines.length;
+    for (let i = 0; i < length; i++) {
+        const line = lines[i].trim();
+        let result = timeFieldExp.exec(line);
+        if (result) {
+            const timeField = result[0];
+            const text = line.replace(timeFieldExp, '').trim();
+            if (text) {
+                const times = timeField.match(timeExp);
+                if (times == null)
+                    continue;
+                for (let time of times) {
+                    linesSet.add(formatTimeLabel(time));
+                }
+            }
+        }
+    }
+    return linesSet;
+};
+const buildAwlyric = (lrcData) => {
+    let lrc = [];
+    if (lrcData.lyric) {
+        lrc.push(`lrc:${Buffer.from(lrcData.lyric.trim(), 'utf-8').toString('base64')}`);
+    }
+    if (lrcData.tlyric) {
+        lrc.push(`tlrc:${Buffer.from(lrcData.tlyric.trim(), 'utf-8').toString('base64')}`);
+    }
+    if (lrcData.rlyric) {
+        lrc.push(`rlrc:${Buffer.from(lrcData.rlyric.trim(), 'utf-8').toString('base64')}`);
+    }
+    if (lrcData.lxlyric) {
+        lrc.push(`awlrc:${Buffer.from(lrcData.lxlyric.trim(), 'utf-8').toString('base64')}`);
+    }
+    return lrc.length ? `[awlrc:${lrc.join(',')}]` : '';
+};
+export const buildLyrics = (lrcData, downloadAwlrc, downloadTlrc, downloadRlrc) => {
+    if (!lrcData.tlyric && !lrcData.rlyric && !lrcData.lxlyric)
+        return lrcData.lyric;
+    const lrcTimeLabels = parseLrcTimeLabel(lrcData.lyric);
+    let lrc = lrcData.lyric;
+    if (downloadTlrc && lrcData.tlyric) {
+        lrc = lrc.trim() + `\n\n${filterExtendedLyricLabel(lrcTimeLabels, lrcData.tlyric)}\n`;
+    }
+    if (downloadRlrc && lrcData.rlyric) {
+        lrc = lrc.trim() + `\n\n${filterExtendedLyricLabel(lrcTimeLabels, lrcData.rlyric)}\n`;
+    }
+    if (downloadAwlrc) {
+        const awlrc = buildAwlyric(lrcData);
+        if (awlrc)
+            lrc = lrc.trim() + `\n\n${awlrc}\n`;
+    }
+    return lrc;
+};

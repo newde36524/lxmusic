@@ -1,0 +1,15 @@
+﻿file: C:\lx-rl\out\tags-test\����.mp3 (4329244 bytes)
+id3v2.4 tag: 12007 bytes of frames, audio starts at 12017
+TIT2  size=9
+    text='����'
+TPE1  size=11
+    text='�ܽ���'
+TALB  size=11
+    text='Ҷ����'
+USLT  size=2862
+    lang=zho lyric='[00:00.000]����  - �ܽ���\n[00:00.000]���ʣ��ܽ���\n[00:00.000]�������ܽ���\n[00:05.309]����'
+APIC  size=9064
+    mime=image/webp type=3 9050 bytes
+    magic=b'RIFFR#\x00\x00WEBP'
+audio bytes after tag: 4317227
+tag structure OK

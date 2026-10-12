@@ -1,0 +1,6 @@
+﻿file: C:\lx-rl\out\tags-test\����.mp3 (4317311 bytes)
+id3v2.3 tag: 74 bytes of frames, audio starts at 84
+TLEN  size=7
+TSSE  size=47
+audio bytes after tag: 4317227
+tag structure OK

@@ -234,9 +234,102 @@ func (t *Tencent) toSong(e txItem) *Song {
 	}
 }
 
-// Detail is a no-op: the search payload already carries the full rendition
-// matrix, and the per-song detail endpoint is the one the User API plugin owns.
-func (t *Tencent) Detail(ctx context.Context, s *Song) error { return nil }
+// Detail refetches the song through music.pf_song_detail_svr.get_song_detail_yqq,
+// the endpoint the desktop app calls to refresh a song's rendition matrix. It
+// needs the songmid, not the media_mid, so a reference parsed from "tx:<mid>"
+// has to fall back to the media_mid: the two coincide for most songs and the
+// service answers for both.
+//
+// It is not part of the audio-url path — that is what the User API owns — so
+// Detail works without a user source and without login.
+func (t *Tencent) Detail(ctx context.Context, s *Song) error {
+	mid := s.MID
+	if mid == "" {
+		mid = s.ID
+	}
+	if mid == "" {
+		return fmt.Errorf("tx: no songmid for %s", s.KeyString())
+	}
+	body := map[string]any{
+		"comm": map[string]any{"ct": "19", "cv": "1859", "uin": "0"},
+		"req": map[string]any{
+			"module": "music.pf_song_detail_svr",
+			"method": "get_song_detail_yqq",
+			"param":  map[string]any{"song_type": 0, "song_mid": mid},
+		},
+	}
+	var resp struct {
+		Code FInt `json:"code"`
+		Req  struct {
+			Code FInt `json:"code"`
+			Data struct {
+				Track txItem `json:"track_info"`
+			} `json:"data"`
+		} `json:"req"`
+	}
+	if err := t.C.PostJSON(ctx, txMusicuURL, map[string]string{
+		"User-Agent": "Mozilla/5.0 (compatible; MSIE 9.0; Windows NT 6.1; WOW64; Trident/5.0)",
+	}, body, &resp); err != nil {
+		return err
+	}
+	if resp.Code != 0 || resp.Req.Code != 0 {
+		return fmt.Errorf("tx: detail code=%d/%d for %s", resp.Code, resp.Req.Code, s.KeyString())
+	}
+	e := resp.Req.Data.Track
+	if string(e.File.MediaMid) == "" {
+		return fmt.Errorf("tx: no track_info for %s", s.KeyString())
+	}
+	if s.Name == "" {
+		s.Name = string(e.Title)
+	}
+	singers := make([]string, 0, len(e.Singer))
+	for _, a := range e.Singer {
+		if v := string(a.Name); v != "" {
+			singers = append(singers, v)
+		}
+	}
+	if len(singers) > 0 {
+		s.Singer = strings.Join(singers, "、")
+	}
+	albumMid := string(e.Album.Mid)
+	if s.Album == "" {
+		s.Album = string(e.Album.Name)
+	}
+	if s.AlbumID == "" {
+		s.AlbumID = albumMid
+	}
+	if s.Duration == 0 {
+		s.Duration = int(e.Interval)
+	}
+	if s.MID == "" {
+		s.MID = string(e.Mid)
+	}
+	if s.NumericID == "" {
+		s.NumericID = string(e.ID)
+	}
+	if s.ID == "" {
+		s.ID = string(e.File.MediaMid)
+	}
+	// Merge without duplicating a tier the search already announced.
+	merge := func(qt string, size FInt) {
+		if size == 0 || contains(qualityTypes(s.Qualities), qt) {
+			return
+		}
+		s.Qualities = append(s.Qualities, Quality{Type: qt, Size: int64(size)})
+	}
+	merge(Q128, e.File.Size128mp3)
+	merge(Q320, e.File.Size320mp3)
+	merge(QFlac, e.File.SizeFlac)
+	merge(QFlac24, e.File.SizeHires)
+	if s.Pic == "" {
+		if albumMid != "" && albumMid != "空" {
+			s.Pic = fmt.Sprintf(txPicAlbum, albumMid)
+		} else if len(e.Singer) > 0 {
+			s.Pic = fmt.Sprintf(txPicSinger, string(e.Singer[0].Mid))
+		}
+	}
+	return nil
+}
 
 // Pic prefers the album cover and falls back to the first singer's headshot.
 func (t *Tencent) Pic(ctx context.Context, s *Song) (string, error) {
@@ -322,7 +415,11 @@ func (t *Tencent) Lyric(ctx context.Context, s *Song) (*Lyric, error) {
 
 // MusicURL resolves a stream URL through musicurl.fcgi. Tencent rotates this
 // endpoint regularly and usually needs a logged-in uin to issue a vkey, which
-// the desktop app gets from its User API plugin; this is the anonymous path.
+// the desktop app gets from its User API plugin; this is the anonymous path. It
+// is dead as of 2026-10-12 for a stronger reason than gating — u.qq.com no
+// longer resolves at all, so the request cannot even be sent. Kept for the same
+// reason as the netease path: the failure stays readable, and a working reply
+// would be picked up instead of ignored.
 func (t *Tencent) MusicURL(ctx context.Context, s *Song, quality Quality) (*PlayerURL, error) {
 	bitrate := int64(128)
 	switch quality.Type {

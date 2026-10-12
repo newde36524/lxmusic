@@ -1,0 +1,261 @@
+######## renderer.js.map :: src/renderer/store/setting.ts (2510 chars)
+import { reactive, computed } from '@common/utils/vueTools';
+import defaultSetting from '@common/defaultSetting';
+import { updateSetting as saveSetting } from '@renderer/utils/ipc';
+export const appSetting = window.lxData.appSetting = reactive({ ...defaultSetting });
+export const isShowAnimation = computed(() => {
+    return appSetting['common.isShowAnimation'];
+});
+export const initSetting = (newSetting) => {
+    mergeSetting(newSetting);
+};
+export const mergeSetting = (newSetting) => {
+    for (const [key, value] of Object.entries(newSetting)) {
+        // @ts-expect-error
+        appSetting[key] = value;
+    }
+};
+export const updateSetting = window.lxData.updateSetting = (setting) => {
+    // console.warn(setting)
+    void saveSetting(setting);
+};
+/**
+ * 保存是否同意协议
+ * @param isAgreePact 是否同意协议
+ */
+export const saveAgreePact = (isAgreePact) => {
+    updateSetting({ 'common.isAgreePact': isAgreePact });
+};
+/**
+ * 保存音频输出id
+ * @param id 媒体驱动id
+ */
+export const saveMediaDeviceId = (id) => {
+    updateSetting({ 'player.mediaDeviceId': id });
+};
+/**
+ * 保存音量大小
+ * @param volume 音量
+ */
+export const saveVolume = (volume) => {
+    updateSetting({ 'player.volume': volume });
+};
+/**
+ * 设置是否静音
+ * @param isMute 是否静音
+ */
+export const saveVolumeIsMute = (isMute) => {
+    updateSetting({ 'player.isMute': isMute });
+};
+/**
+ * 设置播放速率
+ * @param rate 播放速率
+ */
+export const savePlaybackRate = (rate) => {
+    updateSetting({ 'player.playbackRate': rate });
+};
+/**
+ * 设置是否开启桌面歌词
+ * @param enabled
+ */
+export const setVisibleDesktopLyric = (enabled) => {
+    updateSetting({ 'desktopLyric.enable': enabled });
+};
+/**
+ * 设置是否锁定桌面歌词
+ * @param isLock
+ */
+export const setLockDesktopLyric = (isLock) => {
+    updateSetting({ 'desktopLyric.isLock': isLock });
+};
+/**
+ * 设置切歌模式
+ * @param mode
+ */
+export const setTogglePlayMode = (mode) => {
+    updateSetting({ 'player.togglePlayMethod': mode });
+};
+/**
+ * 设置API id
+ * @param sourceId
+ */
+export const setApiSource = (sourceId) => {
+    updateSetting({ 'common.apiSource': sourceId });
+};
+/**
+ * 设置播放详情页歌词字体大小
+ * @param size 字体大小
+ */
+export const setPlayDetailLyricFont = (size) => {
+    updateSetting({ 'playDetail.style.fontSize': size });
+};
+/**
+ * 设置播放详情页歌词对齐方式
+ * @param align 对齐方式
+ */
+export const setPlayDetailLyricAlign = (align) => {
+    updateSetting({ 'playDetail.style.align': align });
+};
+/**
+ * 设置播放详情页音频可视化
+ * @param enable 是否启用
+ */
+export const setEnableAudioVisualization = (enable) => {
+    updateSetting({ 'player.audioVisualization': enable });
+};
+
+
+######## renderer.js.map :: src/renderer/views/Search/index.vue (540 chars)
+import { render } from "./index.vue?vue&type=template&id=6a4f63d6"
+import script from "./index.vue?vue&type=script&lang=js"
+export * from "./index.vue?vue&type=script&lang=js"
+
+const cssModules = {}
+import style0 from "./index.vue?vue&type=style&index=0&id=6a4f63d6&lang=less&module=true"
+cssModules["$style"] = style0
+
+import exportComponent from "../../../../node_modules/vue-loader/dist/exportHelper.js"
+const __exports__ = /*#__PURE__*/exportComponent(script, [['render',render],['__cssModules',cssModules]])
+
+export default __exports__
+
+######## renderer.js.map :: src/renderer/views/Search/MusicList/index.vue (480 chars)
+import script from "./index.vue?vue&type=script&setup=true&lang=ts"
+export * from "./index.vue?vue&type=script&setup=true&lang=ts"
+
+const cssModules = {}
+import style0 from "./index.vue?vue&type=style&index=0&id=0633d551&lang=less&module=true"
+cssModules["$style"] = style0
+
+import exportComponent from "../../../../../node_modules/vue-loader/dist/exportHelper.js"
+const __exports__ = /*#__PURE__*/exportComponent(script, [['__cssModules',cssModules]])
+
+export default __exports__
+
+######## renderer.js.map :: src/renderer/views/Search/SongListList/index.vue (480 chars)
+import script from "./index.vue?vue&type=script&setup=true&lang=ts"
+export * from "./index.vue?vue&type=script&setup=true&lang=ts"
+
+const cssModules = {}
+import style0 from "./index.vue?vue&type=style&index=0&id=a2b1bc28&lang=less&module=true"
+cssModules["$style"] = style0
+
+import exportComponent from "../../../../../node_modules/vue-loader/dist/exportHelper.js"
+const __exports__ = /*#__PURE__*/exportComponent(script, [['__cssModules',cssModules]])
+
+export default __exports__
+
+######## renderer.js.map :: src/renderer/views/Search/components/BlankView.vue (492 chars)
+import script from "./BlankView.vue?vue&type=script&setup=true&lang=js"
+export * from "./BlankView.vue?vue&type=script&setup=true&lang=js"
+
+const cssModules = {}
+import style0 from "./BlankView.vue?vue&type=style&index=0&id=cfef0260&lang=less&module=true"
+cssModules["$style"] = style0
+
+import exportComponent from "../../../../../node_modules/vue-loader/dist/exportHelper.js"
+const __exports__ = /*#__PURE__*/exportComponent(script, [['__cssModules',cssModules]])
+
+export default __exports__
+
+######## renderer.js.map :: src/renderer/views/Search/MusicList/useList.ts (1756 chars)
+import { LIST_IDS } from '@common/constants';
+import { ref } from '@common/utils/vueTools';
+import { playList } from '@renderer/core/player/action';
+import { getListMusics, addListMusics } from '@renderer/store/list/action';
+import { addHistoryWord } from '@renderer/store/search/action';
+// import { useI18n } from '@renderer/plugins/i18n'
+// import { } from '@renderer/store/search/state'
+import { search as searchMusic, listInfos } from '@renderer/store/search/music';
+import { assertApiSupport } from '@renderer/store/utils';
+export default () => {
+    const listRef = ref(null);
+    const listInfo = ref({
+        page: 1,
+        maxPage: 0,
+        limit: 30,
+        total: 0,
+        list: [],
+        key: null,
+        noItemLabel: '',
+    });
+    const search = (text, source, page) => {
+        listInfo.value = listInfos[source];
+        if (text.length)
+            void addHistoryWord(text);
+        void searchMusic(text, page, source).then((list) => {
+            if (list.length) {
+                setTimeout(() => {
+                    if (listRef.value)
+                        listRef.value.scrollToTop();
+                });
+            }
+        });
+    };
+    const handlePlayList = async (index) => {
+        let targetSong = listInfo.value.list[index];
+        if (!assertApiSupport(targetSong.source))
+            return;
+        const defaultListMusics = await getListMusics(LIST_IDS.DEFAULT);
+        await addListMusics(LIST_IDS.DEFAULT, [targetSong]);
+        let targetIndex = defaultListMusics.findIndex(s => s.id === targetSong.id);
+        if (targetIndex > -1)
+            playList(LIST_IDS.DEFAULT, targetIndex);
+    };
+    return {
+        listRef,
+        listInfo,
+        search,
+        handlePlayList,
+    };
+};
+
+
+######## renderer.js.map :: src/renderer/views/Search/SongListList/useList.ts (1611 chars)
+import { onBeforeRouteLeave } from '@common/utils/vueRouter';
+import { ref, nextTick } from '@common/utils/vueTools';
+import { addHistoryWord } from '@renderer/store/search/action';
+import { search as searchSongList, listInfos } from '@renderer/store/search/songlist';
+export default () => {
+    const listRef = ref(null);
+    const listInfo = ref({
+        page: 1,
+        limit: 30,
+        total: 0,
+        list: [],
+        key: null,
+        noItemLabel: '',
+        tagId: '',
+        sortId: '',
+    });
+    const search = (text, source, page) => {
+        // console.log(text, source, page)
+        listInfo.value = listInfos[source];
+        if (text.length)
+            void addHistoryWord(text);
+        void searchSongList(text, page, source).then((list) => {
+            // console.log(list)
+            if (listInfo.value.key == window.lx.songListInfo.searchKey && window.lx.songListInfo.searchPosition) {
+                void nextTick(() => {
+                    listRef.value?.scrollTo(window.lx.songListInfo.searchPosition);
+                });
+            }
+            else if (list.length && listRef.value) {
+                window.lx.songListInfo.searchKey = null;
+                void nextTick(() => {
+                    listRef.value.scrollTo(0);
+                });
+            }
+        });
+    };
+    onBeforeRouteLeave(() => {
+        window.lx.songListInfo.searchKey = listInfo.value.key;
+        if (listRef.value)
+            window.lx.songListInfo.searchPosition = listRef.value.getScrollTop();
+    });
+    return {
+        listRef,
+        listInfo,
+        search,
+    };
+};

@@ -1,0 +1,589 @@
+######## renderer.js.map :: src/renderer/views/List/MusicList/useSearch.js (1006 chars)
+import { ref, onBeforeUnmount } from '@common/utils/vueTools'
+
+export default ({ setSelectedIndex, handlePlayMusic, listRef }) => {
+  const isShowSearchBar = ref(false)
+  const searchList = ref([])
+
+  const handleShowSearchBar = () => {
+    isShowSearchBar.value = true
+  }
+
+  const handleMusicSearchAction = ({ action, data: { index, isPlay } = {} }) => {
+    isShowSearchBar.value = false
+    switch (action) {
+      case 'listClick':
+        if (index < 0) return
+        listRef.value.scrollToIndex(index, -150, true, () => {
+          setSelectedIndex(index)
+          setTimeout(() => {
+            setSelectedIndex(-1)
+            if (isPlay) handlePlayMusic(index)
+          }, 600)
+        })
+        break
+    }
+  }
+
+  window.key_event.on('key_mod+f_down', handleShowSearchBar)
+
+  onBeforeUnmount(() => {
+    window.key_event.off('key_mod+f_down', handleShowSearchBar)
+  })
+
+  return {
+    isShowSearchBar,
+    searchList,
+    handleMusicSearchAction,
+  }
+}
+
+
+######## renderer.js.map :: src/renderer/utils/music.ts (6617 chars)
+import { checkPath, joinPath, extname, basename, readFile, getFileStats } from '@common/utils/nodejs';
+import { formatPlayTime } from '@common/utils/common';
+import { decodeKrc } from '@common/utils/lyricUtils/kg';
+export const checkDownloadFileAvailable = async (musicInfo, savePath) => {
+    return musicInfo.isComplate && !/\.ape$/.test(musicInfo.metadata.fileName) &&
+        (await checkPath(musicInfo.metadata.filePath) || await checkPath(joinPath(savePath, musicInfo.metadata.fileName)));
+};
+export const checkLocalFileAvailable = async (musicInfo) => {
+    return checkPath(musicInfo.meta.filePath);
+};
+/**
+ * 检查音乐文件是否存在
+ * @param musicInfo
+ * @param savePath
+ */
+export const checkMusicFileAvailable = async (musicInfo, savePath) => {
+    if ('progress' in musicInfo) {
+        return checkDownloadFileAvailable(musicInfo, savePath);
+    }
+    else if (musicInfo.source == 'local') {
+        return checkLocalFileAvailable(musicInfo);
+    }
+    else
+        return true;
+};
+export const getDownloadFilePath = async (musicInfo, savePath) => {
+    if (musicInfo.isComplate && !/\.ape$/.test(musicInfo.metadata.fileName)) {
+        if (await checkPath(musicInfo.metadata.filePath))
+            return musicInfo.metadata.filePath;
+        const path = joinPath(savePath, musicInfo.metadata.fileName);
+        if (await checkPath(path))
+            return path;
+    }
+    return '';
+};
+export const getLocalFilePath = async (musicInfo) => {
+    return (await checkPath(musicInfo.meta.filePath)) ? musicInfo.meta.filePath : '';
+};
+/**
+ * 获取音乐文件路径
+ * @param musicInfo
+ * @param savePath
+ * @returns
+ */
+export const getMusicFilePath = async (musicInfo, savePath) => {
+    if ('progress' in musicInfo) {
+        return getDownloadFilePath(musicInfo, savePath);
+    }
+    else if (musicInfo.source == 'local') {
+        return getLocalFilePath(musicInfo);
+    }
+    return '';
+};
+/**
+ * 创建本地音乐信息对象
+ * @param path 文件路径
+ * @returns
+ */
+export const createLocalMusicInfo = async (path) => {
+    if (!await checkPath(path))
+        return null;
+    const { parseFile } = await import('music-metadata');
+    let metadata;
+    try {
+        metadata = await parseFile(path);
+    }
+    catch (err) {
+        console.log(err);
+        return null;
+    }
+    // console.log(metadata)
+    let ext = extname(path);
+    // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
+    let name = (metadata.common.title || basename(path, ext)).trim();
+    let singer = metadata.common.artists?.length ? metadata.common.artists.map(a => a.trim()).join('、') : '';
+    let interval = metadata.format.duration ? formatPlayTime(metadata.format.duration) : '';
+    let albumName = metadata.common.album?.trim() ?? '';
+    return {
+        id: path,
+        name,
+        singer,
+        source: 'local',
+        interval,
+        meta: {
+            albumName,
+            filePath: path,
+            songId: path,
+            picUrl: '',
+            ext: ext.replace(/^\./, ''),
+        },
+    };
+};
+let prevFileInfo = {
+    path: '',
+    promise: Promise.resolve(null),
+};
+const getFileMetadata = async (path) => {
+    if (prevFileInfo.path == path)
+        return prevFileInfo.promise;
+    prevFileInfo.path = path;
+    return prevFileInfo.promise = checkPath(path).then(async (isExist) => {
+        return isExist ? import('music-metadata').then(async ({ parseFile }) => parseFile(path)).catch(err => {
+            console.log(err);
+            return null;
+        }) : null;
+    });
+};
+/**
+ * 获取歌曲文件封面图片
+ * @param path 路径
+ */
+export const getLocalMusicFilePic = async (path) => {
+    const filePath = new RegExp('\\' + extname(path) + '$');
+    let picPath = path.replace(filePath, '.jpg');
+    let stats = await getFileStats(picPath);
+    if (stats)
+        return picPath;
+    picPath = path.replace(filePath, '.png');
+    stats = await getFileStats(picPath);
+    if (stats)
+        return picPath;
+    const metadata = await getFileMetadata(path);
+    if (!metadata)
+        return null;
+    const { selectCover } = await import('music-metadata');
+    return selectCover(metadata.common.picture);
+};
+/**
+ * 获取歌曲文件歌词
+ * @param path 路径
+ */
+export const getLocalMusicFileLyric = async (path) => {
+    // 尝试读取同目录下的同名lrc文件
+    const filePath = new RegExp('\\' + extname(path) + '$');
+    let lrcPath = path.replace(filePath, '.lrc');
+    let stats = await getFileStats(lrcPath);
+    // console.log(lrcPath, stats)
+    if (stats && stats.size < 1024 * 1024 * 10) {
+        const lrcBuf = await readFile(lrcPath);
+        const { detect } = await import('jschardet');
+        const { confidence, encoding } = detect(lrcBuf);
+        console.log('lrc file encoding', confidence, encoding);
+        if (confidence > 0.8) {
+            const iconv = (await import('iconv-lite')).default;
+            if (iconv.encodingExists(encoding)) {
+                const lrc = iconv.decode(lrcBuf, encoding);
+                if (lrc) {
+                    return {
+                        lyric: lrc,
+                    };
+                }
+            }
+        }
+    }
+    // 尝试读取同目录下的同名krc文件
+    lrcPath = path.replace(filePath, '.krc');
+    stats = await getFileStats(lrcPath);
+    console.log(lrcPath, stats?.size);
+    if (stats && stats.size < 1024 * 1024 * 10) {
+        const lrcBuf = await readFile(lrcPath);
+        try {
+            return await decodeKrc(lrcBuf);
+        }
+        catch (e) {
+            console.log(e);
+        }
+    }
+    // 尝试读取文件内歌词
+    const metadata = await getFileMetadata(path);
+    // console.log(metadata?.common)
+    if (!metadata)
+        return null;
+    // let lyricInfo = metadata.common.lyrics?.[0]
+    // if (lyricInfo) {
+    //   let lyric: string | undefined
+    //   if (typeof lyricInfo == 'object') lyric = lyricInfo.text
+    //   else if (typeof lyricInfo == 'string') lyric = lyricInfo
+    //   if (lyric && lyric.length > 10) {
+    //     return { lyric }
+    //   }
+    // }
+    // console.log(metadata)
+    for (const info of Object.values(metadata.native)) {
+        for (const ust of info) {
+            switch (ust.id) {
+                case 'LYRICS': {
+                    const value = typeof ust.value == 'string' ? ust.value : ust.text;
+                    if (value && value.length > 10)
+                        return { lyric: value };
+                    break;
+                }
+                case 'USLT': {
+                    const value = ust.value;
+                    if (value.text && value.text.length > 10)
+                        return { lyric: value.text };
+                    break;
+                }
+            }
+        }
+    }
+    return null;
+};
+
+
+######## renderer.main.worker.js.map :: src/renderer/utils/music.ts (6617 chars)
+import { checkPath, joinPath, extname, basename, readFile, getFileStats } from '@common/utils/nodejs';
+import { formatPlayTime } from '@common/utils/common';
+import { decodeKrc } from '@common/utils/lyricUtils/kg';
+export const checkDownloadFileAvailable = async (musicInfo, savePath) => {
+    return musicInfo.isComplate && !/\.ape$/.test(musicInfo.metadata.fileName) &&
+        (await checkPath(musicInfo.metadata.filePath) || await checkPath(joinPath(savePath, musicInfo.metadata.fileName)));
+};
+export const checkLocalFileAvailable = async (musicInfo) => {
+    return checkPath(musicInfo.meta.filePath);
+};
+/**
+ * 检查音乐文件是否存在
+ * @param musicInfo
+ * @param savePath
+ */
+export const checkMusicFileAvailable = async (musicInfo, savePath) => {
+    if ('progress' in musicInfo) {
+        return checkDownloadFileAvailable(musicInfo, savePath);
+    }
+    else if (musicInfo.source == 'local') {
+        return checkLocalFileAvailable(musicInfo);
+    }
+    else
+        return true;
+};
+export const getDownloadFilePath = async (musicInfo, savePath) => {
+    if (musicInfo.isComplate && !/\.ape$/.test(musicInfo.metadata.fileName)) {
+        if (await checkPath(musicInfo.metadata.filePath))
+            return musicInfo.metadata.filePath;
+        const path = joinPath(savePath, musicInfo.metadata.fileName);
+        if (await checkPath(path))
+            return path;
+    }
+    return '';
+};
+export const getLocalFilePath = async (musicInfo) => {
+    return (await checkPath(musicInfo.meta.filePath)) ? musicInfo.meta.filePath : '';
+};
+/**
+ * 获取音乐文件路径
+ * @param musicInfo
+ * @param savePath
+ * @returns
+ */
+export const getMusicFilePath = async (musicInfo, savePath) => {
+    if ('progress' in musicInfo) {
+        return getDownloadFilePath(musicInfo, savePath);
+    }
+    else if (musicInfo.source == 'local') {
+        return getLocalFilePath(musicInfo);
+    }
+    return '';
+};
+/**
+ * 创建本地音乐信息对象
+ * @param path 文件路径
+ * @returns
+ */
+export const createLocalMusicInfo = async (path) => {
+    if (!await checkPath(path))
+        return null;
+    const { parseFile } = await import('music-metadata');
+    let metadata;
+    try {
+        metadata = await parseFile(path);
+    }
+    catch (err) {
+        console.log(err);
+        return null;
+    }
+    // console.log(metadata)
+    let ext = extname(path);
+    // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
+    let name = (metadata.common.title || basename(path, ext)).trim();
+    let singer = metadata.common.artists?.length ? metadata.common.artists.map(a => a.trim()).join('、') : '';
+    let interval = metadata.format.duration ? formatPlayTime(metadata.format.duration) : '';
+    let albumName = metadata.common.album?.trim() ?? '';
+    return {
+        id: path,
+        name,
+        singer,
+        source: 'local',
+        interval,
+        meta: {
+            albumName,
+            filePath: path,
+            songId: path,
+            picUrl: '',
+            ext: ext.replace(/^\./, ''),
+        },
+    };
+};
+let prevFileInfo = {
+    path: '',
+    promise: Promise.resolve(null),
+};
+const getFileMetadata = async (path) => {
+    if (prevFileInfo.path == path)
+        return prevFileInfo.promise;
+    prevFileInfo.path = path;
+    return prevFileInfo.promise = checkPath(path).then(async (isExist) => {
+        return isExist ? import('music-metadata').then(async ({ parseFile }) => parseFile(path)).catch(err => {
+            console.log(err);
+            return null;
+        }) : null;
+    });
+};
+/**
+ * 获取歌曲文件封面图片
+ * @param path 路径
+ */
+export const getLocalMusicFilePic = async (path) => {
+    const filePath = new RegExp('\\' + extname(path) + '$');
+    let picPath = path.replace(filePath, '.jpg');
+    let stats = await getFileStats(picPath);
+    if (stats)
+        return picPath;
+    picPath = path.replace(filePath, '.png');
+    stats = await getFileStats(picPath);
+    if (stats)
+        return picPath;
+    const metadata = await getFileMetadata(path);
+    if (!metadata)
+        return null;
+    const { selectCover } = await import('music-metadata');
+    return selectCover(metadata.common.picture);
+};
+/**
+ * 获取歌曲文件歌词
+ * @param path 路径
+ */
+export const getLocalMusicFileLyric = async (path) => {
+    // 尝试读取同目录下的同名lrc文件
+    const filePath = new RegExp('\\' + extname(path) + '$');
+    let lrcPath = path.replace(filePath, '.lrc');
+    let stats = await getFileStats(lrcPath);
+    // console.log(lrcPath, stats)
+    if (stats && stats.size < 1024 * 1024 * 10) {
+        const lrcBuf = await readFile(lrcPath);
+        const { detect } = await import('jschardet');
+        const { confidence, encoding } = detect(lrcBuf);
+        console.log('lrc file encoding', confidence, encoding);
+        if (confidence > 0.8) {
+            const iconv = (await import('iconv-lite')).default;
+            if (iconv.encodingExists(encoding)) {
+                const lrc = iconv.decode(lrcBuf, encoding);
+                if (lrc) {
+                    return {
+                        lyric: lrc,
+                    };
+                }
+            }
+        }
+    }
+    // 尝试读取同目录下的同名krc文件
+    lrcPath = path.replace(filePath, '.krc');
+    stats = await getFileStats(lrcPath);
+    console.log(lrcPath, stats?.size);
+    if (stats && stats.size < 1024 * 1024 * 10) {
+        const lrcBuf = await readFile(lrcPath);
+        try {
+            return await decodeKrc(lrcBuf);
+        }
+        catch (e) {
+            console.log(e);
+        }
+    }
+    // 尝试读取文件内歌词
+    const metadata = await getFileMetadata(path);
+    // console.log(metadata?.common)
+    if (!metadata)
+        return null;
+    // let lyricInfo = metadata.common.lyrics?.[0]
+    // if (lyricInfo) {
+    //   let lyric: string | undefined
+    //   if (typeof lyricInfo == 'object') lyric = lyricInfo.text
+    //   else if (typeof lyricInfo == 'string') lyric = lyricInfo
+    //   if (lyric && lyric.length > 10) {
+    //     return { lyric }
+    //   }
+    // }
+    // console.log(metadata)
+    for (const info of Object.values(metadata.native)) {
+        for (const ust of info) {
+            switch (ust.id) {
+                case 'LYRICS': {
+                    const value = typeof ust.value == 'string' ? ust.value : ust.text;
+                    if (value && value.length > 10)
+                        return { lyric: value };
+                    break;
+                }
+                case 'USLT': {
+                    const value = ust.value;
+                    if (value.text && value.text.length > 10)
+                        return { lyric: value.text };
+                    break;
+                }
+            }
+        }
+    }
+    return null;
+};
+
+
+######## renderer.js.map :: src/renderer/core/dislikeList.ts (1885 chars)
+// import { toRaw } from '@common/utils/vueTools'
+import { DISLIKE_EVENT_NAME } from '@common/ipcNames';
+import { rendererInvoke, rendererOff, rendererOn } from '@common/rendererIpc';
+import { action } from '@renderer/store/dislikeList';
+export const initDislikeInfo = async () => {
+    action.initDislikeInfo(await rendererInvoke(DISLIKE_EVENT_NAME.get_dislike_music_infos));
+};
+export const hasDislike = (info) => {
+    if (!info)
+        return false;
+    return action.hasDislike(info);
+};
+export const addDislikeInfo = async (infos) => {
+    await rendererInvoke(DISLIKE_EVENT_NAME.add_dislike_music_infos, infos);
+};
+export const overwirteDislikeInfo = async (rules) => {
+    await rendererInvoke(DISLIKE_EVENT_NAME.overwrite_dislike_music_infos, rules);
+};
+export const clearDislikeInfo = async () => {
+    await rendererInvoke(DISLIKE_EVENT_NAME.clear_dislike_music_infos);
+};
+const noop = () => { };
+export const registerRemoteDislikeAction = (onListChanged = noop) => {
+    const add_dislike_music_infos = ({ params: datas }) => {
+        action.addDislikeInfo(datas);
+    };
+    const overwrite_dislike_music_infos = ({ params: datas }) => {
+        action.overwirteDislikeInfo(datas);
+    };
+    const clear_dislike_music_infos = () => {
+        return action.clearDislikeInfo();
+    };
+    rendererOn(DISLIKE_EVENT_NAME.add_dislike_music_infos, add_dislike_music_infos);
+    rendererOn(DISLIKE_EVENT_NAME.overwrite_dislike_music_infos, overwrite_dislike_music_infos);
+    rendererOn(DISLIKE_EVENT_NAME.clear_dislike_music_infos, clear_dislike_music_infos);
+    return () => {
+        rendererOff(DISLIKE_EVENT_NAME.add_dislike_music_infos, add_dislike_music_infos);
+        rendererOff(DISLIKE_EVENT_NAME.overwrite_dislike_music_infos, overwrite_dislike_music_infos);
+        rendererOff(DISLIKE_EVENT_NAME.clear_dislike_music_infos, clear_dislike_music_infos);
+    };
+};
+
+
+######## renderer.js.map :: src/renderer/store/dislikeList/state.ts (317 chars)
+import { markRaw, ref } from '@common/utils/vueTools';
+// import { deduplicationList } from '@common/utils/renderer'
+export const dislikeInfo = markRaw({
+    names: markRaw(new Set()),
+    musicNames: markRaw(new Set()),
+    singerNames: markRaw(new Set()),
+    rules: '',
+});
+export const dislikeRuleCount = ref(0);
+
+
+######## renderer.js.map :: src/renderer/store/dislikeList/action.ts (3450 chars)
+import { markRaw } from '@common/utils/vueTools';
+import { dislikeInfo, dislikeRuleCount } from './state';
+import { SPLIT_CHAR } from '@common/constants';
+export const hasDislike = (info) => {
+    if ('progress' in info)
+        info = info.metadata.musicInfo;
+    const name = info.name?.replaceAll(SPLIT_CHAR.DISLIKE_NAME, SPLIT_CHAR.DISLIKE_NAME_ALIAS).toLocaleLowerCase().trim() ?? '';
+    const singer = info.singer?.replaceAll(SPLIT_CHAR.DISLIKE_NAME, SPLIT_CHAR.DISLIKE_NAME_ALIAS).toLocaleLowerCase().trim() ?? '';
+    return dislikeInfo.musicNames.has(name) || dislikeInfo.singerNames.has(singer) ||
+        dislikeInfo.names.has(`${name}${SPLIT_CHAR.DISLIKE_NAME}${singer}`);
+};
+export const initDislikeInfo = ({ musicNames, rules, names, singerNames }) => {
+    dislikeInfo.names = markRaw(names);
+    dislikeInfo.singerNames = markRaw(singerNames);
+    dislikeInfo.musicNames = markRaw(musicNames);
+    dislikeInfo.rules = rules;
+    dislikeRuleCount.value = dislikeInfo.musicNames.size + dislikeInfo.singerNames.size + dislikeInfo.names.size;
+};
+const initNameSet = () => {
+    dislikeInfo.names.clear();
+    dislikeInfo.musicNames.clear();
+    dislikeInfo.singerNames.clear();
+    const list = [];
+    for (const item of dislikeInfo.rules.split('\n')) {
+        if (!item)
+            continue;
+        let [name, singer] = item.split(SPLIT_CHAR.DISLIKE_NAME);
+        if (name) {
+            name = name.replaceAll(SPLIT_CHAR.DISLIKE_NAME, SPLIT_CHAR.DISLIKE_NAME_ALIAS).toLocaleLowerCase().trim();
+            if (singer) {
+                singer = singer.replaceAll(SPLIT_CHAR.DISLIKE_NAME, SPLIT_CHAR.DISLIKE_NAME_ALIAS).toLocaleLowerCase().trim();
+                const rule = `${name}${SPLIT_CHAR.DISLIKE_NAME}${singer}`;
+                dislikeInfo.names.add(rule);
+                list.push(rule);
+            }
+            else {
+                dislikeInfo.musicNames.add(name);
+                list.push(name);
+            }
+        }
+        else if (singer) {
+            singer = singer.replaceAll(SPLIT_CHAR.DISLIKE_NAME, SPLIT_CHAR.DISLIKE_NAME_ALIAS).toLocaleLowerCase().trim();
+            dislikeInfo.singerNames.add(singer);
+            list.push(`${SPLIT_CHAR.DISLIKE_NAME}${singer}`);
+        }
+    }
+    dislikeInfo.rules = Array.from(new Set(list)).join('\n');
+    dislikeRuleCount.value = dislikeInfo.musicNames.size + dislikeInfo.singerNames.size + dislikeInfo.names.size;
+};
+export const addDislikeInfo = (infos) => {
+    dislikeInfo.rules += '\n' + infos.map(info => `${info.name ?? ''}${SPLIT_CHAR.DISLIKE_NAME}${info.singer ?? ''}`).join('\n');
+    initNameSet();
+    return dislikeInfo.rules;
+};
+export const overwirteDislikeInfo = (rules) => {
+    dislikeInfo.rules = rules;
+    initNameSet();
+    return dislikeInfo.rules;
+};
+export const clearDislikeInfo = () => {
+    dislikeInfo.rules = '';
+    initNameSet();
+    return dislikeInfo.rules;
+};
+// export const updateDislikeInfo = (info: LX.Dislike.ListItem) => {
+//   const targetInfo = dislikeInfo.list.find(i => i.id == info.id)
+//   if (!targetInfo) return
+//   targetInfo.name = info.name
+//   targetInfo.singer = info.singer
+//   initNameSet()
+// }
+// export const removeDislikeInfo = (ids: string[]) => {
+//   for (const id of ids) {
+//     dislikeInfo.list.splice(dislikeInfo.list.findIndex(info => info.id == id), 1)
+//   }
+//   initNameSet()
+// }
+// export const clearDislikeInfo = () => {
+//   dislikeInfo.rules = ''
+//   initNameSet()
+// }

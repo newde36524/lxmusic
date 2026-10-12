@@ -103,11 +103,13 @@ keeps emitting JSON.
 				"after the sort and the fifty that survive are the highest quality. --limit is the\n"+
 				"page size asked of each platform; it does not lift the 50-row cap. --json emits the\n"+
 				"raw search responses untouched, so it is neither capped nor sorted.\n\n"+
-				"  --source   kg|kw|wy|tx|all            default all\n"+
+				"  --source   kg|kw|wy|tx|mg|<user source>|all  default all\n"+
 				"  --limit    page size asked per source  default 20\n"+
 				"  --page     page number                default 1\n"+
 				"  --out      download dir for the picker  default ./music (cwd)\n"+
-				"  --quality  128k|320k|flac|flac24bit|auto  default auto (best available)\n"+
+				"  --quality  flac24bit|flac|wav|ape|320k|192k|128k|auto  default auto (best available)\n"+
+				"  --force    overwrite a file already in --out\n"+
+				"  --tags     embed title/artist/album/cover/lyric  default on\n"+
 				"  --plain    print the table even on a terminal\n"+
 				"  --json     emit JSON instead of the table\n"+
 				"  --proxy    http proxy URL\n"+
@@ -120,7 +122,7 @@ keeps emitting JSON.
 		newCmd("url <song-ref>", "Resolve a song to a direct audio URL",
 			"Resolves the requested rendition and prints the URL plus the headers the player must send.\n\n"+refHelp+"\n\n"+
 				"  --source   source id for a bare reference\n"+
-				"  --quality  128k|320k|flac|flac24bit|auto  default auto (best available)\n"+
+				"  --quality  flac24bit|flac|wav|ape|320k|192k|128k|auto  default auto (best available)\n"+
 				"  --json     emit JSON\n"+
 				"  --proxy    http proxy URL\n"+
 				"  --verbose  log every HTTP exchange",
@@ -128,12 +130,26 @@ keeps emitting JSON.
 				"  lxmusic url kg:20505418B3A52A7A958BF0AED0EBFBA2E9A818B7 --quality flac\n"+
 				"  lxmusic url kw:228908 --source flower   # through a user source", cmdURL),
 		newCmd("download <song-ref>", "Download a song to disk",
-			"Downloads the requested rendition into --out, overwriting nothing: an existing file is left alone.\n\n"+
+			"Downloads the requested rendition into --out, overwriting nothing: a file that is already\n"+
+				"there is left exactly as it is and the command reports that instead. --force opts out.\n"+
+				"A zero-byte file left by an earlier failed run is treated as not-there and retried.\n\n"+
 				"On a terminal a progress bar tracks the transfer; when stdout is piped the command\n"+
-				"stays silent until the file is saved.\n\n"+refHelp+"\n\n"+
+				"stays silent until the file is saved.\n\n"+
+				"After the transfer the tag is written into the file itself: title, artist and album as\n"+
+				"text, plus the cover and the synced lyric, read back off the song just downloaded. MP3\n"+
+				"gets ID3v2.4 (TIT2/TPE1/TALB/TRCK/TDRC/TCON/USLT/APIC) and FLAC gets a VORBIS_COMMENT\n"+
+				"and a PICTURE block with STREAMINFO left in place. Any ID3 tag the stream already\n"+
+				"carried is stripped first, so a re-download does not stack two tags - migu ships its mp3\n"+
+				"with an ID3v2.3 tag holding only TLEN and TSSE, which is why a file saved straight from\n"+
+				"that stream shows as untitled in a music library. --tags off skips the step. Everything\n"+
+				"else is a no-op: ape, ogg, m4a, wav and wma are not written, and the lyric and cover\n"+
+				"requests are best effort, so a host that goes down never turns a saved file into an\n"+
+				"error.\n\n"+refHelp+"\n\n"+
 				"  --source   source id for a bare reference\n"+
-				"  --quality  128k|320k|flac|flac24bit|auto  default auto (best available)\n"+
+				"  --quality  flac24bit|flac|wav|ape|320k|192k|128k|auto  default auto (best available)\n"+
 				"  --out      download directory           default ./music (cwd)\n"+
+				"  --force    overwrite a file already in --out\n"+
+				"  --tags     embed title/artist/album/cover/lyric  default on\n"+
 				"  --proxy    http proxy URL\n"+
 				"  --verbose  log every HTTP exchange",
 			"  lxmusic download kw:228908 --out ~/Downloads\n"+
@@ -158,17 +174,19 @@ keeps emitting JSON.
 			"Resolves the rendition the way the desktop player does, prints the stream and the headers it "+
 				"needs, then opens the platform's own page in the default browser.\n\n"+refHelp+"\n\n"+
 				"  --source   source id for a bare reference\n"+
-				"  --quality  128k|320k|flac|flac24bit|auto  default auto (best available)\n"+
+				"  --quality  flac24bit|flac|wav|ape|320k|192k|128k|auto  default auto (best available)\n"+
 				"  --proxy    http proxy URL\n"+
 				"  --verbose  log every HTTP exchange",
 			"  lxmusic play kw:228908", cmdPlay),
-		newCmd("share <keyword>", "Print a shareable link for a song",
+		newCmd("share <song-ref | keyword>", "Print a shareable link for a song",
 			"Prints two kinds of link, which live for very different lengths of time:\n\n"+
 				"  page    the platform's own page, stable for years — this is what you share\n"+
 				"  stream  a direct audio URL with an embedded vkey/token the platform expires in\n"+
 				"          minutes to hours; useful for piping into ffplay, useless as a share\n\n"+
-				refHelp+"\n\n"+
-				"  --source   kg|kw|wy|tx|<user source>|all  default all\n"+
+				"Pass a <source>:<id> reference to share a song you already know, or a bare keyword\n"+
+				"to look it up. With a keyword and --source all the sources are tried in turn and the\n"+
+				"first hit wins.\n\n"+refHelp+"\n\n"+
+				"  --source   kg|kw|wy|tx|mg|<user source>|all  default all\n"+
 				"  --quality  rendition to resolve            default auto\n"+
 				"  --index    which search result to use      default 1\n"+
 				"  --limit    search page size                default 10\n"+
@@ -177,7 +195,8 @@ keeps emitting JSON.
 				"  --proxy    http proxy URL\n"+
 				"  --verbose  log every HTTP exchange",
 			"  lxmusic share 晴天 --source kw\n"+
-				"  lxmusic share 晴天 --quality flac", cmdShare),
+				"  lxmusic share 晴天 --quality flac\n"+
+				"  lxmusic share kw:228908        # a known song, no search", cmdShare),
 		newCmd("detail <song-ref>", "Refresh and print full song metadata",
 			"Re-fetches the song record so album, cover and duration are populated, and prints it.\n\n"+refHelp+"\n\n"+
 				"  --source   source id for a bare reference\n"+
@@ -188,7 +207,7 @@ keeps emitting JSON.
 		newCmd("source <sub>", "Manage user sources (自定义音源)",
 			userSourceHelp+"\n\nSubcommands — their own flags:\n\n"+
 				"  list                     show config dir, node, and every source\n"+
-				"  add    --name <id> --url <script url or path> [--source kg|kw|wy|tx]\n"+
+				"  add    --name <id> --url <script url or path> [--source kg|kw|wy|tx|mg]\n"+
 				"         [--node <path>] [--timeout 25] [--ttl 24]\n"+
 				"  rm     <name>\n"+
 				"  info   <name>            what a source announced it can serve\n"+

@@ -766,8 +766,19 @@ func (u *UserSource) Require(s *Song, action string) error {
 		u.Spec.Name, action, strings.Join(c.Actions, ", "))
 }
 
-func (u *UserSource) ID() string   { return u.Spec.Name }
-func (u *UserSource) Name() string { return u.Info.Name }
+func (u *UserSource) ID() string { return u.Spec.Name }
+
+// Name is the display name shown by "lxmusic platforms" and the search table.
+// u.Info.Name is the name the script announced at init, but that only exists
+// after the script has been fetched and run — Describe or the first request.
+// Falling back to the config id means a freshly added source prints something
+// readable instead of a blank column, without waiting for a node round trip.
+func (u *UserSource) Name() string {
+	if u.Info.Name != "" {
+		return u.Info.Name
+	}
+	return u.Spec.Name
+}
 
 // Search is not part of the user source contract: the app never searches through
 // a user source, it resolves the song on a platform source first and only asks

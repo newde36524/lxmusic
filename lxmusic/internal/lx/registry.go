@@ -32,10 +32,12 @@ type Provider interface {
 	// url with no login and no user source in between. The search table lists
 	// only rows a user can actually download, so this decides whether a source
 	// contributes rows to it at all. kw answers true - it serves a short
-	// preview clip, which is still a file - while kg, wy and tx answer false:
-	// an audio url is precisely the capability v2.12.6 outsourced to the user
-	// source scripts, and guessing it here is what made a pickable row that
-	// could never download.
+	// preview clip, which is still a file - and mg answers true too, from the
+	// gateway's listen-url route, which hands over a 128k MP3 to an
+	// unauthenticated client even though the desktop app ships no mg audio
+	// implementation. kg, wy and tx answer false: an audio url is precisely
+	// the capability v2.12.6 outsourced to the user source scripts, and
+	// guessing it here is what made a pickable row that could never download.
 	AnonymousAudio() bool
 }
 
@@ -51,6 +53,7 @@ func Register(c *Client) {
 		"kw": &Kuwo{C: c},
 		"wy": &Netease{C: c},
 		"tx": &Tencent{C: c},
+		"mg": &Migu{C: c},
 	}
 	if cfg, err := LoadConfig(); err == nil {
 		for _, spec := range cfg.Sources {
@@ -63,7 +66,7 @@ func Register(c *Client) {
 }
 
 // sourcesOrder is the display order the desktop app uses in its source picker.
-var sourcesOrder = []string{"kg", "kw", "wy", "tx"}
+var sourcesOrder = []string{"kg", "kw", "wy", "tx", "mg"}
 
 // Sources returns the registered source ids in display order.
 func Sources() []string {
