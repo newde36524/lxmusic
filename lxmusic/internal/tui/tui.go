@@ -36,9 +36,11 @@ const (
 	fixedChrome = 8
 
 	// maxStatusLines is the status block's tallest. The confirm prompt uses two
-	// - the question, then the destination - and a long error message wraps to
-	// two as well, so an explanation fits without being cut off.
-	maxStatusLines = 2
+	// - the question, then the destination - and a finished download can need
+	// three: a preview warning, the provider's own compromise, and the save
+	// line. Truncation cuts from the end, so the warning has to fit too, not
+	// just the confirmation.
+	maxStatusLines = 3
 
 	// pickRowsMin is the narrowest terminal the picker is drawn at in rows: the
 	// furniture, one data row, and the status block at its tallest. Below it there

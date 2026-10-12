@@ -15,9 +15,9 @@ import "syscall"
 // length it encodes stay in step with syscall.Termios: darwin's termios is 72
 // bytes (0x48) and every other BSD's is 44 (0x2c), and the constants already
 // carry the right figure for each. linux keeps its own file, because stdlib
-// does not export TCGETS there.
+// does not export TCGETS there. winsize lives in term_unix.go: it is the same
+// on every unix, linux included.
 const (
 	tcgets  = syscall.TIOCGETA
 	tcssets = syscall.TIOCSETA
-	winsize = syscall.TIOCGWINSZ
 )

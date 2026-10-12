@@ -228,3 +228,33 @@ func TestPumpProgress(t *testing.T) {
 		t.Error("a second stop call blocked")
 	}
 }
+
+// TestPreviewNote pins the size test that decides a fragment from a track. The
+// 181521 byte figure is kuwo's real anonymous preview of a 332 s song, and it is
+// the case that used to be reported as a successful save.
+func TestPreviewNote(t *testing.T) {
+	for _, c := range []struct {
+		name     string
+		duration int
+		got      int64
+		wantHit  bool
+	}{
+		{"kuwo preview of a 5:32 song", 332, 181521, true},
+		{"a real 5:32 mp3", 332, 3984000, false},
+		{"exactly the floor is a track", 332, 332 * 16000 * 3 / 4, false},
+		{"one byte under the floor", 332, 332*16000*3/4 - 1, true},
+		{"no runtime, small file", 0, 181521, true},
+		{"no runtime, big file", 0, 500 * 1024, false},
+		{"nothing downloaded", 332, 0, false},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			got := previewNote(c.duration, c.got)
+			if (got != "") != c.wantHit {
+				t.Fatalf("previewNote(%d, %d) = %q, want %v hit", c.duration, c.got, got, c.wantHit)
+			}
+			if c.wantHit && c.duration > 0 && !strings.Contains(got, "05:32") {
+				t.Errorf("warning omits the runtime: %q", got)
+			}
+		})
+	}
+}

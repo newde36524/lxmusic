@@ -651,14 +651,27 @@ func downloadOne(ctx context.Context, c *lx.Client, p lx.Provider, s *lx.Song,
 	if err != nil {
 		return "", err
 	}
+	// The notes are returned, not printed: the picker erases its screen after
+	// every repaint, so a stderr note was visible for one frame and then gone.
+	// "已保存" is the only line that survived, which is how a 11 second clip got
+	// saved as if it were the track. Warnings lead the status, because the
+	// status block is capped and truncates from the end - the save line is the
+	// one that can afford to be cut.
+	notes := []string{}
+	if m := previewNote(s.Duration, n); m != "" {
+		notes = append(notes, m)
+	}
 	if user != "" {
-		fmt.Fprintf(os.Stderr, "note  : audio served by user source %q, not the built-in %q\n", user, p.ID())
+		notes = append(notes, fmt.Sprintf("音频由用户音源 %q 提供,不是内置 %q", user, p.ID()))
 	}
 	if pl.Note != "" {
-		fmt.Fprintf(os.Stderr, "note  : %s\n", pl.Note)
+		notes = append(notes, pl.Note)
 	}
-	previewNote(s.Duration, n)
-	return fmt.Sprintf("✓ 已保存 %s (%s)", path, lx.FormatBytes(n)), nil
+	saved := fmt.Sprintf("✓ 已保存 %s (%s)", path, lx.FormatBytes(n))
+	for i := len(notes) - 1; i >= 0; i-- {
+		saved = notes[i] + "\n" + saved
+	}
+	return saved, nil
 }
 
 // downloadSelected saves one table row. The row already carries the song it was
@@ -702,25 +715,25 @@ func savePathFor(r tui.Row, outDir string) string {
 // preview object for every song whatever the bitrate, so the size alone is a
 // reliable tell: a real mp3 runs at least about 16 KB per second of runtime.
 // A bare "source:id" reference carries no runtime, so a fixed floor stands in
-// for it - no track longer than a minute is ever that small.
-func previewNote(durationSec int, got int64) {
+// for it - no track longer than a minute is ever that small. It returns the
+// line rather than printing it: the picker wipes its screen after every repaint,
+// so a stderr note was gone before anyone could read it.
+func previewNote(durationSec int, got int64) string {
 	if got <= 0 {
-		return
+		return ""
 	}
 	if durationSec > 0 {
 		if got >= int64(durationSec)*16000*3/4 {
-			return
+			return ""
 		}
 	} else if got >= 400*1024 {
-		return
+		return ""
 	}
-	suffix := ""
 	if durationSec > 0 {
-		suffix = " of a " + lx.FormatDuration(durationSec) + " track"
+		return fmt.Sprintf("⚠ 只是 %s 试听,不是 %s 整首;完整曲目要用户音源或登录",
+			lx.FormatBytes(got), lx.FormatDuration(durationSec))
 	}
-	fmt.Fprintf(os.Stderr, "note  : this is a preview, not the song (%s%s).\n"+
-		"        a user source, or a logged-in session, is what gets the full track.\n",
-		lx.FormatBytes(got), suffix)
+	return fmt.Sprintf("⚠ 只有 %s,疑似试听片段;完整曲目要用户音源或登录", lx.FormatBytes(got))
 }
 
 /* --------------------------------------------------------------- lyric */

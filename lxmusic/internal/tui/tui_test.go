@@ -236,10 +236,10 @@ func TestWrapStatus(t *testing.T) {
 		{"", 80, 1},
 		{"short", 80, 1},
 		{"a\nb", 80, 2},
-		{strings.Repeat("w ", 100), 80, 2},  // two screens of text, no newline
-		{strings.Repeat("周杰伦 ", 60), 80, 2}, // CJK wraps without spaces
-		{strings.Repeat("x", 500), 40, 2},   // no break point at all
-		{"a b c d\n" + strings.Repeat("e ", 60), 20, 2},
+		{strings.Repeat("w ", 100), 80, 3},  // more than a screen of text, no newline
+		{strings.Repeat("周杰伦 ", 60), 80, 3}, // CJK wraps without spaces
+		{strings.Repeat("x", 500), 40, 3},   // no break point at all
+		{"a b c d\n" + strings.Repeat("e ", 60), 20, 3},
 	} {
 		got := wrapStatus(c.status, c.cols)
 		if len(got) != c.want {
@@ -358,13 +358,14 @@ func TestFailureStatusReadable(t *testing.T) {
 		}
 	}
 	// A narrow terminal has less room than the message, so the cut must be marked
-	// rather than dropped silently.
-	narrow := statusBlock(st, 68)
+	// rather than dropped silently. 40 cells hold about two of the three status
+	// lines, so this one still overflows.
+	narrow := statusBlock(st, 40)
 	if len(narrow) > maxStatusLines {
-		t.Errorf("cols=68: rendered %d lines, more than maxStatusLines", len(narrow))
+		t.Errorf("cols=40: rendered %d lines, more than maxStatusLines", len(narrow))
 	}
 	if !strings.Contains(narrow[len(narrow)-1], "..") {
-		t.Errorf("cols=68: cut %d cells without the .. marker: %q", disp(st), narrow)
+		t.Errorf("cols=40: cut %d cells without the .. marker: %q", disp(st), narrow)
 	}
 	// The row budget must always match the rendered block.
 	for _, cols := range []int{68, 80, 120, 160, 200} {
