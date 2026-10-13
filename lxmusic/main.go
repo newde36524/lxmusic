@@ -14,7 +14,9 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -27,10 +29,18 @@ import (
 // per-subcommand. Everything the old usageText said is in commands.go.
 
 func main() {
+	restoreConsole := setupConsole()
 	if err := newRootCmd().Execute(); err != nil {
+		// The error prints first: it is the one line the user is reading, and it
+		// is Chinese, so the console is still in UTF-8 mode when it goes out.
 		fmt.Fprintf(os.Stderr, "error: %v\n", err)
+		restoreConsole()
 		os.Exit(1)
 	}
+	// Called twice on purpose, not deferred: os.Exit skips defers, and the
+	// function is a real no-op when nothing was changed, so restoring on both
+	// ways out is the whole contract.
+	restoreConsole()
 }
 
 /* --------------------------------------------------------------- helpers */
@@ -46,15 +56,34 @@ func flagsFirst(args []string) []string {
 			rest = append(rest, a)
 			continue
 		}
-		flags = append(flags, a)
-		// attach a value unless the flag is self-contained (=-style) or the
-		// next token is another flag
-		if !strings.Contains(a, "=") && i+1 < len(args) && !strings.HasPrefix(args[i+1], "-") {
-			i++
-			flags = append(flags, args[i])
+		if strings.Contains(a, "=") || i+1 >= len(args) || strings.HasPrefix(args[i+1], "-") {
+			flags = append(flags, a)
+			continue
+		}
+		i++
+		// A boolean value is merged into the flag. Go's flag package reads a
+		// bool flag as self-contained, so "--tags false kw:1" used to leave
+		// "false" behind as the first positional argument: the song reference
+		// was lost and the download died with "cannot determine source",
+		// handed the key "false". Anything that is not a boolean spelling stays
+		// a separate token, so "--verbose kw:123" means a reference and not
+		// --verbose=kw:123.
+		if boolArg(args[i]) {
+			flags = append(flags, a+"="+args[i])
+		} else {
+			flags = append(flags, a, args[i])
 		}
 	}
 	return append(flags, rest...)
+}
+
+// boolArg reports whether s is one of the spellings the flag package accepts
+// for a boolean flag, as strconv.ParseBool decides it. Reordering alone cannot
+// settle whether the token after a flag is that flag's value or a positional
+// argument, so the boolean spellings are the only attachable ones.
+func boolArg(s string) bool {
+	_, err := strconv.ParseBool(s)
+	return err == nil
 }
 
 type refs struct {
@@ -171,22 +200,57 @@ func openInBrowser(u string) {
 	}
 }
 
+// isDarwin is the compiled target, not the kernel of the machine the shell
+// happens to be on. It used to run `uname -s`: that spawned a process on every
+// call, and it would have answered Darwin for a Linux binary running under a
+// cross-compiled uname - Darwin is a build target, so runtime.GOOS is the whole
+// question.
 func isDarwin() bool {
-	b, err := exec.Command("uname", "-s").Output()
-	return err == nil && strings.TrimSpace(string(b)) == "Darwin"
+	return runtime.GOOS == "darwin"
 }
 
-// sanitizeFileName keeps only characters that survive every common shell.
+// sanitizeFileName keeps only characters that survive every common shell on both
+// sides. The punctuation set is Windows' illegal list - unix accepts all of it,
+// but a name written on Windows and moved to a mac must not carry a ":" in it.
 func sanitizeFileName(name string) string {
 	out := name
 	for _, b := range []string{"<", ">", ":", "\"", "/", "\\", "|", "?", "*"} {
 		out = strings.ReplaceAll(out, b, "_")
 	}
-	out = strings.TrimRight(strings.TrimSpace(out), ".")
+	// Trailing spaces and dots are rejected by Windows and unreadable in a shell
+	// on unix, and they arrive interleaved: "a . " trims to "a " when the trim is
+	// done once, so trim until the name stops changing. Leading dots go too, which
+	// keeps a mac from treating the file as hidden.
+	for {
+		trimmed := strings.Trim(out, " .")
+		if trimmed == out {
+			break
+		}
+		out = trimmed
+	}
 	if out == "" {
 		return "untitled"
 	}
 	return out
+}
+
+// expandHome turns a leading "~/" or "~\" into the user's home directory. The
+// shells already do this on unix, but only for an unquoted value, and Windows has
+// no equivalent at all, so `--out "~/Downloads"` created a literal directory
+// called "~" there. A "~" anywhere else in the path is left alone: it may be a
+// real directory name.
+func expandHome(p string) string {
+	h, err := os.UserHomeDir()
+	if err != nil {
+		return p
+	}
+	switch {
+	case p == "~":
+		return h
+	case strings.HasPrefix(p, "~/") || strings.HasPrefix(p, `~\`):
+		return filepath.Join(h, p[2:])
+	}
+	return p
 }
 
 func sortedKeys(m map[string]string) []string {
@@ -505,6 +569,7 @@ func cmdSearch(args []string) error {
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
+	outDir = expandHome(outDir)
 	if fs.NArg() < 1 {
 		return fmt.Errorf("usage: lxmusic search <keyword> [--source kg|kw|wy|tx|mg|all]")
 	}
@@ -704,6 +769,7 @@ func cmdDownload(args []string) error {
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
+	outDir = expandHome(outDir)
 	if ref.key == "" && fs.NArg() > 0 {
 		ref.key = fs.Arg(0)
 	}

@@ -140,12 +140,15 @@ func enable() error {
 		createdIn = true
 	}
 
-	_, _ = os.Stdout.WriteString("\x1b[?1049h\x1b[2J\x1b[H")
+	// The cursor goes too, in the same order as term_unix.go. Left visible it
+	// sat at the bottom of the cleared screen while the table occupied the top,
+	// so it blinked in a place that was never part of the drawing.
+	_, _ = os.Stdout.WriteString("\x1b[?1049h\x1b[2J\x1b[H\x1b[?25l")
 	return nil
 }
 
 func disable() {
-	_, _ = os.Stdout.WriteString("\x1b[?1049l")
+	_, _ = os.Stdout.WriteString("\x1b[?25h\x1b[?1049l")
 	if haveMode {
 		pSetConsoleMode.Call(outHandle, uintptr(oldMode))
 	}

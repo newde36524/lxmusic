@@ -112,7 +112,7 @@ keeps emitting JSON.
 				"  --source   kg|kw|wy|tx|mg|<user source>|all  default all\n"+
 				"  --limit    page size asked per source  default 20\n"+
 				"  --page     page number                default 1\n"+
-				"  --out      download dir for the picker  default ./music (cwd)\n"+
+				"  --out      download dir for the picker  default ./music (cwd); ~ expanded\n"+
 				"  --quality  flac24bit|flac|wav|ape|320k|192k|128k|auto  default auto (best available)\n"+
 				"  --force    overwrite a file already in --out\n"+
 				"  --tags     embed title/artist/album/cover/lyric  default on\n"+
@@ -147,13 +147,13 @@ keeps emitting JSON.
 				"and a PICTURE block with STREAMINFO left in place. Any ID3 tag the stream already\n"+
 				"carried is stripped first, so a re-download does not stack two tags - migu ships its mp3\n"+
 				"with an ID3v2.3 tag holding only TLEN and TSSE, which is why a file saved straight from\n"+
-				"that stream shows as untitled in a music library. --tags off skips the step. Everything\n"+
+				"that stream shows as untitled in a music library. --tags false skips the step. Everything\n"+
 				"else is a no-op: ape, ogg, m4a, wav and wma are not written, and the lyric and cover\n"+
 				"requests are best effort, so a host that goes down never turns a saved file into an\n"+
 				"error.\n\n"+refHelp+"\n\n"+
 				"  --source   source id for a bare reference\n"+
 				"  --quality  flac24bit|flac|wav|ape|320k|192k|128k|auto  default auto (best available)\n"+
-				"  --out      download directory           default ./music (cwd)\n"+
+				"  --out      download directory           default ./music (cwd); ~ expanded\n"+
 				"  --force    overwrite a file already in --out\n"+
 				"  --tags     embed title/artist/album/cover/lyric  default on\n"+
 				"  --proxy    http proxy URL\n"+

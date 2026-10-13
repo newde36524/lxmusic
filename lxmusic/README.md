@@ -566,6 +566,14 @@ internal/tui/              表格与交互选择器
 
 **交叉编译能过不等于能跑。** darwin 的 ioctl 号曾经拼错，48 个目标一个报错都没有，macOS 上 `search` 却是打表格就退。这类错误只在本机能跑的那个平台（Windows）上看不到，所以下面的行为验证只覆盖 Windows 和纯文本输出，Unix 终端的实际表现请在你的机器上确认。
 
+**两端一致性**：上面那些差异都是在只跑得了其中一个平台的前提下逐条查出来的。这一层已经查过的几处：
+
+- 换行符**刻意不转译**。Go 在 Windows 上写的是裸 LF，没有 CRLF 转换（字节级验证过：输出 `0A`，CR 计数为 0），CLI 的表格输出也全是裸 LF。加一层 LF→CRLF 会在行间插空行、把列画花，所以不做。
+- `isDarwin()` 改读 `runtime.GOOS`。它原先每次调用都 shell 出去跑 `uname -s`，而且一个在 Linux 上跑、但 uname 被交叉编译成 Darwin 的二进制会骗过它——这是编译目标，不是机器上跑的 uname。
+- 控制台**代码页**（`console_windows.go`）：Go 把 UTF-8 字节直接写进控制台句柄，控制台用自己的输出代码页去解码，中文系统默认 936，于是中文标签在 Windows 上会显示成乱码、在 mac 上正常。进程启动时设成 65001、退出时还原回原来的值；已经就是 65001、stdout 不是真控制台、或者系统拒绝改（老版本还会这样）时都不动。还原必须显式调用——控制台比进程活得久，而 `os.Exit` 会跳过 defer。输入代码页不动，按键走 `ReadConsoleInputW` 直接拿 Unicode，不经过它。非 Windows 走 `console_other.go` 的 no-op。
+- **文件名**：Windows 非法字符必须替换掉，否则在 Windows 上写出的文件搬到 mac 上是废的。`--out ~/Downloads` 的波浪号由程序自己展开——unix shell 只对不加引号的值展开，Windows 则完全没有这个机制。
+- TUI 光标与 unix 版对齐：Windows 版原先漏了 `\x1b[?25l`，清屏后光标留在屏幕下方闪。现在 `enable`/`disable` 两端的序列与 `term_unix.go` 逐字一致。
+
 **测试**
 
 ```bash
@@ -593,7 +601,9 @@ go test -count=1 ./...
 - 下载字节上报：累计、单调、最终等于整个 body；`Content-Length` 缺省时原样透传 `-1`。
 - Windows `INPUT_RECORD` 偏移量与 **key-up 回声过滤**：方向键、PgUp/PgDn、Home/End、Enter（CR 和 LF）、y/n、Ctrl+C/Ctrl+D、字符事件、全零记录。key-up 有专门回归测试——之前每次按方向键跳两行，而且回车被自己的 key-up 应答，导致确认提示永远不出现。过滤是按时间窗做的，不是读 `bKeyDown`：那条判断读偏移 8，而在任何合理的布局里偏移 8 装的都是 `wRepeatCount` 或 `wVirtualKeyCode`，对 key-down 和 key-up 都非零，所以那条判断从来没生效过，也正是每次按压被算两遍的直接证据。测试用固定时钟把 100ms 窗口的两边都钉住了。
 - Unix 终端 ioctl 编码：BSD 把 ioctl 编成 `方向 | 长度<<16 | 组<<8 | 号`，测试断言长度字段等于 `unsafe.Sizeof(syscall.Termios{})`、且 `tcgets` 和 `winsize` 的号不相等。这条是从真 bug 里来的——号的写死值 `0x68` 是 `TIOCGWINSZ` 的号不是 termios 的，darwin 上 `tcgets` 算出一个内核没注册的请求，返回 `ENOTTY`，`isTerminal()` 当「不是终端」，`search` 打完表格就直接退、选择器一次都没进去。Linux 走另一个文件、值恰好写对，所以交叉编译全绿也查不出来，只有真在 macOS 上跑才暴露。
+- 跨平台文件名：Windows 非法字符的替换集**逐条断言结果里不再含有该字符**，而不只是对拍一个期望串——期望串可以跟着函数一起改，断言不能。同时钉住尾部空格与点交错（`foo . ` 裁一次剩 `foo `，Windows 会直接拒收，所以要裁到不动为止）、前导点（会被 mac 当隐藏文件）、以及裁完全空落到 `untitled`。波浪号只在前缀位置展开，路径中间的 `~` 可能是真目录名，一个都不能动。
 - 按键扫描：tmux 前缀序列，以及跨两次 read 被截断的转义序列。
+- **参数重排**：`--tags false kw:123` 这类写法。Go 的 flag 包不把值读给布尔标志，所以 `false` 会漏成第一个位置参数，歌名引用整个丢掉——`download mg:1144349426 --tags false` 曾以 `cannot determine source` 死掉，手里的 key 是 `false`。现在布尔值按 `strconv.ParseBool` 判定后并进标志（`--tags=false`），非布尔的拼写仍然分开，所以 `--verbose kw:123` 里的 `kw:123` 还是引用而不是 `--verbose=kw:123`。断言同时覆盖重排结果和「重排后再交给 `flag.Parse`」那条真实路径。
 - 酷我体积解析：`size:52.83Mb` 这种**两个字母**单位的容错。
 
 > **交互键盘路径和进度条渲染无法在本项目所在的自动化环境里验证**，而且这个限制是查到底了的，不是没找到工具。逐条验证过：
@@ -603,7 +613,7 @@ go test -count=1 ./...
 > - 换 cmd.exe（属于受保护进程组、天然豁免进程组约束）当跳板让它的子进程去 attach，还是同样的拒绝码——**说明这是作业（job object）层面的限制，被所有后代继承，进程组绕行路线不存在**。
 > - 唯一能建出控制台的办法 `CREATE_NEW_CONSOLE` 确实有效，子进程会拿到自己的控制台并正常运行；但这台机器的 kernel32 不导出 `GetCurrentProcessThreadAttributeValue`，`UpdateProcThreadAttribute` 对 `PROC_THREAD_ATTRIBUTE_PROCESS_GROUP_AFFINITY` 和 `PROC_THREAD_ATTRIBUTE_PARENT_PROCESS` 都返回 `ERROR_NOT_SUPPORTED`，父进程退出进程组的口子也是关着的。结果是：控制台建得出来，父进程却连不进去，一个从外面读不到内容、写不进按键的控制台对验证没有任何用处。
 >
-> 所以选择器只验证了它上面的那一层，而那一层的边界是很窄的：`isTerminal` / `enable` / `disable` / `termSize` / `nextKey` 五个函数，合计 435 行（占 7567 行非测试代码的 5.7%），是全部唯一触碰 syscall 的地方。这五个函数以上的 7132 行——四套协议、全部加密、JSON 解析、排序截断、音频路由、选择器布局与渲染、按键映射、表格排版、进度条——零平台分支，跨目标一字不改地编译。
+> 所以选择器只验证了它上面的那一层，而那一层的边界是很窄的：`internal/tui/term_*.go` 五个文件加 `console_windows.go`，合计 497 行（占 9539 行非测试代码的 5.2%），是全部唯一触碰 syscall 的地方；`term_nosys.go` 和 `console_other.go` 这两个不含 syscall 的兜底文件不计在内。这一层以上的 9042 行——四套协议、全部加密、JSON 解析、排序截断、音频路由、选择器布局与渲染、按键映射、表格排版、进度条——零平台分支，跨目标一字不改地编译。
 >
 > 换句话说：**没验证到的是"操作系统怎么把一次按键送进来"，而不是"收到按键之后程序怎么反应"。** 后者有单元测试、有合成的 `INPUT_RECORD`（`bKeyDown` 是真填的，产品代码从不读这个字段，能逐行验证说明起作用的确实是 100ms 时间窗）、有纯文本输出比对。方向键 / Enter / y-n / 进度条在真终端里的实际显示，仍然请在你的机器上确认。
 

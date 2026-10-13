@@ -4,8 +4,10 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"flag"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -481,6 +483,82 @@ func TestSavePathFor(t *testing.T) {
 	}
 }
 
+// TestSanitizeFileName pins that a name survives both filesystems. The
+// punctuation set is Windows' illegal list - unix accepts all of it, but a file
+// written on Windows and moved to a mac must not carry a ":" in it - so each
+// case is checked against that set directly, not just against one expected
+// string a future edit could move along with the function.
+func TestSanitizeFileName(t *testing.T) {
+	cases := []struct {
+		in   string
+		want string
+	}{
+		{"晴天", "晴天"},
+		{"a b-c", "a b-c"},
+		{"a:b", "a_b"},
+		{"kw:228908", "kw_228908"},
+		{`C:\Users`, "C__Users"},
+		{"<star>*?", "_star___"},
+		// A trailing space and dot interleave: one trim pass leaves "foo ",
+		// which Windows would refuse outright.
+		{"foo . ", "foo"},
+		{"foo..", "foo"},
+		{" foo ", "foo"},
+		// A leading dot would make a mac treat the file as hidden.
+		{".hidden", "hidden"},
+		{"", "untitled"},
+		{"   ", "untitled"},
+		{"...", "untitled"},
+	}
+	for _, c := range cases {
+		got := sanitizeFileName(c.in)
+		if got != c.want {
+			t.Errorf("sanitizeFileName(%q) = %q, want %q", c.in, got, c.want)
+		}
+		for _, b := range []string{"<", ">", ":", "\"", "/", "\\", "|", "?", "*"} {
+			if strings.Contains(got, b) {
+				t.Errorf("sanitizeFileName(%q) left %q in %q", c.in, b, got)
+			}
+		}
+		if strings.TrimRight(got, " .") != got {
+			t.Errorf("sanitizeFileName(%q) left a trailing space or dot: %q", c.in, got)
+		}
+		if strings.HasPrefix(got, ".") {
+			t.Errorf("sanitizeFileName(%q) left a leading dot: %q", c.in, got)
+		}
+	}
+}
+
+// TestExpandHome pins that "--out ~/Downloads" means the same thing on both
+// platforms. unix shells expand a bare tilde, Windows has no equivalent, so the
+// directory used to be created literally. The rest of the path must stay put:
+// a "~" that is not at the front can be a real directory name.
+func TestExpandHome(t *testing.T) {
+	home, err := os.UserHomeDir()
+	if err != nil || home == "" {
+		t.Skip("no home directory to expand against")
+	}
+	cases := []struct {
+		in   string
+		want string
+	}{
+		{"~/Downloads", filepath.Join(home, "Downloads")},
+		{"~", home},
+		{"~/", home},
+		{"~\\Downloads", filepath.Join(home, "Downloads")},
+		{"~x", "~x"},
+		{"./music", "./music"},
+		{"music", "music"},
+		{"a~/b", "a~/b"},
+		{"", ""},
+	}
+	for _, c := range cases {
+		if got := expandHome(c.in); got != c.want {
+			t.Errorf("expandHome(%q) = %q, want %q", c.in, got, c.want)
+		}
+	}
+}
+
 // TestDownloadDir pins that downloads default into a music subdirectory of the
 // directory the command was run from, whatever that directory happens to be.
 // The assertion is about the shape, not the absolute path, so it holds no
@@ -791,5 +869,93 @@ func writeMain(t *testing.T, path string, b []byte) {
 	t.Helper()
 	if err := os.WriteFile(path, b, 0o644); err != nil {
 		t.Fatal(err)
+	}
+}
+
+// TestFlagsFirst pins the split between flags and positionals. Every flag value
+// must travel attached to its flag with "=", so the pair survives no matter what
+// kind of flag it is.
+func TestFlagsFirst(t *testing.T) {
+	for _, c := range []struct {
+		name string
+		args []string
+		want []string
+	}{
+		{
+			"flags move ahead of the positionals",
+			[]string{"晴天", "--limit", "5"},
+			[]string{"--limit", "5", "晴天"},
+		},
+		{
+			"a boolean value merges into its flag",
+			[]string{"--tags", "false", "晴天"},
+			[]string{"--tags=false", "晴天"},
+		},
+		{
+			"a boolean value after another flag keeps the reference whole",
+			[]string{"mg:1144349426", "--out", "X", "--quality", "flac", "--tags", "false"},
+			[]string{"--out", "X", "--quality", "flac", "--tags=false", "mg:1144349426"},
+		},
+		{
+			"a number that looks like a boolean still attaches",
+			[]string{"--limit", "1", "晴天"},
+			[]string{"--limit=1", "晴天"},
+		},
+		{
+			"a bool flag does not swallow the reference after it",
+			[]string{"kw:123", "--verbose"},
+			[]string{"--verbose", "kw:123"},
+		},
+		{
+			"=-style is untouched",
+			[]string{"--out=X", "kw:1"},
+			[]string{"--out=X", "kw:1"},
+		},
+		{
+			"a following flag ends the pairing",
+			[]string{"--out", "--verbose", "kw:1"},
+			[]string{"--out", "--verbose", "kw:1"},
+		},
+		{
+			"a single dash is not a flag",
+			[]string{"-", "--limit", "2"},
+			[]string{"--limit", "2", "-"},
+		},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			if got := flagsFirst(c.args); !reflect.DeepEqual(got, c.want) {
+				t.Errorf("flagsFirst(%v) = %v, want %v", c.args, got, c.want)
+			}
+		})
+	}
+}
+
+// TestFlagsFirstKeepsThePositional drives the path the flag package consumes it
+// with. The bug it pins: "--tags false" used to stay two tokens, and because Go
+// does not consume a value for a bool flag, "false" fell through as the first
+// positional argument. The song reference was lost with it, and a download of
+// mg:1144349426 died with "cannot determine source", handed the key "false".
+func TestFlagsFirstKeepsThePositional(t *testing.T) {
+	fs := flag.NewFlagSet("download", flag.ContinueOnError)
+	var outDir, quality string
+	var tags bool
+	fs.StringVar(&outDir, "out", "d", "")
+	fs.StringVar(&quality, "quality", "auto", "")
+	fs.BoolVar(&tags, "tags", true, "")
+	args := []string{"mg:1144349426", "--out", "X", "--quality", "flac", "--tags", "false"}
+	if err := fs.Parse(flagsFirst(args)); err != nil {
+		t.Fatal(err)
+	}
+	if tags {
+		t.Error("--tags false did not turn the flag off")
+	}
+	if outDir != "X" {
+		t.Errorf("--out = %q, want %q", outDir, "X")
+	}
+	if quality != "flac" {
+		t.Errorf("--quality = %q, want %q", quality, "flac")
+	}
+	if fs.NArg() != 1 || fs.Arg(0) != "mg:1144349426" {
+		t.Errorf("positionals = %v, want [mg:1144349426]", fs.Args())
 	}
 }
