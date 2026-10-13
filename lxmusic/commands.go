@@ -99,6 +99,12 @@ keeps emitting JSON.
 			"  lxmusic platforms", cmdPlatforms),
 		newCmd("search <keyword>", "Search for songs and print a table",
 			"Searches every platform (or one with --source), showing the highest quality each hit serves.\n\n"+
+				"音质 and 文件大小 are the rendition the gateway will actually hand out, not the tier the\n"+
+				"platform's catalogue advertises: each row's rendition is asked for once before the table\n"+
+				"is built, and the sort follows what came back. The check takes a couple of seconds and\n"+
+				"runs on a budget of its own, so a platform that will not answer is left at the advertised\n"+
+				"tier and named in a note on stderr. migu is the common case - it advertises flac24bit\n"+
+				"and serves a 128k MP3 to an unauthenticated client.\n\n"+
 				"At most 50 rows are kept, best fidelity first then largest file, so capping happens\n"+
 				"after the sort and the fifty that survive are the highest quality. --limit is the\n"+
 				"page size asked of each platform; it does not lift the 50-row cap. --json emits the\n"+

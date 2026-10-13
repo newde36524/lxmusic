@@ -300,6 +300,116 @@ func toRows(res *lx.SearchResult) []tui.Row {
 	return out
 }
 
+// probeConcurrency caps how many renditions are resolved at once while the
+// table is built. One worker per row is a rate limit on the platforms; eight is
+// enough that a page of fifty does not read as a stall.
+const probeConcurrency = 8
+
+// probeBudget caps the whole rendition check, and is deliberately far shorter
+// than the search deadline. The check is a correction to a display column, not
+// part of the answer: letting it run to the search's 120 s used to exhaust the
+// deadline, the sort then ran on rows nobody had measured, and the first row of
+// the table still advertised the tier the download would not give. A short
+// budget fails the other way - a few rows keep the catalogue number and the
+// note says so - which is readable instead of silent. A var so a test can
+// exercise the bound itself.
+var probeBudget = 8 * time.Second
+
+// providerFor resolves a row's source to its adapter, indirection so a test can
+// stand in a provider that never answers - which is what the budget has to bound.
+var providerFor = lx.GetProvider
+
+// servedRows replaces the tier a row advertises with the tier it will actually
+// serve, so the 音质 and 文件大小 columns and the sort order all read as the
+// file that will land in --out.
+//
+// The search answer is a catalogue: it says what a platform holds, not what its
+// gateway will hand out. migu advertises 星月神话 as flac24bit / 52.6MB and serves
+// a 128k mp3 of 4MB, so a table sorted on the catalogue put the worst file in
+// the list on top.
+//
+// The probe asks the built-in gateway and stops there. The catalogue tier on a
+// row is the built-in's own claim, so the built-in is the only thing worth
+// holding it to; going through resolveAudio would spend the user source's 25 s
+// timeout on every row first, and a script that has stopped answering is
+// precisely what the table never claimed. A user source that does answer is
+// named on the row it serves.
+//
+// Rows the probe cannot answer keep the tier the search announced: a platform
+// that is down is no reason to print a number worse than the truth, and those
+// rows are counted separately rather than quietly passed off as checked.
+func servedRows(ctx context.Context, rows []tui.Row, quality string) (measured, below, unmeasured int, unmeasuredOf []string) {
+	probeCtx, cancel := context.WithTimeout(ctx, probeBudget)
+	defer cancel()
+	sem := make(chan struct{}, probeConcurrency)
+	var wg sync.WaitGroup
+	var mu sync.Mutex
+	missed := map[string]int{}
+	for i := range rows {
+		r := &rows[i]
+		if r.Song == nil {
+			continue
+		}
+		sem <- struct{}{}
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			defer func() { <-sem }()
+			p, err := providerFor(r.Song.Source)
+			if err != nil {
+				return
+			}
+			q := r.Song.QualityByType(quality)
+			pl, err := p.MusicURL(probeCtx, r.Song, q)
+			if err != nil || pl == nil {
+				mu.Lock()
+				defer mu.Unlock()
+				unmeasured++
+				missed[p.Name()]++
+				return
+			}
+			mu.Lock()
+			defer mu.Unlock()
+			measured++
+			if _, d := applyServed(r, pl); d {
+				below++
+			}
+		}()
+	}
+	wg.Wait()
+	for name, n := range missed {
+		unmeasuredOf = append(unmeasuredOf, fmt.Sprintf("%s%d行", name, n))
+	}
+	sort.Strings(unmeasuredOf)
+	return measured, below, unmeasured, unmeasuredOf
+}
+
+// applyServed records one resolved rendition on its row, reporting whether the
+// row changed and whether the served tier is below the one advertised.
+//
+// The size follows the served tier. The gateway never reports a byte count, so
+// it has to come from the catalogue entry for the tier that was actually
+// served; leaving the advertised number in place would show a row reading 128k
+// alongside a 52MB flac24bit size.
+func applyServed(r *tui.Row, pl *lx.PlayerURL) (changed, down bool) {
+	if r.Song == nil || pl == nil || pl.Quality == "" || pl.Quality == r.Quality {
+		return false, false
+	}
+	if qualityRank(pl.Quality) < qualityRank(r.Quality) {
+		down = true
+	}
+	r.Quality = pl.Quality
+	switch sz := r.Song.QualitySize(pl.Quality); {
+	case sz > 0:
+		r.Size = sz
+	case pl.Size > 0:
+		r.Size = pl.Size
+	default:
+		r.Size = 0
+	}
+	return true, down
+}
+
 // sortRows orders the results the way a user reads them: the hit that best
 // answers the query first, then the best fidelity, then the largest file.
 //
@@ -458,6 +568,26 @@ func cmdSearch(args []string) error {
 
 	// Highest fidelity first, then keep the top maxResults. The slice is cut
 	// before numbering, so the table reads 1..N with no gaps.
+	//
+	// The tiers are checked against the gateways before sorting, so the fidelity
+	// key is what will actually be downloaded: sorting on the catalogue would cap
+	// the table with rows that serve a lower tier and hide the real lossless hits.
+	measured, below, unmeasured, missedOf := servedRows(ctx, rows, quality)
+	if measured == 0 {
+		fmt.Fprintf(os.Stderr, "note: 未能核对实际可下载档位，音质/大小列显示的是各平台目录标称\n")
+	} else {
+		fmt.Fprintf(os.Stderr, "note: 已核对 %d 行的实际可下载档位，%d 行低于目录标称 — 音质/大小列显示的是实际能拿到的",
+			measured, below)
+		if unmeasured > 0 {
+			// Naming the platforms, not just the count, tells the user which rows
+			// to distrust. The rows that miss are the ones whose built-in gateway
+			// no longer serves anonymous audio, so the same two platforms are
+			// always the ones.
+			fmt.Fprintf(os.Stderr, "；另有 %d 行未能核对仍显示标称（%s）", unmeasured,
+				strings.Join(missedOf, "、"))
+		}
+		fmt.Fprintln(os.Stderr)
+	}
 	sortRows(rows, keyword)
 	if len(rows) > maxResults {
 		rows = rows[:maxResults]
@@ -593,7 +723,10 @@ func cmdDownload(args []string) error {
 		on = prog.Report
 		stop = pumpProgress(os.Stdout, prog, s.KeyString())
 	}
-	status, err := downloadOne(ctx, c, p, s, quality, outDir, force, tags, on)
+	// With no table above, the promise is the tier the reference was asked for -
+	// for --quality auto, the best rendition the platform announced.
+	advertised := s.QualityByType(quality).Type
+	status, err := downloadOne(ctx, c, p, s, quality, advertised, outDir, force, tags, on)
 	stop()
 	if err != nil {
 		return err
@@ -659,13 +792,52 @@ func pumpProgress(w io.Writer, p *tui.DownloadProgress, label string) (stop func
 // warning - a 500 is the common shape. Failing closed turns a lower-fidelity
 // download into no download, and for mg in particular the user source is the
 // whole reason audio is routed away from the built-in at all.
+// userSourceBreaks is how many times in a row a user source has to fail before
+// the session stops asking it. A source is a script hosted somewhere and it
+// times out at 25 s per call, so two consecutive misses cost half a minute
+// before the built-in is asked at all.
+const userSourceBreaks = 2
+
+var (
+	userSourceFailsMu sync.Mutex
+	userSourceFails   = map[string]int{}
+)
+
+// userSourceBlocked reports whether src has failed often enough to stop asking
+// it. Scoped per platform, not per song: a script that has stopped answering
+// does not answer for one song only, and remembering it per song would pay the
+// timeout again on every row.
+func userSourceBlocked(src string) bool {
+	userSourceFailsMu.Lock()
+	defer userSourceFailsMu.Unlock()
+	return userSourceFails[src] >= userSourceBreaks
+}
+
+// noteUserSource folds one outcome in. A success clears the count, so a script
+// that comes back to life starts serving again instead of staying skipped.
+func noteUserSource(src string, ok bool) {
+	userSourceFailsMu.Lock()
+	defer userSourceFailsMu.Unlock()
+	if ok {
+		delete(userSourceFails, src)
+		return
+	}
+	userSourceFails[src]++
+}
+
 func resolveAudio(ctx context.Context, p lx.Provider, s *lx.Song, quality string) (*lx.PlayerURL, string, error) {
 	q := s.QualityByType(quality)
 	by := lx.AudioProvider(p, s)
+	if by != p && userSourceBlocked(by.ID()) {
+		by = p
+	}
 	pl, err := by.MusicURL(ctx, s, q)
 	if pl != nil {
-		if by != p && pl.Note == "" {
-			pl.Note = "served by user source " + by.ID()
+		if by != p {
+			noteUserSource(by.ID(), true)
+			if pl.Note == "" {
+				pl.Note = "served by user source " + by.ID()
+			}
 		}
 		return pl, by.ID(), nil
 	}
@@ -675,6 +847,7 @@ func resolveAudio(ctx context.Context, p lx.Provider, s *lx.Song, quality string
 		}
 		return nil, "", err
 	}
+	noteUserSource(by.ID(), false)
 	fb, fbErr := p.MusicURL(ctx, s, q)
 	if fb != nil {
 		if fb.Note == "" {
@@ -692,12 +865,16 @@ func resolveAudio(ctx context.Context, p lx.Provider, s *lx.Song, quality string
 }
 
 // downloadOne resolves the rendition and writes the file, returning a one-line
-// status. Shared by "download" and the interactive picker. on receives the bytes
-// written as they happen, or nil when nothing is watching. When force is false a
-// file already present is left exactly as it is, which is the promise the help
-// text has always made; --force opts back into overwriting.
+// status. Shared by "download" and the interactive picker. advertised is the tier
+// the user was shown - the row's quality in the picker, the tier the reference
+// was asked for on the command line - and the file that lands is held to it: a
+// transfer that comes back in a different family fails rather than reporting a
+// save. on receives the bytes written as they happen, or nil when nothing is
+// watching. When force is false a file already present is left exactly as it is,
+// which is the promise the help text has always made; --force opts back into
+// overwriting.
 func downloadOne(ctx context.Context, c *lx.Client, p lx.Provider, s *lx.Song,
-	quality, outDir string, force, tags bool, on func(done, total int64)) (string, error) {
+	quality, advertised, outDir string, force, tags bool, on func(done, total int64)) (string, error) {
 	pl, user, err := resolveAudio(ctx, p, s, quality)
 	if err != nil {
 		return "", err
@@ -725,6 +902,13 @@ func downloadOne(ctx context.Context, c *lx.Client, p lx.Provider, s *lx.Song,
 	n, err := c.DownloadFileOn(ctx, pl.URL, path, pl.Headers, on)
 	if err != nil {
 		return "", err
+	}
+	// Held against the tier the list showed, not against pl.Quality: the gateway
+	// already reported its own compromise in pl.Note. The file is left on disk and
+	// the path named, so the user can keep it or clear it - deleting a file this
+	// far into the call would be an unannounced destruction.
+	if why := formatMismatch(advertised, storedExt(pl, path)); why != "" {
+		return "", fmt.Errorf("下载失败：%s；文件已写入 %s (%s)", why, path, lx.FormatBytes(n))
 	}
 	// The notes are returned, not printed: the picker erases its screen after
 	// every repaint, so a stderr note was visible for one frame and then gone.
@@ -809,7 +993,7 @@ func downloadSelected(c *lx.Client, r tui.Row, quality, outDir string, force, ta
 	if err != nil {
 		return "", err
 	}
-	return downloadOne(ctx, c, p, s, quality, outDir, force, tags, on)
+	return downloadOne(ctx, c, p, s, quality, r.Quality, outDir, force, tags, on)
 }
 
 // savePathFor predicts where a row will be written, without a network round
@@ -850,6 +1034,65 @@ func previewNote(durationSec int, got int64) string {
 			lx.FormatBytes(got), lx.FormatDuration(durationSec))
 	}
 	return fmt.Sprintf("⚠ 只有 %s,疑似试听片段;完整曲目要用户音源或登录", lx.FormatBytes(got))
+}
+
+// tierFamily and extFamily reduce a quality label and a file extension to the
+// one distinction that matters: lossless or lossy. Comparing extensions
+// directly would fail a row that promises 128k and lands as a .ogg or .aac,
+// which is the same rendition in another container, and "" is returned when
+// neither side can be classified so an unknown label cannot fail a transfer that
+// otherwise succeeded.
+func tierFamily(t string) string {
+	switch t {
+	case lx.QFlac, lx.QFlac24, lx.QWav, lx.QApe:
+		return "无损"
+	case lx.Q320, lx.Q192, lx.Q128:
+		return "有损"
+	}
+	return ""
+}
+
+func extFamily(ext string) string {
+	switch ext {
+	case ".flac", ".wav", ".ape":
+		return "无损"
+	case ".mp3", ".ogg", ".m4a", ".aac", ".wma", ".opus", ".mka":
+		return "有损"
+	}
+	return ""
+}
+
+// storedExt is the format the bytes on disk actually are. The URL wins over the
+// file name: a platform can hand back a file name with a different extension than
+// the payload it serves, which is how a 3.8MB mp3 once came out named .flac.
+func storedExt(pl *lx.PlayerURL, path string) string {
+	if e := lx.PathExt(pl.URL); e != "" {
+		return e
+	}
+	return strings.ToLower(filepath.Ext(path))
+}
+
+// formatMismatch reports that the file that landed is a worse family than the
+// list promised - lossless promised, lossy stored. An upgrade is not flagged: the
+// user asked for one thing and got a better rendition, which is not a failure.
+// "" also covers a match and anything that cannot be classified, since an unknown
+// tier or an unrecognized extension must not fail a transfer that otherwise
+// succeeded.
+func formatMismatch(advertised, stored string) string {
+	want, got := tierFamily(advertised), extFamily(stored)
+	if want == "" || got == "" || familyRank(got) >= familyRank(want) {
+		return ""
+	}
+	return fmt.Sprintf("列表标注 %s，实际写入的是%s %s 文件", advertised, got, stored)
+}
+
+// familyRank orders the families worst first, so a comparison reads as "is what
+// landed at least as good as what was promised".
+func familyRank(f string) int {
+	if f == "无损" {
+		return 1
+	}
+	return 0
 }
 
 /* --------------------------------------------------------------- lyric */

@@ -185,6 +185,274 @@ func TestToRowsCarriesSize(t *testing.T) {
 	}
 }
 
+// TestApplyServed pins what the table shows after a rendition is probed. The
+// load-bearing case is the migu one at the end: the catalogue advertises
+// flac24bit at 52.6MB, the gateway serves a 128k mp3, and the row has to come
+// out reading 128k with the 128k size - never 128k next to the flac number,
+// which is what the probe used to leave on screen.
+func TestApplyServed(t *testing.T) {
+	matrix := func() *lx.Song {
+		return &lx.Song{Source: "mg", Qualities: []lx.Quality{
+			{Type: lx.Q128, Size: 4018053},
+			{Type: lx.Q320, Size: 10044816},
+			{Type: lx.QFlac, Size: 29892504},
+			{Type: lx.QFlac24, Size: 55158550},
+		}}
+	}
+	row := func(q string, song *lx.Song) tui.Row {
+		return tui.Row{Quality: q, Size: 55158550, Song: song}
+	}
+	for _, c := range []struct {
+		name        string
+		q           string
+		song        *lx.Song
+		pl          *lx.PlayerURL
+		wantQuality string
+		wantSize    int64
+		wantChanged bool
+		wantDown    bool
+	}{
+		{
+			name:        "no song leaves the row alone",
+			q:           lx.QFlac24,
+			song:        nil,
+			pl:          &lx.PlayerURL{Quality: lx.Q128},
+			wantQuality: lx.QFlac24,
+			wantSize:    55158550,
+		},
+		{
+			name:        "a failed probe leaves the row alone",
+			q:           lx.QFlac24,
+			song:        matrix(),
+			pl:          nil,
+			wantQuality: lx.QFlac24,
+			wantSize:    55158550,
+		},
+		{
+			name:        "an empty answer leaves the row alone",
+			q:           lx.QFlac24,
+			song:        matrix(),
+			pl:          &lx.PlayerURL{Quality: ""},
+			wantQuality: lx.QFlac24,
+			wantSize:    55158550,
+		},
+		{
+			name:        "the same tier is not a change",
+			q:           lx.QFlac24,
+			song:        matrix(),
+			pl:          &lx.PlayerURL{Quality: lx.QFlac24},
+			wantQuality: lx.QFlac24,
+			wantSize:    55158550,
+		},
+		{
+			name:        "the size follows the served tier",
+			q:           lx.QFlac24,
+			song:        matrix(),
+			pl:          &lx.PlayerURL{Quality: lx.Q128},
+			wantQuality: lx.Q128,
+			wantSize:    4018053,
+			wantChanged: true,
+			wantDown:    true,
+		},
+		{
+			name:        "an unsized tier falls back to the url size",
+			q:           lx.QFlac24,
+			song:        &lx.Song{Qualities: []lx.Quality{{Type: lx.QFlac24, Size: 55158550}}},
+			pl:          &lx.PlayerURL{Quality: lx.Q128, Size: 3900000},
+			wantQuality: lx.Q128,
+			wantSize:    3900000,
+			wantChanged: true,
+			wantDown:    true,
+		},
+		{
+			name:        "no size anywhere reads unknown, not the old number",
+			q:           lx.QFlac24,
+			song:        &lx.Song{Qualities: []lx.Quality{{Type: lx.QFlac24, Size: 55158550}}},
+			pl:          &lx.PlayerURL{Quality: lx.Q128},
+			wantQuality: lx.Q128,
+			wantSize:    0,
+			wantChanged: true,
+			wantDown:    true,
+		},
+		{
+			// The probe normally confirms or lowers the tier, but a row built from
+			// a bare reference advertises nothing at all, so a real tier is a gain.
+			name:        "a higher served tier is a change, not a downgrade",
+			q:           lx.Q320,
+			song:        matrix(),
+			pl:          &lx.PlayerURL{Quality: lx.QFlac24},
+			wantQuality: lx.QFlac24,
+			wantSize:    55158550,
+			wantChanged: true,
+		},
+		{
+			name:        "an unknown served tier is not treated as the best",
+			q:           lx.QFlac24,
+			song:        matrix(),
+			pl:          &lx.PlayerURL{Quality: "-"},
+			wantQuality: "-",
+			wantSize:    0,
+			wantChanged: true,
+			wantDown:    true,
+		},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			r := row(c.q, c.song)
+			changed, down := applyServed(&r, c.pl)
+			if r.Quality != c.wantQuality || r.Size != c.wantSize {
+				t.Errorf("row = %s/%d, want %s/%d", r.Quality, r.Size, c.wantQuality, c.wantSize)
+			}
+			if changed != c.wantChanged || down != c.wantDown {
+				t.Errorf("(changed, down) = (%v, %v), want (%v, %v)", changed, down, c.wantChanged, c.wantDown)
+			}
+		})
+	}
+	// A row built from a bare reference has neither a song nor a size, and must
+	// not panic or change.
+	var bare tui.Row
+	if changed, down := applyServed(&bare, &lx.PlayerURL{Quality: lx.Q128}); changed || down {
+		t.Errorf("a bare row must not change: (%v, %v)", changed, down)
+	}
+}
+
+// slowProvider never answers: it sits on its context until the caller cancels.
+// That is the shape of a gateway that is down, which is what probeBudget exists
+// to bound.
+type slowProvider struct{}
+
+func (slowProvider) ID() string   { return "slow" }
+func (slowProvider) Name() string { return "slow" }
+func (slowProvider) Search(context.Context, string, int, int) (*lx.SearchResult, error) {
+	return nil, nil
+}
+func (slowProvider) MusicURL(ctx context.Context, s *lx.Song, q lx.Quality) (*lx.PlayerURL, error) {
+	<-ctx.Done()
+	return nil, ctx.Err()
+}
+func (slowProvider) Lyric(context.Context, *lx.Song) (*lx.Lyric, error) {
+	return nil, errors.New("no lyric")
+}
+func (slowProvider) Pic(context.Context, *lx.Song) (string, error) { return "", nil }
+func (slowProvider) Detail(context.Context, *lx.Song) error        { return nil }
+func (slowProvider) AnonymousAudio() bool                          { return true }
+
+// answerProvider answers with one fixed tier, whatever was asked.
+type answerProvider struct{ pl *lx.PlayerURL }
+
+func (answerProvider) ID() string   { return "ans" }
+func (answerProvider) Name() string { return "ans" }
+func (answerProvider) Search(context.Context, string, int, int) (*lx.SearchResult, error) {
+	return nil, nil
+}
+func (a answerProvider) MusicURL(context.Context, *lx.Song, lx.Quality) (*lx.PlayerURL, error) {
+	return a.pl, nil
+}
+func (answerProvider) Lyric(context.Context, *lx.Song) (*lx.Lyric, error) {
+	return nil, errors.New("no lyric")
+}
+func (answerProvider) Pic(context.Context, *lx.Song) (string, error) { return "", nil }
+func (answerProvider) Detail(context.Context, *lx.Song) error        { return nil }
+func (answerProvider) AnonymousAudio() bool                          { return true }
+
+func stubProviders(t *testing.T, p lx.Provider) {
+	t.Helper()
+	old := providerFor
+	providerFor = func(id string) (lx.Provider, error) { return p, nil }
+	t.Cleanup(func() { providerFor = old })
+}
+
+// TestServedRowsBudget pins that the rendition check cannot run past its own
+// budget. It once borrowed the search's 120 s deadline and exhausted it, so the
+// sort ran on rows nobody had measured and the table still advertised the tier
+// the download would not give. Here every row hangs on its context, so the only
+// thing that can end the call is the budget.
+func TestServedRowsBudget(t *testing.T) {
+	oldBudget := probeBudget
+	probeBudget = 200 * time.Millisecond
+	defer func() { probeBudget = oldBudget }()
+	stubProviders(t, slowProvider{})
+
+	rows := make([]tui.Row, 24)
+	for i := range rows {
+		rows[i] = tui.Row{Quality: lx.QFlac24, Size: 55158550, Song: &lx.Song{Source: "slow"}}
+	}
+	start := time.Now()
+	measured, below, unmeasured, missedOf := servedRows(context.Background(), rows, lx.QAuto)
+	if elapsed := time.Since(start); elapsed > 5*time.Second {
+		t.Errorf("servedRows ran %v; it must stop at probeBudget, not at the caller's deadline", elapsed)
+	}
+	// Nothing was answered, so nothing may have been claimed as measured, and no
+	// row may have been rewritten from a catalogue number it never earned.
+	if measured != 0 || below != 0 || unmeasured != len(rows) {
+		t.Errorf("(measured, below, unmeasured) = (%d, %d, %d), want (0, 0, %d)",
+			measured, below, unmeasured, len(rows))
+	}
+	if rows[0].Quality != lx.QFlac24 || rows[0].Size != 55158550 {
+		t.Errorf("an unanswered row was rewritten: %s/%d", rows[0].Quality, rows[0].Size)
+	}
+	// The note names the platforms, so the caller can say which rows are unverified.
+	if len(missedOf) != 1 || missedOf[0] != "slow24行" {
+		t.Errorf("missedOf = %v, want one entry naming the platform and its rows", missedOf)
+	}
+}
+
+// TestServedRowsReports pins the three counts and that an answer lands on the
+// row: the answered rows are the ones measured, a lower tier is a downgrade, and
+// the hung rows are neither.
+func TestServedRowsReports(t *testing.T) {
+	stubProviders(t, answerProvider{pl: &lx.PlayerURL{Quality: lx.Q128}})
+	rows := []tui.Row{
+		{Song: &lx.Song{Source: "ans", Qualities: []lx.Quality{
+			{Type: lx.Q128, Size: 4018053}, {Type: lx.QFlac24, Size: 55158550}}}, Quality: lx.QFlac24, Size: 55158550},
+		{Song: &lx.Song{Source: "ans"}},
+		{Song: nil},
+	}
+	measured, below, unmeasured, _ := servedRows(context.Background(), rows, lx.QAuto)
+	if measured != 2 || below != 1 || unmeasured != 0 {
+		t.Errorf("(measured, below, unmeasured) = (%d, %d, %d), want (2, 1, 0)", measured, below, unmeasured)
+	}
+	if rows[0].Quality != lx.Q128 || rows[0].Size != 4018053 {
+		t.Errorf("the answered row = %s/%d, want 128k and the 128k catalogue size", rows[0].Quality, rows[0].Size)
+	}
+	// A row that advertised no tier at all learns what the gateway gives, without
+	// being counted as a downgrade - it claimed nothing to fall below.
+	if rows[1].Quality != lx.Q128 {
+		t.Errorf("a row with no catalogue = %q, want the measured tier", rows[1].Quality)
+	}
+}
+
+// TestUserSourceBreaker pins the circuit breaker. A user source is a script
+// hosted somewhere and times out at 25 s per call, so two consecutive misses are
+// half a minute paid before the built-in is asked at all - and then again on
+// every row of every search. One refusal is not a dead script, so one miss must
+// not trip it.
+func clearFails(src string) {
+	userSourceFailsMu.Lock()
+	delete(userSourceFails, src)
+	userSourceFailsMu.Unlock()
+}
+
+func TestUserSourceBreaker(t *testing.T) {
+	const src = "breaker"
+	clearFails(src)
+	defer clearFails(src)
+	if userSourceBlocked(src) {
+		t.Fatal("a source that has never been asked must not be blocked")
+	}
+	noteUserSource(src, false)
+	if userSourceBlocked(src) {
+		t.Fatal("one refusal must not block the source")
+	}
+	noteUserSource(src, false)
+	if !userSourceBlocked(src) {
+		t.Fatal("two consecutive refusals must block the source")
+	}
+	noteUserSource(src, true)
+	if userSourceBlocked(src) {
+		t.Fatal("a success must clear the count so a recovered script serves again")
+	}
+}
+
 // TestSavePathFor pins that the confirm prompt's destination is computed from
 // the row alone. It must not touch the network: it runs between the Enter
 // keypress and the prompt appearing, so a round trip in here freezes the UI.
@@ -313,6 +581,104 @@ func TestPreviewNote(t *testing.T) {
 				t.Errorf("warning omits the runtime: %q", got)
 			}
 		})
+	}
+}
+
+// TestFormatMismatch pins the check that turns a mismatched transfer into a
+// failure. The load-bearing cases are the migu one first - a flac24bit row that
+// lands as a 3.8MB mp3 - and the ogg case, where a 128k promise landing in
+// another lossy container is the same rendition and must not fail.
+func TestFormatMismatch(t *testing.T) {
+	cases := []struct {
+		name        string
+		advertised  string
+		stored      string
+		wantFail    bool
+		wantContain string
+	}{
+		{name: "lossless promised, mp3 landed", advertised: lx.QFlac24, stored: ".mp3", wantFail: true,
+			wantContain: "列表标注 flac24bit，实际写入的是有损 .mp3 文件"},
+		{name: "flac promised, mp3 landed", advertised: lx.QFlac, stored: ".mp3", wantFail: true,
+			wantContain: "有损 .mp3"},
+		{name: "wav promised, mp3 landed", advertised: lx.QWav, stored: ".mp3", wantFail: true,
+			wantContain: "有损 .mp3"},
+		{name: "promise met", advertised: lx.QFlac24, stored: ".flac"},
+		{name: "wav promise met", advertised: lx.QWav, stored: ".wav"},
+		{name: "ape promise met", advertised: lx.QApe, stored: ".ape"},
+		{name: "128k promise met", advertised: lx.Q128, stored: ".mp3"},
+		{name: "same rendition in another container", advertised: lx.Q128, stored: ".ogg"},
+		{name: "320k as aac", advertised: lx.Q320, stored: ".aac"},
+		{name: "a surprise upgrade is not a failure", advertised: lx.Q128, stored: ".flac"},
+		{name: "auto is not a promise", advertised: lx.QAuto, stored: ".mp3"},
+		{name: "best is not a promise", advertised: lx.QBestKnown, stored: ".mp3"},
+		{name: "an unlabelled row is not a promise", advertised: "", stored: ".mp3"},
+		{name: "a dash row is not a promise", advertised: "-", stored: ".mp3"},
+		{name: "an unknown tier is skipped", advertised: "wav24", stored: ".mp3"},
+		{name: "no extension to read", advertised: lx.QFlac24, stored: ""},
+		{name: "an unrecognized extension is skipped", advertised: lx.QFlac24, stored: ".txt"},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			got := formatMismatch(c.advertised, c.stored)
+			if (got != "") != c.wantFail {
+				t.Fatalf("formatMismatch(%q, %q) = %q, want failure=%v", c.advertised, c.stored, got, c.wantFail)
+			}
+			if c.wantFail && !strings.Contains(got, c.wantContain) {
+				t.Errorf("message %q does not name the promise and what landed", got)
+			}
+		})
+	}
+}
+
+// TestStoredExt pins that the URL decides the format, not the file name. A
+// platform can name a file .flac while serving mp3 bytes; trusting the name is
+// exactly how the mismatch would slip past the check.
+func TestStoredExt(t *testing.T) {
+	cases := []struct {
+		name string
+		url  string
+		path string
+		want string
+	}{
+		{name: "the url wins over the file name",
+			url: "http://h/t/MP3_128_16_Stero.mp3?t=1", path: "/o/星月神话.flac", want: ".mp3"},
+		{name: "a kuwo flac rendition",
+			url:  "http://car.kuwo.cn/x/r/F000000B3.flac?bitrate$2000&format$flac&source$x.apk",
+			path: "/o/a.mp3", want: ".flac"},
+		{name: "no extension in the url falls back to the path",
+			url: "http://h/t/vkey=abc", path: "/o/a.MP3", want: ".mp3"},
+		{name: "an empty url falls back to the path",
+			url: "", path: "/o/a.flac", want: ".flac"},
+		{name: "no extension anywhere",
+			url: "http://h/t/vkey=abc", path: "/o/a", want: ""},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			if got := storedExt(&lx.PlayerURL{URL: c.url}, c.path); got != c.want {
+				t.Errorf("storedExt = %q, want %q", got, c.want)
+			}
+		})
+	}
+}
+
+// TestAudioExtPathOnly is the regression behind PathExt: only the path may be
+// read, because a query string can carry its own extension.
+func TestAudioExtPathOnly(t *testing.T) {
+	for _, c := range []struct {
+		url  string
+		want string
+	}{
+		{"/t/a.mp3?$format$flac&x.apk", ".mp3"},
+		{"/t/a.mp3?x.flac", ".mp3"},
+		{"/t/a.mp3#f.flac", ".mp3"},
+		{"/t/.hidden.mp3", ".mp3"},
+		{"/t/noext", ""},
+		{"", ""},
+		{"/t/a.apk", ""},
+	} {
+		if got := lx.PathExt(c.url); got != c.want {
+			t.Errorf("PathExt(%q) = %q, want %q", c.url, got, c.want)
+		}
 	}
 }
 

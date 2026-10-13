@@ -120,3 +120,38 @@ func TestBestOf(t *testing.T) {
 		}
 	}
 }
+
+// TestQualityByType pins the fallback. The load-bearing case is the last one: a
+// request naming a tier the matrix does not list must be passed through, not
+// replaced by the first known one. mg announces a song known only by id with PQ
+// alone, so substituting turned an explicit flac24bit request into 128k with no
+// note at all - the user asked for one thing and got another, silently.
+func TestQualityByType(t *testing.T) {
+	matrix := []Quality{{Type: Q128, Size: 1024}, {Type: Q320, Size: 2048}, {Type: QFlac, Size: 52428800}}
+	for _, c := range []struct {
+		name string
+		q    []Quality
+		req  string
+		want Quality
+	}{
+		{"exact match keeps its size", matrix, Q320, Quality{Type: Q320, Size: 2048}},
+		{"auto settles on the best", matrix, QAuto, Quality{Type: QFlac, Size: 52428800}},
+		{"best settles on the best", matrix, QBestKnown, Quality{Type: QFlac, Size: 52428800}},
+		{"empty matrix passes the request through", nil, QFlac24, Quality{Type: QFlac24}},
+		{"auto with no matrix stays auto", nil, QAuto, Quality{Type: QAuto}},
+		{"tier the matrix lacks is passed through", matrix, QFlac24, Quality{Type: QFlac24}},
+		{"tier the matrix lacks is not the first entry", matrix, QWav, Quality{Type: QWav}},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			s := &Song{Qualities: c.q}
+			if got := s.QualityByType(c.req); got != c.want {
+				t.Errorf("QualityByType(%q) = %+v, want %+v", c.req, got, c.want)
+			}
+		})
+	}
+	// The regression as it actually presented: mg detail announces PQ alone for a
+	// song known only by id, and the request is for the top tier.
+	if got := (&Song{Qualities: []Quality{{Type: Q128}}}).QualityByType(QFlac24); got.Type != QFlac24 {
+		t.Errorf("mg-style matrix substituted %q for a flac24bit request", got.Type)
+	}
+}

@@ -47,24 +47,38 @@ func QualityList() []string {
 	return append(out, QAuto)
 }
 
+// PathExt is the audio extension on the path of a URL, lowercased, or "" when
+// the path carries none. Only the path is inspected: a query string can carry an
+// extension of its own, kuwo's does ("$format$flac", plus ".apk" inside a
+// spoofed User-Agent), and so would corrupt the answer.
+func PathExt(url string) string {
+	i := strings.LastIndex(url, "/")
+	if i < 0 {
+		return ""
+	}
+	p := url[i+1:]
+	if j := strings.IndexAny(p, "?#"); j >= 0 {
+		p = p[:j]
+	}
+	dot := strings.LastIndexByte(p, '.')
+	if dot <= 0 {
+		return ""
+	}
+	switch e := strings.ToLower(p[dot:]); e {
+	case ".flac", ".mp3", ".ogg", ".m4a", ".aac", ".wav", ".ape":
+		return e
+	}
+	return ""
+}
+
 // AudioExt picks a file extension for a stream. The URL's own path extension
 // wins, because a source can hand back a different format than the label it was
 // asked for and the path is what the server actually serves - kuwo writes the
 // flac renditions under "trackmedia/F000000B...flac". It falls back to the
-// quality label. Only the path is inspected, since kuwo's query string is
-// "$"-delimited and carries ".apk" in its spoofed User-Agent.
+// quality label.
 func AudioExt(quality, url string) string {
-	if i := strings.LastIndex(url, "/"); i >= 0 {
-		p := url[i+1:]
-		if j := strings.IndexAny(p, "?#"); j >= 0 {
-			p = p[:j]
-		}
-		if dot := strings.LastIndexByte(p, '.'); dot > 0 {
-			switch strings.ToLower(p[dot:]) {
-			case ".flac", ".mp3", ".ogg", ".m4a", ".aac", ".wav", ".ape":
-				return strings.ToLower(p[dot:])
-			}
-		}
+	if e := PathExt(url); e != "" {
+		return e
 	}
 	switch quality {
 	case QFlac, QFlac24:
@@ -148,26 +162,36 @@ func (s *Song) HasQuality(t string) bool {
 	return false
 }
 
-// BestQualitySize is the byte count the platform announced for the best
-// rendition the song offers - the rendition "--quality auto" would pick - or 0
-// when the platform did not announce one. Matching BestQuality exactly matters:
-// QualityByType falls back to the first quality when the type is unknown, which
-// would report a lower rendition's size.
-func (s *Song) BestQualitySize() int64 {
-	b := s.BestQuality()
-	if b == "" {
-		return 0
-	}
+// QualitySize is the byte count the platform announced for one rendition, or 0
+// when it announced no size for it - which the table prints as "-", never as a
+// guess borrowed from a different tier.
+func (s *Song) QualitySize(t string) int64 {
 	for _, q := range s.Qualities {
-		if q.Type == b {
+		if q.Type == t {
 			return q.Size
 		}
 	}
 	return 0
 }
 
+// BestQualitySize is the byte count the platform announced for the best
+// rendition the song offers - the rendition "--quality auto" would pick - or 0
+// when the platform did not announce one. Routing through QualitySize keeps the
+// tier exact: an approximate match would report a different rendition's number.
+func (s *Song) BestQualitySize() int64 {
+	return s.QualitySize(s.BestQuality())
+}
+
 // QualityByType resolves a requested quality to a concrete rendition, applying
 // the same fallback rules the desktop player uses.
+//
+// A tier the matrix does not list is passed through unchanged, not replaced by
+// the first known one. A matrix can be thinner than the gateway's real
+// inventory: mg announces a song known only by id with PQ alone, so substituting
+// turned an explicit request for flac24bit into 128k with no note at all. Each
+// provider already knows what to do with a tier it was not offered, and mg in
+// particular reports the compromise it had to make. A caller that wants the size
+// of a rendition must use BestQualitySize, which does not route through here.
 func (s *Song) QualityByType(t string) Quality {
 	if t == QAuto || t == QBestKnown || t == "" {
 		if b := s.BestQuality(); b != "" {
@@ -178,9 +202,6 @@ func (s *Song) QualityByType(t string) Quality {
 		if q.Type == t {
 			return q
 		}
-	}
-	if len(s.Qualities) > 0 { // unknown quality requested: use the first known one
-		return s.Qualities[0]
 	}
 	return Quality{Type: t}
 }
